@@ -1,8 +1,7 @@
 import { useState } from 'react'
 import { createFileRoute, useNavigate } from '@tanstack/react-router'
 import imageCompression from 'browser-image-compression'
-import { RiCameraLine, RiLoader4Line, RiPencilLine } from '@remixicon/react'
-import { Button } from '~/components/ui/button'
+import { RiCameraLine, RiLoader4Line } from '@remixicon/react'
 import {
   Card,
   CardContent,
@@ -58,11 +57,6 @@ function Scan() {
     }
   }
 
-  async function manual() {
-    const billId = await createBill.mutateAsync({})
-    navigate({ to: '/review/$billId', params: { billId } })
-  }
-
   return (
     <div className="mx-auto w-full max-w-md p-4 sm:p-6 space-y-5">
       <Card>
@@ -101,10 +95,6 @@ function Scan() {
           {error && <p className="text-sm text-destructive">{error}</p>}
         </CardContent>
       </Card>
-
-      <Button variant="outline" className="w-full" onClick={manual} disabled={busy}>
-        <RiPencilLine /> Enter manually instead
-      </Button>
     </div>
   )
 }
