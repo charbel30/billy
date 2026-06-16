@@ -52,6 +52,41 @@ export function sanitizeWorkingBill(w: WorkingBill): WorkingBill {
   }
 }
 
+export function canPersistWorkingBill(w: WorkingBill): boolean {
+  const itemIds = new Set<string>()
+  for (const item of w.lineItems) {
+    if (!item.id || itemIds.has(item.id)) return false
+    itemIds.add(item.id)
+    if (!item.name.trim()) return false
+    if (!Number.isFinite(item.qty) || item.qty <= 0) return false
+    if (!Number.isFinite(item.unitPrice) || item.unitPrice < 0) return false
+    if (!Number.isFinite(item.lineTotal) || item.lineTotal < 0) return false
+    if (
+      item.confidence != null &&
+      (!Number.isFinite(item.confidence) ||
+        item.confidence < 0 ||
+        item.confidence > 1)
+    ) {
+      return false
+    }
+  }
+
+  const personIds = new Set<string>()
+  for (const person of w.people) {
+    if (!person.id || personIds.has(person.id)) return false
+    personIds.add(person.id)
+    if (!person.name.trim() || !person.color.trim()) return false
+  }
+
+  for (const claim of w.claims) {
+    if (!itemIds.has(claim.itemId)) return false
+    if (!personIds.has(claim.personId)) return false
+    if (!Number.isFinite(claim.units) || claim.units < 0) return false
+  }
+
+  return true
+}
+
 /** A stored working copy is only usable if it's the current single-doc shape. */
 export function isValidWorkingBill(w: unknown): w is WorkingBill {
   if (!w || typeof w !== 'object') return false

@@ -73,7 +73,8 @@ function Split() {
         size="lg"
         className="w-full"
         onClick={async () => {
-          await editor.flushNow()
+          const saved = await editor.flushNow()
+          if (!saved) return
           navigate({ to: '/summary/$billId', params: { billId } })
         }}
       >

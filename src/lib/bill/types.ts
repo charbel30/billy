@@ -48,5 +48,5 @@ export interface BillEditor {
   setClaim: (itemId: string, personId: string, units: number) => void
   stepClaim: (itemId: string, personId: string, delta: number) => void
   shareEvenly: (itemId: string, personIds: string[]) => void
-  flushNow: () => Promise<void>
+  flushNow: () => Promise<boolean>
 }

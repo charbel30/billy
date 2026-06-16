@@ -26,6 +26,7 @@ import type {
 } from '~/lib/types'
 import type { BillEditor, WorkingBill, WorkingMeta } from '~/lib/bill/types'
 import {
+  canPersistWorkingBill,
   sanitizeWorkingBill,
   workingBillFromDoc,
 } from '~/lib/bill/working'
@@ -51,18 +52,29 @@ export function useBillEditor(id: Id<'bills'>): BillEditor {
   const dirtyRef = useRef(false)
   const baseVersionRef = useRef(serverDoc.version)
   const timer = useRef<ReturnType<typeof setTimeout> | null>(null)
+  const saveWorkingRef = useRef(saveWorking.mutateAsync)
 
-  const flush = useCallback(async () => {
+  useEffect(() => {
+    saveWorkingRef.current = saveWorking.mutateAsync
+  }, [saveWorking.mutateAsync])
+
+  const flush = useCallback(async (): Promise<boolean> => {
     if (timer.current) {
       clearTimeout(timer.current)
       timer.current = null
     }
     const cur = workingRef.current
-    if (!cur || !dirtyRef.current) return
-    dirtyRef.current = false
+    if (!cur) return true
     const clean = sanitizeWorkingBill(cur)
+    if (!dirtyRef.current) return canPersistWorkingBill(clean)
+    if (!canPersistWorkingBill(clean)) {
+      dirtyRef.current = true
+      return false
+    }
+
+    dirtyRef.current = false
     try {
-      await saveWorking.mutateAsync({
+      await saveWorkingRef.current({
         id,
         lineItems: clean.lineItems,
         people: clean.people,
@@ -73,10 +85,12 @@ export function useBillEditor(id: Id<'bills'>): BillEditor {
       // isn't mistaken for an external edit.
       baseVersionRef.current += 1
       clearWorkingBill(id)
+      return true
     } catch {
       dirtyRef.current = true // leave dirty so a later flush retries
+      return false
     }
-  }, [id, saveWorking])
+  }, [id])
 
   const scheduleFlush = useCallback(() => {
     if (timer.current) clearTimeout(timer.current)

@@ -13,6 +13,7 @@ import { billQueries } from '~/queries'
 import { reconcile } from '~/lib/reconcile'
 import { formatLbp, formatUsd, toUsd } from '~/lib/currency'
 import { parseNumericInput } from '~/lib/number'
+import { canPersistWorkingBill } from '~/lib/bill/working'
 
 export const Route = createFileRoute('/review/$billId')({
   component: Review,
@@ -30,6 +31,7 @@ function Review() {
   const editor = useBillEditor(billId)
   const { bill, setMeta, addLineItem, updateLineItem, removeLineItem } = editor
   const { meta } = bill
+  const canContinue = bill.lineItems.length > 0 && canPersistWorkingBill(bill)
 
   const recon = reconcile({
     lineItems: bill.lineItems,
@@ -106,9 +108,10 @@ function Review() {
       <Button
         size="lg"
         className="mt-5 w-full"
-        disabled={bill.lineItems.length === 0}
+        disabled={!canContinue}
         onClick={async () => {
-          await editor.flushNow()
+          const saved = await editor.flushNow()
+          if (!saved) return
           navigate({ to: '/split/$billId', params: { billId } })
         }}
       >
