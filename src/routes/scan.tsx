@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import { createFileRoute, useNavigate } from '@tanstack/react-router'
 import imageCompression from 'browser-image-compression'
-import { RiCameraLine, RiLoader4Line } from '@remixicon/react'
+import { RiCameraLine, RiImageLine, RiLoader4Line } from '@remixicon/react'
 import {
   Card,
   CardContent,
@@ -29,6 +29,8 @@ function Scan() {
 
   async function handleFile(e: React.ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0]
+    // Reset so picking the same file again still fires onChange.
+    e.target.value = ''
     if (!file) return
     setBusy(true)
     setError(null)
@@ -63,7 +65,8 @@ function Scan() {
         <CardHeader>
           <CardTitle>Scan a receipt</CardTitle>
           <CardDescription>
-            Point your camera at the bill. We compress it and read the items.
+            Take a photo of the bill or pick one from your gallery. We compress
+            it and read the items.
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-3">
@@ -87,9 +90,25 @@ function Scan() {
                 </>
               ) : (
                 <>
-                  <RiCameraLine /> Take / choose photo
+                  <RiCameraLine /> Take photo
                 </>
               )}
+            </span>
+          </label>
+          <label className="block">
+            <input
+              type="file"
+              accept="image/*"
+              className="hidden"
+              disabled={busy}
+              onChange={handleFile}
+            />
+            <span
+              className={`inline-flex h-12 w-full items-center justify-center gap-2 rounded-4xl border border-border bg-background px-4 text-sm font-medium transition-all ${
+                busy ? 'pointer-events-none opacity-60' : 'hover:bg-muted cursor-pointer'
+              }`}
+            >
+              <RiImageLine /> Choose from gallery
             </span>
           </label>
           {error && <p className="text-sm text-destructive">{error}</p>}
