@@ -34,6 +34,24 @@ export function usePublish() {
   })
 }
 
+export function useJoinSplit() {
+  return useMutation({
+    mutationFn: useConvexMutation(api.bills.mutations.joinSplit),
+  })
+}
+
+export function useAddGuestPerson() {
+  return useMutation({
+    mutationFn: useConvexMutation(api.bills.mutations.addGuestPerson),
+  })
+}
+
+export function useSaveGuestClaims() {
+  return useMutation({
+    mutationFn: useConvexMutation(api.bills.mutations.saveGuestClaims),
+  })
+}
+
 // ---------------------------------------------------------------------------
 // Image upload + extraction (imperative; no optimistic update)
 // ---------------------------------------------------------------------------

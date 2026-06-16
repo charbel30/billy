@@ -21,10 +21,11 @@ export const serviceSplitMode = v.union(
   v.literal('proportional'),
   v.literal('even'),
 )
-// Lifecycle: PENDING (extraction saved, awaiting tweaks) → READY (reconciled/
-// edited) → PUBLISHED (final shareable snapshot).
+// Lifecycle: PENDING/NEEDS_REVIEW (extraction saved, awaiting tweaks) → READY
+// (reconciled/edited) → PUBLISHED (shareable; host working edits are frozen).
 export const billStatus = v.union(
   v.literal('PENDING'),
+  v.literal('NEEDS_REVIEW'),
   v.literal('READY'),
   v.literal('PUBLISHED'),
 )
@@ -44,6 +45,15 @@ export const person = v.object({
   id: v.string(),
   name: v.string(),
   color: v.string(),
+  // Anonymous guests store a random session id locally. A claim has no owner of
+  // its own — ownership is transitive: guestSessionId → person.id → claim.personId.
+  // Rule enforced by the scoped guest mutations: you may edit a person (and its
+  // claims) iff person.guestSessionId === yourSession (or you're the host/owner).
+  // One session may own MANY people (a guest who joins via the link can add
+  // himself, his girlfriend, etc.) — that's `addGuestPerson` stamping each new
+  // person with the same session id. Everyone can READ the whole bill; you only
+  // WRITE your own people. Concurrent writes are last-write-wins.
+  guestSessionId: v.optional(v.string()),
 })
 
 // A claim is a (person, item) pair with a fractional unit count. countable lines
@@ -63,7 +73,12 @@ const schema = defineSchema({
     branch: v.optional(v.string()),
     datetime: v.optional(v.string()),
     currencyPrimary: v.string(), // usually "LBP"
-    rate: v.optional(v.number()), // LBP per USD
+    // `rate` is a direct, user-facing knob (LBP per USD), default 90000 — the
+    // parallel-market rate that holds ~95% of the time. The user rarely touches
+    // it. rateSource defaults to 'manual'; extraction may upgrade it to 'receipt'
+    // when the paper prints both currency totals (deriveRate), but there is no
+    // manual printed-total entry — see printedTotal* below.
+    rate: v.optional(v.number()),
     rateSource,
 
     // Tax / service charge are OFF by default (ui-flow-vision.md): a plain bill
@@ -73,6 +88,11 @@ const schema = defineSchema({
     serviceChargeOn: v.boolean(),
     serviceSplitMode,
 
+    // Extraction-only reference: what the receipt itself printed. Never edited by
+    // hand (the manual printed-total input was dropped — it fought the line items
+    // as a second source of truth). The displayed total is always DERIVED from
+    // lineItems (Σ lineTotal), and USD = derivedLbp / rate. These stay only to (a)
+    // let extraction auto-derive the rate and (b) flag "items don't match receipt".
     printedTotalLbp: v.optional(v.number()),
     printedTotalUsd: v.optional(v.number()),
 
@@ -85,6 +105,7 @@ const schema = defineSchema({
     // Bumped on every saveWorking flush; lets a viewer detect "edited elsewhere"
     // (last-write-wins otherwise).
     version: v.number(),
+    updatedAt: v.optional(v.number()),
 
     lineItems: v.array(lineItem),
     people: v.array(person), // seeded with a "self" person on create

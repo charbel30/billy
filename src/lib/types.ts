@@ -4,8 +4,7 @@
 
 export type RateSource = 'receipt' | 'market' | 'manual'
 export type ServiceSplitMode = 'proportional' | 'even'
-// PENDING (extraction saved) → READY (reconciled/edited) → PUBLISHED (snapshot).
-export type BillStatus = 'PENDING' | 'READY' | 'PUBLISHED'
+export type BillStatus = 'PENDING' | 'NEEDS_REVIEW' | 'READY' | 'PUBLISHED'
 
 // ---------------------------------------------------------------------------
 // In-document shapes — these mirror the JSON arrays stored inside the single
@@ -28,6 +27,7 @@ export interface Person {
   id: string
   name: string
   color: string
+  guestSessionId?: string
 }
 
 /** A (person, item) claim of a fractional number of units. */

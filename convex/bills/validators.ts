@@ -28,6 +28,7 @@ export const billDocValidator = v.object({
   shareToken: v.string(),
   status: billStatus,
   version: v.number(),
+  updatedAt: v.optional(v.number()),
   lineItems: v.array(lineItem),
   people: v.array(person),
   claims: v.array(claim),

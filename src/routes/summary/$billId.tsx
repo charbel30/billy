@@ -61,7 +61,7 @@ function Summary() {
           <h1 className="text-xl font-black">{bill.merchantName || 'Totals'}</h1>
           {bill.rate ? (
             <p className="text-xs text-muted-foreground">
-              {formatLbp(bill.rate)} / $1 · {bill.rateSource}
+              {formatLbp(bill.rate)} / $1
             </p>
           ) : null}
         </div>

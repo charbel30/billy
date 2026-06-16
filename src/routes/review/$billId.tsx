@@ -1,3 +1,4 @@
+import { useState } from 'react'
 import { createFileRoute, useNavigate } from '@tanstack/react-router'
 import { RiArrowRightLine, RiLoader4Line } from '@remixicon/react'
 import type { Id } from 'convex/_generated/dataModel'
@@ -60,9 +61,7 @@ function Review() {
             </div>
           </div>
           <p className="mt-1 text-xs text-muted-foreground">
-            {meta.rate
-              ? `${formatLbp(meta.rate)} / $1 · ${meta.rateSource}`
-              : 'No rate yet — add both printed totals below'}
+            {formatLbp(meta.rate ?? 0)} / $1
           </p>
         </div>
 
@@ -82,42 +81,22 @@ function Review() {
           onAdd={() => addLineItem()}
         />
 
+        {/* Items don't match what the receipt printed (extraction reference only) */}
+        {recon.diff != null && !recon.ok && meta.printedTotalLbp != null && (
+          <p className="mt-3 text-xs text-destructive">
+            Items don't match the receipt total by{' '}
+            {formatLbp(Math.abs(recon.diff))} — check the lines above.
+          </p>
+        )}
+
         <div className="my-4 border-t border-dashed border-border" />
 
-        {/* Printed totals drive the venue rate */}
-        <div className="space-y-2">
-          <p className="text-xs font-medium text-muted-foreground">
-            Printed totals (sets the LBP/USD rate)
-          </p>
-          <div className="grid grid-cols-2 gap-3">
-            <BlurCommitInput
-              value={meta.printedTotalLbp}
-              numeric
-              placeholder="Total LL"
-              onCommit={(raw) =>
-                setMeta({ printedTotalLbp: parseNumericInput(raw) })
-              }
-              align="center"
-              className="w-full rounded-md border border-border py-1.5 text-sm tabular-nums"
-            />
-            <BlurCommitInput
-              value={meta.printedTotalUsd}
-              numeric
-              placeholder="Total $"
-              onCommit={(raw) =>
-                setMeta({ printedTotalUsd: parseNumericInput(raw) })
-              }
-              align="center"
-              className="w-full rounded-md border border-border py-1.5 text-sm tabular-nums"
-            />
-          </div>
-          {recon.diff != null && !recon.ok && (
-            <p className="text-xs text-destructive">
-              Items don't match the printed total by{' '}
-              {formatLbp(Math.abs(recon.diff))} — check the lines above.
-            </p>
-          )}
-        </div>
+        <RateField
+          rate={meta.rate}
+          onCommit={(raw) =>
+            setMeta({ rate: parseNumericInput(raw), rateSource: 'manual' })
+          }
+        />
 
         <div className="mt-4">
           <ServicePanel meta={meta} onChange={setMeta} />
@@ -135,6 +114,53 @@ function Review() {
       >
         Continue to split <RiArrowRightLine />
       </Button>
+    </div>
+  )
+}
+
+// The USD↔LBP rate defaults to 90,000 and is correct ~95% of the time, so it's
+// hidden behind a disclosure — only surface the editor when the venue actually
+// charged a different rate.
+function RateField({
+  rate,
+  onCommit,
+}: {
+  rate: number | null | undefined
+  onCommit: (raw: string) => void
+}) {
+  const [open, setOpen] = useState(false)
+
+  if (!open) {
+    return (
+      <button
+        type="button"
+        onClick={() => setOpen(true)}
+        className="flex w-full items-center justify-between text-xs text-muted-foreground hover:text-foreground"
+      >
+        <span>Exchange rate</span>
+        <span className="tabular-nums">
+          {formatLbp(rate ?? 0)} / $1 · Adjust
+        </span>
+      </button>
+    )
+  }
+
+  return (
+    <div className="space-y-1">
+      <p className="text-xs font-medium text-muted-foreground">
+        Exchange rate (LL per $1)
+      </p>
+      <BlurCommitInput
+        value={rate}
+        numeric
+        placeholder="90,000"
+        onCommit={onCommit}
+        align="center"
+        className="w-full rounded-md border border-border py-1.5 text-sm tabular-nums"
+      />
+      <p className="text-xs text-muted-foreground">
+        Only change this if the venue used a different rate.
+      </p>
     </div>
   )
 }

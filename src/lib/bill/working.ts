@@ -38,7 +38,12 @@ export function sanitizeWorkingBill(w: WorkingBill): WorkingBill {
       lineTotal: li.lineTotal,
       ...(li.confidence != null ? { confidence: li.confidence } : {}),
     })),
-    people: w.people.map((p) => ({ id: p.id, name: p.name, color: p.color })),
+    people: w.people.map((p) => ({
+      id: p.id,
+      name: p.name,
+      color: p.color,
+      ...(p.guestSessionId != null ? { guestSessionId: p.guestSessionId } : {}),
+    })),
     claims: w.claims.map((c) => ({
       itemId: c.itemId,
       personId: c.personId,

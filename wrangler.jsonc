@@ -1,0 +1,14 @@
+{
+  "$schema": "node_modules/wrangler/config-schema.json",
+  "name": "billy",
+  "account_id": "14e12e31d11d5594856f61441406f6fd",
+  "compatibility_date": "2026-06-01",
+  "compatibility_flags": ["nodejs_compat"],
+  "main": "@tanstack/react-start/server-entry",
+  "routes": [
+    { "pattern": "spolio.net", "custom_domain": true }
+  ],
+  "observability": {
+    "enabled": true
+  }
+}

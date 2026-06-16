@@ -16,7 +16,7 @@ export const attachImageAndExtract = mutation({
   handler: async (ctx, { billId, imageRef }) => {
     const bill = await ctx.db.get(billId)
     invariant(bill, `missing bill ${billId}`)
-    await ctx.db.patch(billId, { imageRef })
+    await ctx.db.patch(billId, { imageRef, updatedAt: Date.now() })
     await ctx.scheduler.runAfter(0, internal.extraction.actions.extractReceipt, {
       billId,
       imageRef,

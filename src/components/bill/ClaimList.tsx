@@ -22,6 +22,8 @@ export function ClaimList({
   rate,
   onStep,
   onShareEvenly,
+  canShareEvenly = true,
+  sharePeople = people,
 }: {
   lineItems: LineItem[]
   people: Person[]
@@ -30,6 +32,8 @@ export function ClaimList({
   rate: number | null | undefined
   onStep: (itemId: string, personId: string, delta: number) => void
   onShareEvenly: (itemId: string, personIds: string[]) => void
+  canShareEvenly?: boolean
+  sharePeople?: Person[]
 }) {
   const colorById = new Map(people.map((p) => [p.id, p.color]))
 
@@ -122,10 +126,12 @@ export function ClaimList({
                   ))}
                 </AnimatePresence>
               </div>
-              {people.length > 1 && (
+              {canShareEvenly && sharePeople.length > 1 && (
                 <button
                   type="button"
-                  onClick={() => onShareEvenly(item.id, people.map((p) => p.id))}
+                  onClick={() =>
+                    onShareEvenly(item.id, sharePeople.map((p) => p.id))
+                  }
                   className="inline-flex items-center gap-1 text-xs text-muted-foreground hover:text-foreground"
                 >
                   <RiGroupLine className="size-3.5" /> split evenly
