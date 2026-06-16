@@ -120,6 +120,15 @@ function createGuestPerson(
   }
 }
 
+function assertSharedForGuestWrites(bill: Bill) {
+  if (bill.status === 'FINALIZED') {
+    throw new Error('This split has been finalized')
+  }
+  if (bill.status !== 'PUBLISHED') {
+    throw new Error('This split has not been shared yet')
+  }
+}
+
 export const createBill = mutation({
   args: {
     merchantName: v.optional(v.string()),
@@ -168,8 +177,8 @@ export const saveWorking = mutation({
   handler: async (ctx, { id, lineItems, people, claims, meta }) => {
     const bill = await ctx.db.get(id)
     invariant(bill, `missing bill ${id}`)
-    // A published bill is a frozen snapshot. Don't let a late flush mutate it.
-    if (bill.status === 'PUBLISHED') return null
+    // A finalized bill is a frozen receipt. Don't let a late flush mutate it.
+    if (bill.status === 'FINALIZED') return null
 
     const nextItems = lineItems ?? bill.lineItems
     const nextPeople = people ?? bill.people
@@ -188,7 +197,7 @@ export const saveWorking = mutation({
       claims: nextClaims,
       version: bill.version + 1,
       updatedAt: now(),
-      status: 'READY',
+      status: bill.status === 'PUBLISHED' ? 'PUBLISHED' : 'READY',
       ...definedOnly(meta ?? {}),
     }
 
@@ -218,10 +227,23 @@ export const publish = mutation({
   handler: async (ctx, { id }) => {
     const bill = await ctx.db.get(id)
     invariant(bill, `missing bill ${id}`)
-    if (bill.status !== 'PUBLISHED') {
+    if (bill.status !== 'PUBLISHED' && bill.status !== 'FINALIZED') {
       await ctx.db.patch(id, { status: 'PUBLISHED', updatedAt: now() })
     }
     return bill.shareToken
+  },
+})
+
+export const finalize = mutation({
+  args: { id: v.id('bills') },
+  returns: v.null(),
+  handler: async (ctx, { id }) => {
+    const bill = await ctx.db.get(id)
+    invariant(bill, `missing bill ${id}`)
+    if (bill.status !== 'FINALIZED') {
+      await ctx.db.patch(id, { status: 'FINALIZED', updatedAt: now() })
+    }
+    return null
   },
 })
 
@@ -235,6 +257,7 @@ export const joinSplit = mutation({
   handler: async (ctx, { shareToken, guestSessionId, name }) => {
     assertGuestSessionId(guestSessionId)
     const bill = await getBillByShareToken(ctx, shareToken)
+    assertSharedForGuestWrites(bill)
     const clean = cleanName(name)
     const existing = findGuestPerson(bill, guestSessionId)
 
@@ -270,6 +293,7 @@ export const addGuestPerson = mutation({
   handler: async (ctx, { shareToken, guestSessionId, name }) => {
     assertGuestSessionId(guestSessionId)
     const bill = await getBillByShareToken(ctx, shareToken)
+    assertSharedForGuestWrites(bill)
     const nextPerson = createGuestPerson(bill, cleanName(name), guestSessionId)
     await ctx.db.patch(bill._id, {
       people: [...bill.people, nextPerson],
@@ -294,6 +318,7 @@ export const saveGuestClaims = mutation({
   handler: async (ctx, { shareToken, guestSessionId, personId, claims }) => {
     assertGuestSessionId(guestSessionId)
     const bill = await getBillByShareToken(ctx, shareToken)
+    assertSharedForGuestWrites(bill)
     const person = bill.people.find((p) => p.id === personId)
     invariant(person, 'person not found')
     if (person.guestSessionId !== guestSessionId) {

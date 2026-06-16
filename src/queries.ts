@@ -34,6 +34,12 @@ export function usePublish() {
   })
 }
 
+export function useFinalize() {
+  return useMutation({
+    mutationFn: useConvexMutation(api.bills.mutations.finalize),
+  })
+}
+
 export function useJoinSplit() {
   return useMutation({
     mutationFn: useConvexMutation(api.bills.mutations.joinSplit),

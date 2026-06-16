@@ -22,12 +22,12 @@ export const serviceSplitMode = v.union(
   v.literal('even'),
 )
 // Lifecycle: PENDING/NEEDS_REVIEW (extraction saved, awaiting tweaks) → READY
-// (reconciled/edited) → PUBLISHED (shareable; host working edits are frozen).
 export const billStatus = v.union(
   v.literal('PENDING'),
   v.literal('NEEDS_REVIEW'),
   v.literal('READY'),
   v.literal('PUBLISHED'),
+  v.literal('FINALIZED'),
 )
 
 // Reusable element validators — shared by the schema and by `saveWorking` args so

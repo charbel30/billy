@@ -4,18 +4,14 @@ import { useSuspenseQuery } from '@tanstack/react-query'
 import { Loader } from '~/components/Loader'
 import { Button } from '~/components/ui/button'
 import { Input } from '~/components/ui/input'
-import { CurrencyToggle, type Currency } from '~/components/CurrencyToggle'
-import { ClaimList } from '~/components/bill/ClaimList'
-import { PortfolioReceipt } from '~/components/bill/PortfolioReceipt'
-import { RemainingBar } from '~/components/bill/RemainingBar'
+import { BillSplitWorkspace } from '~/components/bill/BillSplitWorkspace'
+import { BillSummary } from '~/components/bill/BillSummary'
 import {
   billQueries,
   useAddGuestPerson,
   useJoinSplit,
   useSaveGuestClaims,
 } from '~/queries'
-import { computePortfolios, personClaimedLines } from '~/lib/split'
-import { formatLbp, formatUsd, toUsd } from '~/lib/currency'
 import type { Claim, Person } from '~/lib/types'
 import { cn } from '~/lib/utils'
 
@@ -93,7 +89,6 @@ function PersonPicker({
 function GuestView() {
   const { shareToken } = Route.useParams()
   const { data: bill } = useSuspenseQuery(billQueries.byToken(shareToken))
-  const [currency, setCurrency] = useState<Currency>('USD')
   const [guestSessionId, setGuestSessionId] = useState<string | null>(null)
   const [joinName, setJoinName] = useState('')
   const [extraName, setExtraName] = useState('')
@@ -122,19 +117,6 @@ function GuestView() {
     }
   }, [controlledPeople, activeId])
 
-  const portfolios = computePortfolios({
-    lineItems: bill.lineItems,
-    people: bill.people,
-    claims: bill.claims,
-    serviceCharge: bill.serviceCharge,
-    tax: bill.tax,
-    serviceChargeOn: bill.serviceChargeOn,
-    serviceSplitMode: bill.serviceSplitMode,
-    rate: bill.rate,
-  })
-  const grandLbp = portfolios.reduce((s, p) => s + p.totalLbp, 0)
-  const fmt = (lbp: number) =>
-    currency === 'LBP' ? formatLbp(lbp) : formatUsd(toUsd(lbp, bill.rate))
   const activePerson = bill.people.find((p) => p.id === activeId) ?? null
 
   async function join() {
@@ -161,7 +143,10 @@ function GuestView() {
     setExtraName('')
   }
 
-  async function savePersonClaims(personId: string, nextClaims: Array<{ itemId: string; units: number }>) {
+  async function savePersonClaims(
+    personId: string,
+    nextClaims: Array<{ itemId: string; units: number }>,
+  ) {
     if (!guestSessionId) return
     const result = await saveGuestClaims.mutateAsync({
       shareToken,
@@ -198,138 +183,106 @@ function GuestView() {
     }
   }
 
+  if (bill.status !== 'PUBLISHED' && bill.status !== 'FINALIZED') {
+    return (
+      <div className="mx-auto w-full max-w-md p-4 sm:p-6 space-y-4">
+        <div className="rounded-3xl border border-border bg-card p-4">
+          <h1 className="text-xl font-black">This split is not open yet</h1>
+          <p className="mt-1 text-sm text-muted-foreground">
+            Ask the host to invite people from the split page, then come back to
+            this link.
+          </p>
+        </div>
+      </div>
+    )
+  }
+
+  if (bill.status === 'FINALIZED') {
+    return (
+      <div className="mx-auto w-full max-w-md p-4 sm:p-6 space-y-4">
+        <BillSummary
+          bill={bill}
+          title={bill.merchantName || 'Final receipt'}
+          description="This split is finalized, so the receipt is read-only."
+        />
+      </div>
+    )
+  }
+
   return (
-    <div className="mx-auto w-full max-w-md p-4 sm:p-6 space-y-4">
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-xl font-black">{bill.merchantName || 'Receipt'}</h1>
-          {bill.rate ? (
-            <p className="text-xs text-muted-foreground">
-              {formatLbp(bill.rate)} / $1
-            </p>
-          ) : null}
-        </div>
-        <CurrencyToggle value={currency} onChange={setCurrency} />
-      </div>
-
-      <div className="rounded-3xl border border-border bg-card p-4 space-y-3">
-        {controlledPeople.length === 0 ? (
-          <>
-            <div>
-              <h2 className="font-bold">Join the split</h2>
-              <p className="text-sm text-muted-foreground">
-                Add your name, then claim the items that are yours.
-              </p>
-            </div>
-            <div className="flex gap-2">
-              <Input
-                value={joinName}
-                onChange={(e) => setJoinName(e.target.value)}
-                onKeyDown={(e) => e.key === 'Enter' && void join()}
-                placeholder="Your name"
-              />
-              <Button
-                type="button"
-                disabled={!joinName.trim() || joinSplit.isPending}
-                onClick={() => void join()}
-              >
-                Join
-              </Button>
-            </div>
-          </>
-        ) : (
-          <>
-            <div>
-              <h2 className="font-bold">Claim your items</h2>
-              <p className="text-sm text-muted-foreground">
-                These edits are scoped to your people, so they won't overwrite
-                the rest of the bill.
-              </p>
-            </div>
-
-            <PersonPicker
-              people={controlledPeople}
-              activeId={activeId}
-              onSelect={setActiveId}
-            />
-
-            <div className="flex gap-2">
-              <Input
-                value={extraName}
-                onChange={(e) => setExtraName(e.target.value)}
-                onKeyDown={(e) => e.key === 'Enter' && void addPerson()}
-                placeholder="Add someone with you"
-              />
-              <Button
-                type="button"
-                variant="outline"
-                disabled={!extraName.trim() || addGuestPerson.isPending}
-                onClick={() => void addPerson()}
-              >
-                Add
-              </Button>
-            </div>
-
-            <RemainingBar lineItems={bill.lineItems} claims={bill.claims} />
-
-            {conflictMessage ? (
-              <div className="rounded-xl border border-amber-200 bg-amber-50 px-3 py-2 text-xs text-amber-800">
-                {conflictMessage}
+    <BillSplitWorkspace
+      bill={bill}
+      description="Join the bill, claim your items, and watch everyone's totals update."
+      editorSlot={
+        <div className="rounded-3xl border border-border bg-card p-4 space-y-3">
+          {controlledPeople.length === 0 ? (
+            <>
+              <div>
+                <h2 className="font-bold">Join the split</h2>
+                <p className="text-sm text-muted-foreground">
+                  Add your name, then claim the items that are yours.
+                </p>
               </div>
-            ) : null}
+              <div className="flex gap-2">
+                <Input
+                  value={joinName}
+                  onChange={(e) => setJoinName(e.target.value)}
+                  onKeyDown={(e) => e.key === 'Enter' && void join()}
+                  placeholder="Your name"
+                />
+                <Button
+                  type="button"
+                  disabled={!joinName.trim() || joinSplit.isPending}
+                  onClick={() => void join()}
+                >
+                  Join
+                </Button>
+              </div>
+            </>
+          ) : (
+            <>
+              <div>
+                <h2 className="font-bold">Claim your items</h2>
+                <p className="text-sm text-muted-foreground">
+                  These edits are scoped to your people, so they won't overwrite
+                  the rest of the bill.
+                </p>
+              </div>
 
-            <ClaimList
-              lineItems={bill.lineItems}
-              people={bill.people}
-              claims={bill.claims}
-              activePerson={activePerson}
-              rate={bill.rate}
-              onStep={stepClaim}
-              onShareEvenly={shareEvenly}
-              canShareEvenly={controlledPeople.length > 1}
-              sharePeople={controlledPeople}
-            />
+              <PersonPicker
+                people={controlledPeople}
+                activeId={activeId}
+                onSelect={setActiveId}
+              />
 
-            {saveGuestClaims.isPending ? (
-              <p className="text-xs text-muted-foreground">Saving claim...</p>
-            ) : null}
-          </>
-        )}
-      </div>
-
-      <div className="space-y-3">
-        {portfolios.map((p) => (
-          <PortfolioReceipt
-            key={p.personId}
-            portfolio={p}
-            lines={personClaimedLines(p.personId, bill.lineItems, bill.claims)}
-            rate={bill.rate}
-            currency={currency}
-            serviceChargeOn={bill.serviceChargeOn}
-          />
-        ))}
-      </div>
-
-      <div className="flex items-center justify-between rounded-xl border border-border p-3">
-        <span className="text-muted-foreground">Grand total</span>
-        <span className="text-lg font-black tabular-nums">{fmt(grandLbp)}</span>
-      </div>
-
-      <details className="text-sm">
-        <summary className="cursor-pointer text-muted-foreground">
-          See all items ({bill.lineItems.length})
-        </summary>
-        <div className="mt-2 space-y-1">
-          {bill.lineItems.map((li) => (
-            <div key={li.id} className="flex justify-between tabular-nums">
-              <span>
-                {li.qty}× {li.name}
-              </span>
-              <span>{fmt(li.lineTotal)}</span>
-            </div>
-          ))}
+              <div className="flex gap-2">
+                <Input
+                  value={extraName}
+                  onChange={(e) => setExtraName(e.target.value)}
+                  onKeyDown={(e) => e.key === 'Enter' && void addPerson()}
+                  placeholder="Add someone with you"
+                />
+                <Button
+                  type="button"
+                  variant="outline"
+                  disabled={!extraName.trim() || addGuestPerson.isPending}
+                  onClick={() => void addPerson()}
+                >
+                  Add
+                </Button>
+              </div>
+            </>
+          )}
         </div>
-      </details>
-    </div>
+      }
+      activePerson={activePerson}
+      onStep={stepClaim}
+      onShareEvenly={shareEvenly}
+      canShareEvenly={controlledPeople.length > 1}
+      sharePeople={controlledPeople}
+      showClaims={controlledPeople.length > 0}
+      conflictMessage={conflictMessage}
+      savingMessage={saveGuestClaims.isPending ? 'Saving claim...' : null}
+    />
   )
 }

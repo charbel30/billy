@@ -4,7 +4,12 @@
 
 export type RateSource = 'receipt' | 'market' | 'manual'
 export type ServiceSplitMode = 'proportional' | 'even'
-export type BillStatus = 'PENDING' | 'NEEDS_REVIEW' | 'READY' | 'PUBLISHED'
+export type BillStatus =
+  | 'PENDING'
+  | 'NEEDS_REVIEW'
+  | 'READY'
+  | 'PUBLISHED'
+  | 'FINALIZED'
 
 // ---------------------------------------------------------------------------
 // In-document shapes — these mirror the JSON arrays stored inside the single
