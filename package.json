@@ -9,7 +9,7 @@
     "dev:db": "convex dev",
     "build": "vite build && tsc --noEmit",
     "preview": "vite preview",
-    "deploy": "pnpm build && pnpm exec wrangler deploy",
+    "deploy": "pnpm build && pnpm exec wrangler deploy --config dist/server/wrangler.json --keep-vars",
     "cf-typegen": "pnpm exec wrangler types"
   },
   "dependencies": {
