@@ -1,15 +1,13 @@
-// Split logic (spec §6.1). Each line item is assigned to one or more people; a
-// shared item splits by its assignees' shareFractions. Service/tax are distributed
-// proportionally to each person's subtotal by default, or evenly on request.
-// Per-person totals are COMPUTED here, never stored, so they never drift.
+// Split logic — unit-by-unit claiming (architecture-decision.md, ui-flow-vision.md).
+// Each line item has `qty` units; people claim a fractional number of those units
+// via `claims`. A person's share of a line = claimedUnits × effectiveUnitPrice,
+// where effectiveUnitPrice = lineTotal / qty (lineTotal is the source of truth, so
+// per-person totals always reconcile to the printed bill even when qty × unitPrice
+// disagrees). Service/tax are distributed proportionally by default, or evenly, and
+// only when serviceChargeOn. Per-person totals are COMPUTED here, never stored.
 // Pure — no React/Convex imports.
 
-import type {
-  AssignmentInput,
-  LineItemInput,
-  PersonInput,
-  ServiceSplitMode,
-} from './types'
+import type { Claim, LineItem, Person, ServiceSplitMode } from './types'
 import { toUsd } from './currency'
 
 export interface Portfolio {
@@ -23,13 +21,74 @@ export interface Portfolio {
 }
 
 export interface ComputePortfoliosInput {
-  lineItems: LineItemInput[]
-  people: PersonInput[]
-  assignments: AssignmentInput[]
+  lineItems: LineItem[]
+  people: Person[]
+  claims: Claim[]
   serviceCharge: number
   tax: number
-  rate: number | null | undefined
+  serviceChargeOn: boolean
   serviceSplitMode: ServiceSplitMode
+  rate: number | null | undefined
+}
+
+/** effectiveUnitPrice = lineTotal / qty. Falls back to unitPrice when qty is 0,
+ *  so a malformed line never divides by zero. */
+export function effectiveUnitPrice(item: LineItem): number {
+  if (item.qty > 0) return item.lineTotal / item.qty
+  return item.unitPrice
+}
+
+/** Total units of `item` claimed by anyone. */
+export function claimedUnits(item: LineItem, claims: Claim[]): number {
+  let sum = 0
+  for (const c of claims) if (c.itemId === item.id) sum += c.units
+  return sum
+}
+
+/** Units of `item` still on the bill (unclaimed). Leftover is normal, not an
+ *  error — it just means counting stopped or the line was comped. */
+export function remainingUnits(item: LineItem, claims: Claim[]): number {
+  return Math.max(0, item.qty - claimedUnits(item, claims))
+}
+
+/** LBP value still unclaimed across the whole bill — drives the
+ *  "remaining on the bill" running total / bar while splitting. */
+export function totalRemainingLbp(lineItems: LineItem[], claims: Claim[]): number {
+  let sum = 0
+  for (const item of lineItems) {
+    sum += remainingUnits(item, claims) * effectiveUnitPrice(item)
+  }
+  return sum
+}
+
+export interface ClaimedLine {
+  itemId: string
+  name: string
+  units: number
+  lbp: number
+}
+
+/** The lines a person claimed, with their LBP share of each — drives the
+ *  per-person "little receipt" on the summary / share screen. */
+export function personClaimedLines(
+  personId: string,
+  lineItems: LineItem[],
+  claims: Claim[],
+): ClaimedLine[] {
+  const itemById = new Map(lineItems.map((li) => [li.id, li]))
+  const lines: ClaimedLine[] = []
+  for (const c of claims) {
+    if (c.personId !== personId || c.units <= 0) continue
+    const li = itemById.get(c.itemId)
+    if (!li) continue
+    lines.push({
+      itemId: c.itemId,
+      name: li.name,
+      units: c.units,
+      lbp: c.units * effectiveUnitPrice(li),
+    })
+  }
+  return lines
 }
 
 /** Round `values` to integers summing exactly to `target` (largest-remainder).
@@ -50,45 +109,56 @@ function roundToTarget(values: number[], target: number): number[] {
 }
 
 export function computePortfolios(input: ComputePortfoliosInput): Portfolio[] {
-  const { lineItems, people, assignments, serviceCharge, tax, rate, serviceSplitMode } =
-    input
+  const {
+    lineItems,
+    people,
+    claims,
+    serviceCharge,
+    tax,
+    serviceChargeOn,
+    serviceSplitMode,
+    rate,
+  } = input
 
-  const itemById = new Map(lineItems.map((li) => [li._id, li]))
+  const itemById = new Map(lineItems.map((li) => [li.id, li]))
 
-  // Per-person raw subtotal = Σ (lineTotal × shareFraction) over their assignments.
-  const subtotal = new Map<string, number>(people.map((p) => [p._id, 0]))
-  for (const a of assignments) {
-    const li = itemById.get(a.lineItemId)
-    if (!li || !subtotal.has(a.personId)) continue
-    subtotal.set(a.personId, (subtotal.get(a.personId) ?? 0) + li.lineTotal * a.shareFraction)
+  // Per-person raw subtotal = Σ (units × effectiveUnitPrice) over their claims.
+  const subtotal = new Map<string, number>(people.map((p) => [p.id, 0]))
+  for (const c of claims) {
+    const li = itemById.get(c.itemId)
+    if (!li || !subtotal.has(c.personId)) continue
+    subtotal.set(
+      c.personId,
+      (subtotal.get(c.personId) ?? 0) + c.units * effectiveUnitPrice(li),
+    )
   }
 
   const totalSubtotal = [...subtotal.values()].reduce((s, v) => s + v, 0)
-  const extras = (serviceCharge || 0) + (tax || 0)
+  const extras = serviceChargeOn ? (serviceCharge || 0) + (tax || 0) : 0
 
   // Distribute service/tax: even per head, or proportional to subtotal.
   const serviceShare = new Map<string, number>()
   for (const p of people) {
     if (serviceSplitMode === 'even') {
-      serviceShare.set(p._id, people.length ? extras / people.length : 0)
+      serviceShare.set(p.id, people.length ? extras / people.length : 0)
     } else {
-      const sub = subtotal.get(p._id) ?? 0
-      serviceShare.set(p._id, totalSubtotal > 0 ? extras * (sub / totalSubtotal) : 0)
+      const sub = subtotal.get(p.id) ?? 0
+      serviceShare.set(p.id, totalSubtotal > 0 ? extras * (sub / totalSubtotal) : 0)
     }
   }
 
-  // Round per-person totals so they sum exactly to the assigned grand total.
+  // Round per-person totals so they sum exactly to the claimed grand total.
   const rawTotals = people.map(
-    (p) => (subtotal.get(p._id) ?? 0) + (serviceShare.get(p._id) ?? 0),
+    (p) => (subtotal.get(p.id) ?? 0) + (serviceShare.get(p.id) ?? 0),
   )
   const target = totalSubtotal + extras
   const roundedTotals = roundToTarget(rawTotals, target)
 
   return people.map((p, i) => {
     const totalLbp = roundedTotals[i]
-    const sub = Math.round(subtotal.get(p._id) ?? 0)
+    const sub = Math.round(subtotal.get(p.id) ?? 0)
     return {
-      personId: p._id,
+      personId: p.id,
       name: p.name,
       color: p.color,
       subtotalLbp: sub,

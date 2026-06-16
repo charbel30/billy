@@ -4,7 +4,38 @@
 
 export type RateSource = 'receipt' | 'market' | 'manual'
 export type ServiceSplitMode = 'proportional' | 'even'
-export type BillStatus = 'DRAFT' | 'NEEDS_REVIEW' | 'READY' | 'SHARED'
+// PENDING (extraction saved) → READY (reconciled/edited) → PUBLISHED (snapshot).
+export type BillStatus = 'PENDING' | 'READY' | 'PUBLISHED'
+
+// ---------------------------------------------------------------------------
+// In-document shapes — these mirror the JSON arrays stored inside the single
+// `bills` row (convex/schema.ts). IDs are client-generated strings, unique
+// within a bill; there are no Convex Ids inside the document.
+// ---------------------------------------------------------------------------
+
+export interface LineItem {
+  id: string
+  name: string
+  qty: number
+  unitPrice: number
+  /** Source of truth. effectiveUnitPrice = lineTotal / qty. */
+  lineTotal: number
+  /** <1 lowers trust; surfaced as a "check this" flag in review. */
+  confidence?: number
+}
+
+export interface Person {
+  id: string
+  name: string
+  color: string
+}
+
+/** A (person, item) claim of a fractional number of units. */
+export interface Claim {
+  itemId: string
+  personId: string
+  units: number
+}
 
 // ---------------------------------------------------------------------------
 // Extraction shape — the strict JSON we ask the vision-LLM to return.
@@ -29,33 +60,4 @@ export interface ExtractedReceipt {
   tax: number
   printed_total_lbp?: number | null
   printed_total_usd?: number | null
-}
-
-// ---------------------------------------------------------------------------
-// App-level inputs for the pure logic functions. These mirror the Convex docs
-// (camelCase) but only the fields the logic needs, so the functions stay
-// decoupled from the generated Doc<> types. `_id` is the Convex document id.
-// ---------------------------------------------------------------------------
-
-export interface LineItemInput {
-  _id: string
-  name: string
-  qty: number
-  unitPrice: number
-  lineTotal: number
-  currency: string
-  confidence?: number
-}
-
-export interface PersonInput {
-  _id: string
-  name: string
-  color: string
-}
-
-export interface AssignmentInput {
-  _id: string
-  lineItemId: string
-  personId: string
-  shareFraction: number
 }

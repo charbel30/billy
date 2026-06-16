@@ -1,24 +1,32 @@
 import { v } from 'convex/values'
 import {
   type MutationCtx,
-  type QueryCtx,
   internalMutation,
   mutation,
   query,
 } from './_generated/server'
 import { internal } from './_generated/api'
-import type { Doc, Id } from './_generated/dataModel'
 import { invariant } from './invariant'
 import * as imageStore from './imageStore'
-import { rateSource, serviceSplitMode } from './schema'
-import { reconcile } from '../src/lib/reconcile'
-import { deriveRate } from '../src/lib/currency'
+import {
+  type Claim,
+  type LineItem,
+  type Person,
+  claim,
+  lineItem,
+  person,
+  rateSource,
+  serviceSplitMode,
+} from './schema'
+import { DEFAULT_RATE, deriveRate } from '../src/lib/currency'
 import type { ExtractedReceipt } from '../src/lib/types'
 
-// Below which a line item's confidence forces a human review (spec §4.4).
-const CONFIDENCE_THRESHOLD = 0.6
+// Single-document bill model (architecture-decision.md). Editing happens local-
+// first in React state; the client flushes the whole working document with a
+// debounced `saveWorking`. There is no per-interaction CRUD and no optimistic
+// layer — just two mutations (saveWorking + publish) plus the image pipeline.
 
-// Color palette for people chips, handed out round-robin (spec §8.2 PersonChips).
+// Color palette for people chips, handed out round-robin (ui-flow-vision.md).
 const PERSON_COLORS = [
   '#ef4444', '#f59e0b', '#10b981', '#3b82f6',
   '#8b5cf6', '#ec4899', '#14b8a6', '#f97316',
@@ -31,25 +39,59 @@ function newShareToken(): string {
   )
 }
 
-// ---------------------------------------------------------------------------
-// Reads — assemble a whole bill into one consistent server-side snapshot.
-// ---------------------------------------------------------------------------
-
-async function assembleBill(ctx: QueryCtx, bill: Doc<'bills'>) {
-  const [lineItems, people, assignments] = await Promise.all([
-    ctx.db.query('lineItems').withIndex('by_bill', (q) => q.eq('billId', bill._id)).collect(),
-    ctx.db.query('people').withIndex('by_bill', (q) => q.eq('billId', bill._id)).collect(),
-    ctx.db.query('assignments').withIndex('by_bill', (q) => q.eq('billId', bill._id)).collect(),
-  ])
-  return { bill, lineItems, people, assignments }
+function newId(): string {
+  return crypto.randomUUID()
 }
+
+function definedOnly<T extends Record<string, unknown>>(patch: T) {
+  return Object.fromEntries(
+    Object.entries(patch).filter(([, val]) => val !== undefined),
+  )
+}
+
+/** Drop/scale claims so the document stays internally consistent after edits:
+ *  - remove claims that point at a deleted item or person;
+ *  - if an item's summed claimed units exceed its qty (e.g. qty was lowered),
+ *    scale that item's claims down proportionally so they fit (architecture-
+ *    decision.md "orphan-claim reconcile"). Leftover (under-claimed) units are
+ *    fine and left alone. */
+function reconcileClaims(
+  items: LineItem[],
+  people: Person[],
+  claims: Claim[],
+): Claim[] {
+  const itemById = new Map(items.map((i) => [i.id, i]))
+  const personIds = new Set(people.map((p) => p.id))
+
+  const live = claims.filter(
+    (c) => itemById.has(c.itemId) && personIds.has(c.personId) && c.units > 0,
+  )
+
+  // Scale per item when over-claimed.
+  const claimedByItem = new Map<string, number>()
+  for (const c of live) {
+    claimedByItem.set(c.itemId, (claimedByItem.get(c.itemId) ?? 0) + c.units)
+  }
+  return live.map((c) => {
+    const item = itemById.get(c.itemId)!
+    const claimed = claimedByItem.get(c.itemId) ?? 0
+    if (item.qty > 0 && claimed > item.qty) {
+      return { ...c, units: (c.units * item.qty) / claimed }
+    }
+    return c
+  })
+}
+
+// ---------------------------------------------------------------------------
+// Reads — the whole bill is one document, so reads are a single get.
+// ---------------------------------------------------------------------------
 
 export const getBill = query({
   args: { id: v.id('bills') },
   handler: async (ctx, { id }) => {
     const bill = await ctx.db.get(id)
     invariant(bill, `missing bill ${id}`)
-    return await assembleBill(ctx, bill)
+    return bill
   },
 })
 
@@ -61,49 +103,13 @@ export const getBillByToken = query({
       .withIndex('by_share_token', (q) => q.eq('shareToken', shareToken))
       .unique()
     invariant(bill, 'bill not found')
-    return await assembleBill(ctx, bill)
+    return bill
   },
 })
 
 // ---------------------------------------------------------------------------
-// Status routing — re-run the checksum after any change that affects it.
-// ---------------------------------------------------------------------------
-
-async function recomputeStatus(ctx: MutationCtx, billId: Id<'bills'>) {
-  const bill = await ctx.db.get(billId)
-  if (!bill || bill.status === 'SHARED') return // don't downgrade a shared bill
-  const lineItems = await ctx.db
-    .query('lineItems')
-    .withIndex('by_bill', (q) => q.eq('billId', billId))
-    .collect()
-  const res = reconcile({
-    lineItems,
-    serviceCharge: bill.serviceCharge,
-    tax: bill.tax,
-    printedTotal: bill.printedTotalLbp ?? null,
-  })
-  const status = res.ok ? 'READY' : 'NEEDS_REVIEW'
-  if (status !== bill.status) await ctx.db.patch(billId, { status })
-}
-
-/** Equal-split a shared item: every assignee gets 1/count after add/remove. */
-async function rebalanceItem(ctx: MutationCtx, lineItemId: Id<'lineItems'>) {
-  const rows = await ctx.db
-    .query('assignments')
-    .withIndex('by_line_item', (q) => q.eq('lineItemId', lineItemId))
-    .collect()
-  const frac = rows.length ? 1 / rows.length : 0
-  await Promise.all(rows.map((r) => ctx.db.patch(r._id, { shareFraction: frac })))
-}
-
-function definedOnly<T extends Record<string, unknown>>(patch: T) {
-  return Object.fromEntries(
-    Object.entries(patch).filter(([, val]) => val !== undefined),
-  )
-}
-
-// ---------------------------------------------------------------------------
-// Bill lifecycle
+// Create — seeds an empty working bill with a "self" person (ui-flow-vision.md:
+// the bill is yours by default). Tax/service start OFF.
 // ---------------------------------------------------------------------------
 
 export const createBill = mutation({
@@ -115,217 +121,105 @@ export const createBill = mutation({
     return await ctx.db.insert('bills', {
       merchantName: args.merchantName ?? '',
       currencyPrimary: args.currencyPrimary ?? 'LBP',
-      rateSource: 'manual',
+      rate: DEFAULT_RATE,
+      rateSource: 'market',
       serviceCharge: 0,
       tax: 0,
+      serviceChargeOn: false,
       serviceSplitMode: 'proportional',
       shareToken: newShareToken(),
-      status: 'DRAFT',
+      status: 'PENDING',
+      version: 0,
+      lineItems: [],
+      people: [{ id: newId(), name: 'self', color: PERSON_COLORS[0] }],
+      claims: [],
     })
   },
 })
 
-export const updateBillMeta = mutation({
+// ---------------------------------------------------------------------------
+// saveWorking — the debounced flush. Full-document replace of whatever arrays /
+// meta the client sends; everything omitted is left untouched. Idempotent.
+// ---------------------------------------------------------------------------
+
+const metaValidator = v.object({
+  merchantName: v.optional(v.string()),
+  branch: v.optional(v.string()),
+  datetime: v.optional(v.string()),
+  currencyPrimary: v.optional(v.string()),
+  rate: v.optional(v.number()),
+  rateSource: v.optional(rateSource),
+  serviceCharge: v.optional(v.number()),
+  tax: v.optional(v.number()),
+  serviceChargeOn: v.optional(v.boolean()),
+  serviceSplitMode: v.optional(serviceSplitMode),
+  printedTotalLbp: v.optional(v.number()),
+  printedTotalUsd: v.optional(v.number()),
+})
+
+export const saveWorking = mutation({
   args: {
     id: v.id('bills'),
-    merchantName: v.optional(v.string()),
-    branch: v.optional(v.string()),
-    datetime: v.optional(v.string()),
-    serviceCharge: v.optional(v.number()),
-    tax: v.optional(v.number()),
-    rate: v.optional(v.number()),
-    rateSource: v.optional(rateSource),
-    serviceSplitMode: v.optional(serviceSplitMode),
-    printedTotalLbp: v.optional(v.number()),
-    printedTotalUsd: v.optional(v.number()),
+    lineItems: v.optional(v.array(lineItem)),
+    people: v.optional(v.array(person)),
+    claims: v.optional(v.array(claim)),
+    meta: v.optional(metaValidator),
   },
-  handler: async (ctx, { id, ...patch }) => {
+  handler: async (ctx, { id, lineItems, people, claims, meta }) => {
     const bill = await ctx.db.get(id)
     invariant(bill, `missing bill ${id}`)
-    await ctx.db.patch(id, definedOnly(patch))
+    // A published bill is a frozen snapshot — don't let a late flush mutate it.
+    if (bill.status === 'PUBLISHED') return
+
+    const nextItems = lineItems ?? bill.lineItems
+    const nextPeople = people ?? bill.people
+    const nextClaims = reconcileClaims(
+      nextItems,
+      nextPeople,
+      claims ?? bill.claims,
+    )
+
+    const patch: Record<string, unknown> = {
+      lineItems: nextItems,
+      people: nextPeople,
+      claims: nextClaims,
+      version: bill.version + 1,
+      status: 'READY',
+      ...definedOnly(meta ?? {}),
+    }
 
     // Auto-derive the rate from printed totals unless the user set it manually.
-    const fresh = await ctx.db.get(id)
-    if (fresh && patch.rate === undefined && fresh.rateSource !== 'manual') {
+    const printedLbp = meta?.printedTotalLbp ?? bill.printedTotalLbp
+    const printedUsd = meta?.printedTotalUsd ?? bill.printedTotalUsd
+    const nextRateSource = meta?.rateSource ?? bill.rateSource
+    if (meta?.rate === undefined && nextRateSource !== 'manual') {
       const derived = deriveRate({
-        printedTotalLbp: fresh.printedTotalLbp,
-        printedTotalUsd: fresh.printedTotalUsd,
+        printedTotalLbp: printedLbp,
+        printedTotalUsd: printedUsd,
       })
-      if (derived && (fresh.rate !== derived.rate || fresh.rateSource !== 'receipt')) {
-        await ctx.db.patch(id, { rate: derived.rate, rateSource: derived.source })
+      if (derived) {
+        patch.rate = derived.rate
+        patch.rateSource = derived.source
       }
     }
-    await recomputeStatus(ctx, id)
+
+    await ctx.db.patch(id, patch)
   },
 })
 
-export const finalizeShare = mutation({
+// ---------------------------------------------------------------------------
+// publish — freeze the bill as a shareable snapshot and hand back its token.
+// ---------------------------------------------------------------------------
+
+export const publish = mutation({
   args: { id: v.id('bills') },
   handler: async (ctx, { id }) => {
     const bill = await ctx.db.get(id)
     invariant(bill, `missing bill ${id}`)
-    if (bill.status !== 'SHARED') await ctx.db.patch(id, { status: 'SHARED' })
-    return bill.shareToken
-  },
-})
-
-export const deleteBill = mutation({
-  args: { id: v.id('bills') },
-  handler: async (ctx, { id }) => {
-    const [lineItems, people, assignments] = await Promise.all([
-      ctx.db.query('lineItems').withIndex('by_bill', (q) => q.eq('billId', id)).collect(),
-      ctx.db.query('people').withIndex('by_bill', (q) => q.eq('billId', id)).collect(),
-      ctx.db.query('assignments').withIndex('by_bill', (q) => q.eq('billId', id)).collect(),
-    ])
-    await Promise.all([
-      ...lineItems.map((d) => ctx.db.delete(d._id)),
-      ...people.map((d) => ctx.db.delete(d._id)),
-      ...assignments.map((d) => ctx.db.delete(d._id)),
-    ])
-    await ctx.db.delete(id)
-  },
-})
-
-// ---------------------------------------------------------------------------
-// Line items
-// ---------------------------------------------------------------------------
-
-export const addLineItem = mutation({
-  args: {
-    billId: v.id('bills'),
-    name: v.string(),
-    qty: v.number(),
-    unitPrice: v.number(),
-    lineTotal: v.optional(v.number()),
-    currency: v.optional(v.string()),
-    confidence: v.optional(v.number()),
-  },
-  handler: async (ctx, args) => {
-    const bill = await ctx.db.get(args.billId)
-    invariant(bill, `missing bill ${args.billId}`)
-    await ctx.db.insert('lineItems', {
-      billId: args.billId,
-      name: args.name,
-      qty: args.qty,
-      unitPrice: args.unitPrice,
-      lineTotal: args.lineTotal ?? args.qty * args.unitPrice,
-      currency: args.currency ?? bill.currencyPrimary,
-      confidence: args.confidence,
-    })
-    await recomputeStatus(ctx, args.billId)
-  },
-})
-
-export const updateLineItem = mutation({
-  args: {
-    id: v.id('lineItems'),
-    name: v.optional(v.string()),
-    qty: v.optional(v.number()),
-    unitPrice: v.optional(v.number()),
-    lineTotal: v.optional(v.number()),
-    confidence: v.optional(v.number()),
-  },
-  handler: async (ctx, { id, ...patch }) => {
-    const item = await ctx.db.get(id)
-    invariant(item, `missing line item ${id}`)
-    await ctx.db.patch(id, definedOnly(patch))
-    await recomputeStatus(ctx, item.billId)
-  },
-})
-
-export const deleteLineItem = mutation({
-  args: { id: v.id('lineItems') },
-  handler: async (ctx, { id }) => {
-    const item = await ctx.db.get(id)
-    invariant(item, `missing line item ${id}`)
-    const assignments = await ctx.db
-      .query('assignments')
-      .withIndex('by_line_item', (q) => q.eq('lineItemId', id))
-      .collect()
-    await Promise.all(assignments.map((a) => ctx.db.delete(a._id)))
-    await ctx.db.delete(id)
-    await recomputeStatus(ctx, item.billId)
-  },
-})
-
-// ---------------------------------------------------------------------------
-// People
-// ---------------------------------------------------------------------------
-
-export const addPerson = mutation({
-  args: { billId: v.id('bills'), name: v.string() },
-  handler: async (ctx, { billId, name }) => {
-    const bill = await ctx.db.get(billId)
-    invariant(bill, `missing bill ${billId}`)
-    const existing = await ctx.db
-      .query('people')
-      .withIndex('by_bill', (q) => q.eq('billId', billId))
-      .collect()
-    await ctx.db.insert('people', {
-      billId,
-      name,
-      color: PERSON_COLORS[existing.length % PERSON_COLORS.length],
-    })
-  },
-})
-
-export const updatePerson = mutation({
-  args: { id: v.id('people'), name: v.optional(v.string()), color: v.optional(v.string()) },
-  handler: async (ctx, { id, ...patch }) => {
-    const person = await ctx.db.get(id)
-    invariant(person, `missing person ${id}`)
-    await ctx.db.patch(id, definedOnly(patch))
-  },
-})
-
-export const deletePerson = mutation({
-  args: { id: v.id('people') },
-  handler: async (ctx, { id }) => {
-    const person = await ctx.db.get(id)
-    invariant(person, `missing person ${id}`)
-    const assignments = await ctx.db
-      .query('assignments')
-      .withIndex('by_person', (q) => q.eq('personId', id))
-      .collect()
-    // Removing a person can change shared-item splits — rebalance affected items.
-    const touchedItems = new Set(assignments.map((a) => a.lineItemId))
-    await Promise.all(assignments.map((a) => ctx.db.delete(a._id)))
-    await ctx.db.delete(id)
-    await Promise.all([...touchedItems].map((itemId) => rebalanceItem(ctx, itemId)))
-  },
-})
-
-// ---------------------------------------------------------------------------
-// Assignments (item <-> person)
-// ---------------------------------------------------------------------------
-
-export const toggleAssignment = mutation({
-  args: {
-    billId: v.id('bills'),
-    lineItemId: v.id('lineItems'),
-    personId: v.id('people'),
-  },
-  handler: async (ctx, { billId, lineItemId, personId }) => {
-    const existing = await ctx.db
-      .query('assignments')
-      .withIndex('by_line_item', (q) => q.eq('lineItemId', lineItemId))
-      .collect()
-    const mine = existing.find((a) => a.personId === personId)
-    if (mine) {
-      await ctx.db.delete(mine._id)
-    } else {
-      await ctx.db.insert('assignments', { billId, lineItemId, personId, shareFraction: 1 })
+    if (bill.status !== 'PUBLISHED') {
+      await ctx.db.patch(id, { status: 'PUBLISHED' })
     }
-    await rebalanceItem(ctx, lineItemId)
-  },
-})
-
-export const updateShareFraction = mutation({
-  args: { id: v.id('assignments'), shareFraction: v.number() },
-  handler: async (ctx, { id, shareFraction }) => {
-    const a = await ctx.db.get(id)
-    invariant(a, `missing assignment ${id}`)
-    await ctx.db.patch(id, { shareFraction })
+    return bill.shareToken
   },
 })
 
@@ -354,65 +248,47 @@ export const attachImageAndExtract = mutation({
   },
 })
 
-/** Step 4: persist the model's output. Idempotent on billId — actions can retry,
- *  so we clear existing line items/assignments before inserting (spec §4.3). */
+/** Step 4: persist the model's output into the document arrays. Idempotent on
+ *  billId — the action can retry, so we replace lineItems wholesale and reset
+ *  claims (spec §4.3). The bill returns to PENDING for the human review pass. */
 export const applyExtraction = internalMutation({
   args: { billId: v.id('bills'), parsed: v.any() },
-  handler: async (ctx, { billId, parsed }) => {
+  handler: async (ctx: MutationCtx, { billId, parsed }) => {
     const bill = await ctx.db.get(billId)
     if (!bill) return
     const receipt = parsed as ExtractedReceipt
 
-    const [oldItems, oldAssignments] = await Promise.all([
-      ctx.db.query('lineItems').withIndex('by_bill', (q) => q.eq('billId', billId)).collect(),
-      ctx.db.query('assignments').withIndex('by_bill', (q) => q.eq('billId', billId)).collect(),
-    ])
-    await Promise.all([
-      ...oldItems.map((d) => ctx.db.delete(d._id)),
-      ...oldAssignments.map((d) => ctx.db.delete(d._id)),
-    ])
-
-    const currency = receipt.currency_primary || bill.currencyPrimary || 'LBP'
-    const items = receipt.line_items ?? []
-    for (const item of items) {
-      await ctx.db.insert('lineItems', {
-        billId,
-        name: item.name,
-        qty: item.qty,
-        unitPrice: item.unit_price,
-        lineTotal: item.line_total,
-        currency,
-        confidence: item.confidence,
-      })
-    }
+    const items: LineItem[] = (receipt.line_items ?? []).map((i) => ({
+      id: newId(),
+      name: i.name,
+      qty: i.qty,
+      unitPrice: i.unit_price,
+      lineTotal: i.line_total,
+      confidence: i.confidence,
+    }))
 
     const derived = deriveRate({
       printedTotalLbp: receipt.printed_total_lbp,
       printedTotalUsd: receipt.printed_total_usd,
     })
 
-    // Route on checksum AND confidence (spec §4.3/§4.4).
-    const res = reconcile({
-      lineItems: items.map((i) => ({ lineTotal: i.line_total })),
-      serviceCharge: receipt.service_charge ?? 0,
-      tax: receipt.tax ?? 0,
-      printedTotal: receipt.printed_total_lbp ?? null,
-    })
-    const lowConfidence = items.some((i) => (i.confidence ?? 1) < CONFIDENCE_THRESHOLD)
-    const status = res.ok && !lowConfidence ? 'READY' : 'NEEDS_REVIEW'
-
     await ctx.db.patch(billId, {
       merchantName: receipt.merchant ?? bill.merchantName,
       branch: receipt.branch ?? bill.branch,
       datetime: receipt.datetime ?? bill.datetime,
-      currencyPrimary: currency,
+      currencyPrimary: receipt.currency_primary || bill.currencyPrimary || 'LBP',
       serviceCharge: receipt.service_charge ?? 0,
       tax: receipt.tax ?? 0,
       printedTotalLbp: receipt.printed_total_lbp ?? undefined,
       printedTotalUsd: receipt.printed_total_usd ?? undefined,
-      ...(derived ? { rate: derived.rate, rateSource: derived.source } : {}),
+      ...(derived
+        ? { rate: derived.rate, rateSource: derived.source }
+        : { rate: DEFAULT_RATE, rateSource: 'market' as const }),
+      lineItems: items,
+      claims: [], // fresh extraction → nothing claimed yet
       imageRef: undefined, // delete-after-extract: clear the ref (spec §10)
-      status,
+      status: 'PENDING',
+      version: bill.version + 1,
     })
   },
 })

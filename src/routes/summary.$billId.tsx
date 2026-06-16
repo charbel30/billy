@@ -2,14 +2,15 @@ import { useState } from 'react'
 import { createFileRoute } from '@tanstack/react-router'
 import { useSuspenseQuery } from '@tanstack/react-query'
 import toast from 'react-hot-toast'
-import { RiFileCopyLine } from '@remixicon/react'
+import { RiCheckLine, RiFileCopyLine } from '@remixicon/react'
 import type { Id } from 'convex/_generated/dataModel'
 import { Loader } from '~/components/Loader'
 import { Button } from '~/components/ui/button'
-import { Separator } from '~/components/ui/separator'
 import { CurrencyToggle, type Currency } from '~/components/CurrencyToggle'
-import { billQueries, useFinalizeShare } from '~/queries'
-import { computePortfolios } from '~/lib/split'
+import { PortfolioReceipt } from '~/components/bill/PortfolioReceipt'
+import { AnimatedAmount } from '~/components/bill/AnimatedAmount'
+import { billQueries, usePublish } from '~/queries'
+import { computePortfolios, personClaimedLines } from '~/lib/split'
 import { formatLbp, formatUsd, toUsd } from '~/lib/currency'
 
 export const Route = createFileRoute('/summary/$billId')({
@@ -24,27 +25,26 @@ export const Route = createFileRoute('/summary/$billId')({
 
 function Summary() {
   const billId = Route.useParams().billId as Id<'bills'>
-  const { data } = useSuspenseQuery(billQueries.detail(billId))
-  const { bill, lineItems, people, assignments } = data
-  const finalize = useFinalizeShare()
-  const [currency, setCurrency] = useState<Currency>('LBP')
+  const { data: bill } = useSuspenseQuery(billQueries.detail(billId))
+  const publish = usePublish()
+  const [currency, setCurrency] = useState<Currency>('USD')
 
   const portfolios = computePortfolios({
-    lineItems,
-    people,
-    assignments,
+    lineItems: bill.lineItems,
+    people: bill.people,
+    claims: bill.claims,
     serviceCharge: bill.serviceCharge,
     tax: bill.tax,
-    rate: bill.rate,
+    serviceChargeOn: bill.serviceChargeOn,
     serviceSplitMode: bill.serviceSplitMode,
+    rate: bill.rate,
   })
 
   const grandLbp = portfolios.reduce((s, p) => s + p.totalLbp, 0)
-  const fmt = (lbp: number) =>
-    currency === 'LBP' ? formatLbp(lbp) : formatUsd(toUsd(lbp, bill.rate))
+  const published = bill.status === 'PUBLISHED'
 
-  async function copyLink() {
-    await finalize.mutateAsync({ id: billId })
+  async function shareLink() {
+    await publish.mutateAsync({ id: billId })
     const url = `${window.location.origin}/b/${bill.shareToken}`
     try {
       await navigator.clipboard.writeText(url)
@@ -55,59 +55,55 @@ function Summary() {
   }
 
   return (
-    <div className="mx-auto w-full max-w-md p-4 sm:p-6 space-y-5">
+    <div className="mx-auto w-full max-w-md p-4 sm:p-6 space-y-4">
       <div className="flex items-center justify-between">
-        <h1 className="text-xl font-black">Totals</h1>
+        <div>
+          <h1 className="text-xl font-black">{bill.merchantName || 'Totals'}</h1>
+          {bill.rate ? (
+            <p className="text-xs text-muted-foreground">
+              {formatLbp(bill.rate)} / $1 · {bill.rateSource}
+            </p>
+          ) : null}
+        </div>
         <CurrencyToggle value={currency} onChange={setCurrency} />
       </div>
 
-      {!bill.rate && currency === 'USD' && (
+      {!bill.rate && (
         <p className="text-sm text-amber-600">
-          No rate set — USD amounts show as $0.00. Add printed totals on the review
-          screen.
+          No rate set — USD shows as $0.00. Add printed totals on the review screen.
         </p>
       )}
 
-      <div className="space-y-2">
+      <div className="space-y-3">
         {portfolios.map((p) => (
-          <div
+          <PortfolioReceipt
             key={p.personId}
-            className="rounded-xl border border-border p-3 space-y-1"
-          >
-            <div className="flex items-center justify-between">
-              <span className="inline-flex items-center gap-2 text-sm font-medium">
-                <span
-                  className="size-3 rounded-full"
-                  style={{ backgroundColor: p.color }}
-                />
-                {p.name}
-              </span>
-              <span className="font-semibold tabular-nums">{fmt(p.totalLbp)}</span>
-            </div>
-            <div className="text-xs text-muted-foreground tabular-nums">
-              items {fmt(p.subtotalLbp)} · service/tax {fmt(p.serviceShareLbp)}
-            </div>
-          </div>
+            portfolio={p}
+            lines={personClaimedLines(p.personId, bill.lineItems, bill.claims)}
+            rate={bill.rate}
+            currency={currency}
+            serviceChargeOn={bill.serviceChargeOn}
+          />
         ))}
-        {portfolios.length === 0 && (
-          <p className="text-sm text-muted-foreground">No people to show.</p>
-        )}
       </div>
 
-      <Separator />
-
-      <div className="flex items-center justify-between">
+      <div className="flex items-center justify-between rounded-xl border border-border p-3">
         <span className="text-muted-foreground">Grand total</span>
-        <span className="text-lg font-black tabular-nums">{fmt(grandLbp)}</span>
+        <AnimatedAmount
+          value={currency === 'LBP' ? grandLbp : toUsd(grandLbp, bill.rate)}
+          format={currency === 'LBP' ? formatLbp : formatUsd}
+          className="text-lg font-black"
+        />
       </div>
 
       <Button
         size="lg"
         className="w-full"
-        onClick={copyLink}
-        disabled={finalize.isPending}
+        onClick={shareLink}
+        disabled={publish.isPending}
       >
-        <RiFileCopyLine /> Copy share link
+        {published ? <RiCheckLine /> : <RiFileCopyLine />}
+        {published ? 'Copy share link again' : 'Publish & copy share link'}
       </Button>
     </div>
   )

@@ -5,6 +5,10 @@
 
 import type { RateSource } from './types'
 
+// Baked-in parallel-market rate (LBP per USD) used until a receipt carries its own
+// rate or the user overrides it. Temporary: replace with the Phase-2 market feed.
+export const DEFAULT_RATE = 90000
+
 /** Derive the rate from the receipt's printed totals when both are present.
  *  Returns null when only one (or neither) total is printed — the caller then
  *  falls back to a market rate (Phase 2) or manual entry. */

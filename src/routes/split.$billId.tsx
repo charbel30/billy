@@ -1,20 +1,14 @@
+import { useEffect, useState } from 'react'
 import { createFileRoute, useNavigate } from '@tanstack/react-router'
-import { useSuspenseQuery } from '@tanstack/react-query'
+import { RiArrowRightLine } from '@remixicon/react'
 import type { Id } from 'convex/_generated/dataModel'
 import { Loader } from '~/components/Loader'
 import { Button } from '~/components/ui/button'
-import { Label } from '~/components/ui/label'
-import { Switch } from '~/components/ui/switch'
-import { Separator } from '~/components/ui/separator'
-import { PersonChips } from '~/components/PersonChips'
-import { AssignGrid } from '~/components/AssignGrid'
-import {
-  billQueries,
-  useAddPerson,
-  useDeletePerson,
-  useToggleAssignment,
-  useUpdateBillMeta,
-} from '~/queries'
+import { PersonRail } from '~/components/bill/PersonRail'
+import { ClaimList } from '~/components/bill/ClaimList'
+import { RemainingBar } from '~/components/bill/RemainingBar'
+import { useBillEditor } from '~/hooks/useBillEditor'
+import { billQueries } from '~/queries'
 
 export const Route = createFileRoute('/split/$billId')({
   component: Split,
@@ -29,71 +23,61 @@ export const Route = createFileRoute('/split/$billId')({
 function Split() {
   const billId = Route.useParams().billId as Id<'bills'>
   const navigate = useNavigate()
-  const { data } = useSuspenseQuery(billQueries.detail(billId))
-  const { bill, lineItems, people, assignments } = data
+  const editor = useBillEditor(billId)
+  const { bill, addPerson, removePerson, stepClaim, shareEvenly } = editor
 
-  const addPerson = useAddPerson()
-  const deletePerson = useDeletePerson()
-  const toggle = useToggleAssignment()
-  const updateMeta = useUpdateBillMeta()
+  const [activeId, setActiveId] = useState<string | null>(
+    bill.people[0]?.id ?? null,
+  )
+  // Keep an active person selected as people are added/removed.
+  useEffect(() => {
+    if (!bill.people.some((p) => p.id === activeId)) {
+      setActiveId(bill.people[0]?.id ?? null)
+    }
+  }, [bill.people, activeId])
 
-  const even = bill.serviceSplitMode === 'even'
+  const activePerson = bill.people.find((p) => p.id === activeId) ?? null
 
   return (
-    <div className="mx-auto w-full max-w-md p-4 sm:p-6 space-y-5">
-      <h1 className="text-xl font-black">Split</h1>
-
-      <div className="space-y-2">
-        <Label>People</Label>
-        <PersonChips
-          people={people}
-          onAdd={(name) => addPerson.mutate({ billId, name })}
-          onRemove={(id) => deletePerson.mutate({ id })}
-        />
+    <div className="mx-auto w-full max-w-md p-4 sm:p-6 space-y-4">
+      <div>
+        <h1 className="text-xl font-black">Split it</h1>
+        <p className="text-sm text-muted-foreground">
+          Pick a person, then pull their units off the receipt.
+        </p>
       </div>
 
-      <Separator />
+      <PersonRail
+        people={bill.people}
+        activeId={activeId}
+        onSelect={setActiveId}
+        onAdd={addPerson}
+        onRemove={removePerson}
+      />
 
-      <div className="space-y-2">
-        <Label>Assign items</Label>
-        <AssignGrid
-          lineItems={lineItems}
-          people={people}
-          assignments={assignments}
-          rate={bill.rate}
-          onToggle={(lineItemId, personId) =>
-            toggle.mutate({ billId, lineItemId, personId })
-          }
+      <RemainingBar lineItems={bill.lineItems} claims={bill.claims} />
+
+      <div className="rounded-3xl border border-border bg-card p-4">
+        <ClaimList
+          lineItems={bill.lineItems}
+          people={bill.people}
+          claims={bill.claims}
+          activePerson={activePerson}
+          rate={bill.meta.rate}
+          onStep={stepClaim}
+          onShareEvenly={shareEvenly}
         />
       </div>
-
-      <Separator />
-
-      <label className="flex items-center justify-between gap-4">
-        <span className="space-y-0.5">
-          <span className="block text-sm font-medium">Split service &amp; tax evenly</span>
-          <span className="block text-xs text-muted-foreground">
-            Off = proportional to each person's items (the fair default)
-          </span>
-        </span>
-        <Switch
-          checked={even}
-          onCheckedChange={(checked) =>
-            updateMeta.mutate({
-              id: billId,
-              serviceSplitMode: checked ? 'even' : 'proportional',
-            })
-          }
-        />
-      </label>
 
       <Button
         size="lg"
         className="w-full"
-        disabled={people.length === 0}
-        onClick={() => navigate({ to: '/summary/$billId', params: { billId } })}
+        onClick={async () => {
+          await editor.flushNow()
+          navigate({ to: '/summary/$billId', params: { billId } })
+        }}
       >
-        See totals
+        See totals <RiArrowRightLine />
       </Button>
     </div>
   )
