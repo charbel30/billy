@@ -129,6 +129,63 @@ function assertSharedForGuestWrites(bill: Bill) {
   }
 }
 
+function assertEditableSplit(bill: Bill) {
+  if (bill.status === 'FINALIZED') {
+    throw new Error('This split has been finalized')
+  }
+}
+
+function saveClaimsForPerson(
+  bill: Bill,
+  personId: string,
+  claims: Array<{ itemId: string; units: number }>,
+) {
+  const itemById = new Map(bill.lineItems.map((item) => [item.id, item]))
+  const otherClaims = bill.claims.filter((c) => c.personId !== personId)
+  const otherClaimedByItem = new Map<string, number>()
+  for (const c of otherClaims) {
+    otherClaimedByItem.set(
+      c.itemId,
+      (otherClaimedByItem.get(c.itemId) ?? 0) + c.units,
+    )
+  }
+
+  const requestedByItem = new Map<string, number>()
+  let rejectedCount = 0
+  for (const c of claims) {
+    const item = itemById.get(c.itemId)
+    if (!item || !Number.isFinite(c.units) || c.units <= 0) {
+      rejectedCount += 1
+      continue
+    }
+    requestedByItem.set(
+      c.itemId,
+      (requestedByItem.get(c.itemId) ?? 0) + c.units,
+    )
+  }
+
+  const acceptedClaims: Claim[] = []
+  for (const [itemId, requestedUnits] of requestedByItem) {
+    const item = itemById.get(itemId)
+    if (!item) continue
+    const available = Math.max(
+      0,
+      item.qty - (otherClaimedByItem.get(itemId) ?? 0),
+    )
+    const acceptedUnits = Math.min(requestedUnits, available)
+    if (acceptedUnits < requestedUnits) rejectedCount += 1
+    if (acceptedUnits > 0) {
+      acceptedClaims.push({ itemId, personId, units: acceptedUnits })
+    }
+  }
+
+  return {
+    acceptedClaims,
+    rejectedCount,
+    nextClaims: [...otherClaims, ...acceptedClaims],
+  }
+}
+
 export const createBill = mutation({
   args: {
     merchantName: v.optional(v.string()),
@@ -180,12 +237,13 @@ export const saveWorking = mutation({
     // A finalized bill is a frozen receipt. Don't let a late flush mutate it.
     if (bill.status === 'FINALIZED') return null
 
+    const splitIsLive = bill.status === 'PUBLISHED'
     const nextItems = lineItems ?? bill.lineItems
-    const nextPeople = people ?? bill.people
+    const nextPeople = splitIsLive ? bill.people : (people ?? bill.people)
     const nextClaims = reconcileClaims(
       nextItems,
       nextPeople,
-      claims ?? bill.claims,
+      splitIsLive ? bill.claims : (claims ?? bill.claims),
     )
     validateLineItems(nextItems)
     validatePeople(nextPeople)
@@ -243,6 +301,118 @@ export const finalize = mutation({
     if (bill.status !== 'FINALIZED') {
       await ctx.db.patch(id, { status: 'FINALIZED', updatedAt: now() })
     }
+    return null
+  },
+})
+
+export const addHostPerson = mutation({
+  args: {
+    id: v.id('bills'),
+    name: v.string(),
+  },
+  returns: v.object({ personId: v.string() }),
+  handler: async (ctx, { id, name }) => {
+    const bill = await ctx.db.get(id)
+    invariant(bill, `missing bill ${id}`)
+    assertEditableSplit(bill)
+    const nextPerson: Person = {
+      id: newClientId(),
+      name: cleanName(name),
+      color: nextPersonColor(bill.people.length),
+    }
+    await ctx.db.patch(id, {
+      people: [...bill.people, nextPerson],
+      version: bill.version + 1,
+      updatedAt: now(),
+    })
+    return { personId: nextPerson.id }
+  },
+})
+
+export const removeHostPerson = mutation({
+  args: {
+    id: v.id('bills'),
+    personId: v.string(),
+  },
+  returns: v.null(),
+  handler: async (ctx, { id, personId }) => {
+    const bill = await ctx.db.get(id)
+    invariant(bill, `missing bill ${id}`)
+    assertEditableSplit(bill)
+    if (!bill.people.some((p) => p.id === personId)) {
+      throw new Error('person not found')
+    }
+    if (bill.people.length <= 1) {
+      throw new Error('At least one person is required')
+    }
+    await ctx.db.patch(id, {
+      people: bill.people.filter((p) => p.id !== personId),
+      claims: bill.claims.filter((c) => c.personId !== personId),
+      version: bill.version + 1,
+      updatedAt: now(),
+    })
+    return null
+  },
+})
+
+export const saveHostClaims = mutation({
+  args: {
+    id: v.id('bills'),
+    personId: v.string(),
+    claims: v.array(guestClaimInput),
+  },
+  returns: v.object({
+    acceptedClaims: v.array(claim),
+    rejectedCount: v.number(),
+  }),
+  handler: async (ctx, { id, personId, claims }) => {
+    const bill = await ctx.db.get(id)
+    invariant(bill, `missing bill ${id}`)
+    assertEditableSplit(bill)
+    const person = bill.people.find((p) => p.id === personId)
+    invariant(person, 'person not found')
+
+    const result = saveClaimsForPerson(bill, personId, claims)
+    await ctx.db.patch(id, {
+      claims: result.nextClaims,
+      version: bill.version + 1,
+      updatedAt: now(),
+    })
+    return {
+      acceptedClaims: result.acceptedClaims,
+      rejectedCount: result.rejectedCount,
+    }
+  },
+})
+
+export const shareHostItemEvenly = mutation({
+  args: {
+    id: v.id('bills'),
+    itemId: v.string(),
+    personIds: v.array(v.string()),
+  },
+  returns: v.null(),
+  handler: async (ctx, { id, itemId, personIds }) => {
+    const bill = await ctx.db.get(id)
+    invariant(bill, `missing bill ${id}`)
+    assertEditableSplit(bill)
+    const item = bill.lineItems.find((li) => li.id === itemId)
+    invariant(item, 'item not found')
+    if (personIds.length === 0) throw new Error('Choose at least one person')
+    const peopleIds = new Set(bill.people.map((p) => p.id))
+    for (const personId of personIds) {
+      if (!peopleIds.has(personId)) throw new Error('person not found')
+    }
+
+    const units = item.qty / personIds.length
+    await ctx.db.patch(id, {
+      claims: [
+        ...bill.claims.filter((c) => c.itemId !== itemId),
+        ...personIds.map((personId) => ({ itemId, personId, units })),
+      ],
+      version: bill.version + 1,
+      updatedAt: now(),
+    })
     return null
   },
 })
@@ -325,51 +495,16 @@ export const saveGuestClaims = mutation({
       throw new Error('You can only edit your own claims')
     }
 
-    const itemById = new Map(bill.lineItems.map((item) => [item.id, item]))
-    const otherClaims = bill.claims.filter((c) => c.personId !== personId)
-    const otherClaimedByItem = new Map<string, number>()
-    for (const c of otherClaims) {
-      otherClaimedByItem.set(
-        c.itemId,
-        (otherClaimedByItem.get(c.itemId) ?? 0) + c.units,
-      )
-    }
-
-    const requestedByItem = new Map<string, number>()
-    let rejectedCount = 0
-    for (const c of claims) {
-      const item = itemById.get(c.itemId)
-      if (!item || !Number.isFinite(c.units) || c.units <= 0) {
-        rejectedCount += 1
-        continue
-      }
-      requestedByItem.set(
-        c.itemId,
-        (requestedByItem.get(c.itemId) ?? 0) + c.units,
-      )
-    }
-
-    const acceptedClaims: Claim[] = []
-    for (const [itemId, requestedUnits] of requestedByItem) {
-      const item = itemById.get(itemId)
-      if (!item) continue
-      const available = Math.max(
-        0,
-        item.qty - (otherClaimedByItem.get(itemId) ?? 0),
-      )
-      const acceptedUnits = Math.min(requestedUnits, available)
-      if (acceptedUnits < requestedUnits) rejectedCount += 1
-      if (acceptedUnits > 0) {
-        acceptedClaims.push({ itemId, personId, units: acceptedUnits })
-      }
-    }
-
+    const result = saveClaimsForPerson(bill, personId, claims)
     await ctx.db.patch(bill._id, {
-      claims: [...otherClaims, ...acceptedClaims],
+      claims: result.nextClaims,
       version: bill.version + 1,
       updatedAt: now(),
     })
 
-    return { acceptedClaims, rejectedCount }
+    return {
+      acceptedClaims: result.acceptedClaims,
+      rejectedCount: result.rejectedCount,
+    }
   },
 })

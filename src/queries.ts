@@ -40,6 +40,30 @@ export function useFinalize() {
   })
 }
 
+export function useAddHostPerson() {
+  return useMutation({
+    mutationFn: useConvexMutation(api.bills.mutations.addHostPerson),
+  })
+}
+
+export function useRemoveHostPerson() {
+  return useMutation({
+    mutationFn: useConvexMutation(api.bills.mutations.removeHostPerson),
+  })
+}
+
+export function useSaveHostClaims() {
+  return useMutation({
+    mutationFn: useConvexMutation(api.bills.mutations.saveHostClaims),
+  })
+}
+
+export function useShareHostItemEvenly() {
+  return useMutation({
+    mutationFn: useConvexMutation(api.bills.mutations.shareHostItemEvenly),
+  })
+}
+
 export function useJoinSplit() {
   return useMutation({
     mutationFn: useConvexMutation(api.bills.mutations.joinSplit),

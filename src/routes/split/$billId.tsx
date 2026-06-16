@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react'
 import { createFileRoute, useNavigate } from '@tanstack/react-router'
+import { useSuspenseQuery } from '@tanstack/react-query'
 import toast from 'react-hot-toast'
 import {
   RiArrowRightLine,
@@ -12,8 +13,16 @@ import { Loader } from '~/components/Loader'
 import { Button } from '~/components/ui/button'
 import { PersonRail } from '~/components/bill/PersonRail'
 import { BillSplitWorkspace } from '~/components/bill/BillSplitWorkspace'
-import { useBillEditor } from '~/hooks/useBillEditor'
-import { billQueries, useFinalize, usePublish } from '~/queries'
+import {
+  billQueries,
+  useAddHostPerson,
+  useFinalize,
+  usePublish,
+  useRemoveHostPerson,
+  useSaveHostClaims,
+  useShareHostItemEvenly,
+} from '~/queries'
+import type { Claim } from '~/lib/types'
 
 export const Route = createFileRoute('/split/$billId')({
   component: Split,
@@ -28,14 +37,18 @@ export const Route = createFileRoute('/split/$billId')({
 function Split() {
   const billId = Route.useParams().billId as Id<'bills'>
   const navigate = useNavigate()
-  const editor = useBillEditor(billId)
-  const { bill, addPerson, removePerson, stepClaim, shareEvenly } = editor
+  const { data: bill } = useSuspenseQuery(billQueries.detail(billId))
   const publish = usePublish()
   const finalize = useFinalize()
+  const addHostPerson = useAddHostPerson()
+  const removeHostPerson = useRemoveHostPerson()
+  const saveHostClaims = useSaveHostClaims()
+  const shareHostItemEvenly = useShareHostItemEvenly()
 
   const [activeId, setActiveId] = useState<string | null>(
     bill.people[0]?.id ?? null,
   )
+  const [conflictMessage, setConflictMessage] = useState<string | null>(null)
   // Keep an active person selected as people are added/removed.
   useEffect(() => {
     if (!bill.people.some((p) => p.id === activeId)) {
@@ -48,16 +61,68 @@ function Split() {
   const shared = bill.status === 'PUBLISHED' || finalized
 
   const workspaceBill = {
-    merchantName: bill.meta.merchantName,
+    merchantName: bill.merchantName,
     lineItems: bill.lineItems,
     people: bill.people,
     claims: bill.claims,
-    serviceCharge: bill.meta.serviceCharge,
-    tax: bill.meta.tax,
-    serviceChargeOn: bill.meta.serviceChargeOn,
-    serviceSplitMode: bill.meta.serviceSplitMode,
-    rate: bill.meta.rate,
+    serviceCharge: bill.serviceCharge,
+    tax: bill.tax,
+    serviceChargeOn: bill.serviceChargeOn,
+    serviceSplitMode: bill.serviceSplitMode,
+    rate: bill.rate,
     status: bill.status,
+  }
+
+  function claimsForPerson(claims: Claim[], personId: string) {
+    return claims
+      .filter((c) => c.personId === personId && c.units > 0)
+      .map((c) => ({ itemId: c.itemId, units: c.units }))
+  }
+
+  function unitsFor(claims: Claim[], itemId: string, personId: string): number {
+    return (
+      claims.find((c) => c.itemId === itemId && c.personId === personId)
+        ?.units ?? 0
+    )
+  }
+
+  async function addPerson(name: string) {
+    const result = await addHostPerson.mutateAsync({ id: billId, name })
+    setActiveId(result.personId)
+  }
+
+  async function removePerson(personId: string) {
+    await removeHostPerson.mutateAsync({ id: billId, personId })
+  }
+
+  async function savePersonClaims(
+    personId: string,
+    nextClaims: Array<{ itemId: string; units: number }>,
+  ) {
+    const result = await saveHostClaims.mutateAsync({
+      id: billId,
+      personId,
+      claims: nextClaims,
+    })
+    setConflictMessage(
+      result.rejectedCount > 0
+        ? 'Some units were already claimed, so we kept only what was still available.'
+        : null,
+    )
+  }
+
+  function stepClaim(itemId: string, personId: string, delta: number) {
+    const current = unitsFor(bill.claims, itemId, personId)
+    const nextUnits = Math.max(0, current + delta)
+    const nextClaims = claimsForPerson(bill.claims, personId).filter(
+      (c) => c.itemId !== itemId,
+    )
+    if (nextUnits > 0) nextClaims.push({ itemId, units: nextUnits })
+    void savePersonClaims(personId, nextClaims)
+  }
+
+  function shareEvenly(itemId: string, personIds: string[]) {
+    void shareHostItemEvenly.mutateAsync({ id: billId, itemId, personIds })
   }
 
   async function copySplitLink() {
@@ -72,11 +137,6 @@ function Split() {
   }
 
   async function finalizeSplit() {
-    const saved = await editor.flushNow()
-    if (!saved) {
-      toast.error('Finish the receipt details before finalizing')
-      return
-    }
     const confirmed = window.confirm(
       'Finalize this split? This locks edits for everyone and turns the summary into a read-only receipt.',
     )
@@ -91,12 +151,6 @@ function Split() {
       description="Pick a person, claim their items, and invite everyone from this same screen."
       notice={
         <>
-          {editor.editedElsewhere ? (
-            <div className="rounded-xl border border-amber-200 bg-amber-50 px-3 py-2 text-xs text-amber-800">
-              Someone else changed this bill. Your next save may overwrite their
-              latest edit.
-            </div>
-          ) : null}
           {shared && !finalized ? (
             <div className="rounded-xl border border-border bg-muted/40 px-3 py-2 text-xs text-muted-foreground">
               This split link is live. Guests can join and claim their own items.
@@ -124,6 +178,12 @@ function Split() {
       onStep={stepClaim}
       onShareEvenly={shareEvenly}
       showClaims={!finalized}
+      conflictMessage={conflictMessage}
+      savingMessage={
+        saveHostClaims.isPending || shareHostItemEvenly.isPending
+          ? 'Saving split...'
+          : null
+      }
       actionSlot={
         finalized ? (
           <Button
