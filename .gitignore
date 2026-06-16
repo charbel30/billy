@@ -12,6 +12,8 @@ yarn.lock
 /server/build
 /public/build
 dist
+.wrangler
+.pnpm-store
 
 # Sentry Config File
 .env.sentry-build-plugin
