@@ -1,55 +1,14 @@
-import { useEffect, useState } from 'react'
 import { AnimatePresence, motion } from 'motion/react'
 import { RiAddLine, RiAlertLine, RiDeleteBin6Line } from '@remixicon/react'
 import type { LineItem } from '~/lib/types'
 import { formatLbp, formatUsd, toUsd } from '~/lib/currency'
-import { cn } from '~/lib/utils'
-
-const LOW_CONFIDENCE = 0.6
+import { LOW_CONFIDENCE_THRESHOLD } from '~/lib/bill/constants'
+import { parseNumericInput } from '~/lib/number'
+import { BlurCommitInput } from './BlurCommitInput'
 
 // A receipt-style line list with inline editing on the RIGHT of each row
 // (ui-flow-vision.md). lineTotal is the source of truth; editing qty or unit price
 // recomputes it, but editing the total directly overrides it.
-
-/** Bare inline input that reads like receipt text, commits on blur. */
-function Cell({
-  value,
-  onCommit,
-  numeric,
-  placeholder,
-  className,
-  align = 'left',
-}: {
-  value: string | number
-  onCommit: (raw: string) => void
-  numeric?: boolean
-  placeholder?: string
-  className?: string
-  align?: 'left' | 'right'
-}) {
-  const initial = value === '' ? '' : String(value)
-  const [draft, setDraft] = useState(initial)
-  useEffect(() => setDraft(initial), [initial])
-  return (
-    <input
-      inputMode={numeric ? 'decimal' : undefined}
-      placeholder={placeholder}
-      value={draft}
-      onChange={(e) => setDraft(e.target.value)}
-      onBlur={() => draft !== initial && onCommit(draft)}
-      className={cn(
-        'bg-transparent outline-none focus:bg-muted/60 rounded px-1 -mx-1',
-        align === 'right' && 'text-right',
-        className,
-      )}
-    />
-  )
-}
-
-function num(raw: string): number {
-  const n = Number(raw.replace(/[^0-9.-]/g, ''))
-  return Number.isFinite(n) ? n : 0
-}
 
 export function ReceiptLines({
   lineItems,
@@ -68,7 +27,8 @@ export function ReceiptLines({
     <div className="divide-y divide-dashed divide-border">
       <AnimatePresence initial={false}>
         {lineItems.map((li) => {
-          const low = li.confidence != null && li.confidence < LOW_CONFIDENCE
+          const low =
+            li.confidence != null && li.confidence < LOW_CONFIDENCE_THRESHOLD
           return (
             <motion.div
               key={li.id}
@@ -80,11 +40,11 @@ export function ReceiptLines({
               className="py-2"
             >
               <div className="flex items-baseline gap-2">
-                <Cell
+                <BlurCommitInput
                   value={li.name}
                   placeholder="Item"
                   onCommit={(raw) => onUpdate(li.id, { name: raw })}
-                  className="flex-1 font-medium"
+                  className="flex-1 -mx-1 font-medium"
                 />
                 <span className="font-semibold tabular-nums">
                   {formatLbp(li.lineTotal)}
@@ -99,24 +59,25 @@ export function ReceiptLines({
                     <RiAlertLine className="size-3.5" /> check
                   </span>
                 )}
-                <Cell
+                <BlurCommitInput
                   value={li.qty}
                   numeric
                   onCommit={(raw) => {
-                    const qty = num(raw)
+                    const qty = parseNumericInput(raw)
                     onUpdate(li.id, { qty, lineTotal: qty * li.unitPrice })
                   }}
-                  className="w-10 text-center"
+                  align="center"
+                  className="w-10 -mx-1"
                 />
                 <span>×</span>
-                <Cell
+                <BlurCommitInput
                   value={li.unitPrice}
                   numeric
                   onCommit={(raw) => {
-                    const unitPrice = num(raw)
+                    const unitPrice = parseNumericInput(raw)
                     onUpdate(li.id, { unitPrice, lineTotal: li.qty * unitPrice })
                   }}
-                  className="w-20"
+                  className="w-20 -mx-1"
                 />
                 <span className="ml-auto flex items-center gap-2">
                   {rate ? <span>{formatUsd(toUsd(li.lineTotal, rate))}</span> : null}

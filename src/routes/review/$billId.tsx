@@ -1,9 +1,9 @@
-import { useEffect, useState } from 'react'
 import { createFileRoute, useNavigate } from '@tanstack/react-router'
 import { RiArrowRightLine, RiLoader4Line } from '@remixicon/react'
 import type { Id } from 'convex/_generated/dataModel'
 import { Loader } from '~/components/Loader'
 import { Button } from '~/components/ui/button'
+import { BlurCommitInput } from '~/components/bill/BlurCommitInput'
 import { ReceiptLines } from '~/components/bill/ReceiptLines'
 import { ServicePanel } from '~/components/bill/ServicePanel'
 import { AnimatedAmount } from '~/components/bill/AnimatedAmount'
@@ -11,6 +11,7 @@ import { useBillEditor } from '~/hooks/useBillEditor'
 import { billQueries } from '~/queries'
 import { reconcile } from '~/lib/reconcile'
 import { formatLbp, formatUsd, toUsd } from '~/lib/currency'
+import { parseNumericInput } from '~/lib/number'
 
 export const Route = createFileRoute('/review/$billId')({
   component: Review,
@@ -21,40 +22,6 @@ export const Route = createFileRoute('/review/$billId')({
     )
   },
 })
-
-function num(raw: string): number {
-  const n = Number(raw.replace(/[^0-9.-]/g, ''))
-  return Number.isFinite(n) ? n : 0
-}
-
-/** Bare receipt-header input, commits on blur. */
-function HeaderInput({
-  value,
-  onCommit,
-  numeric,
-  placeholder,
-  className,
-}: {
-  value: string | number | undefined
-  onCommit: (raw: string) => void
-  numeric?: boolean
-  placeholder?: string
-  className?: string
-}) {
-  const initial = value == null ? '' : String(value)
-  const [draft, setDraft] = useState(initial)
-  useEffect(() => setDraft(initial), [initial])
-  return (
-    <input
-      inputMode={numeric ? 'decimal' : undefined}
-      placeholder={placeholder}
-      value={draft}
-      onChange={(e) => setDraft(e.target.value)}
-      onBlur={() => draft !== initial && onCommit(draft)}
-      className={`bg-transparent text-center outline-none focus:bg-muted/60 rounded px-1 ${className ?? ''}`}
-    />
-  )
-}
 
 function Review() {
   const billId = Route.useParams().billId as Id<'bills'>
@@ -75,10 +42,11 @@ function Review() {
       <div className="rounded-3xl border border-border bg-card p-5 shadow-sm">
         {/* Receipt header — merchant + the USD headline */}
         <div className="text-center">
-          <HeaderInput
+          <BlurCommitInput
             value={meta.merchantName}
             placeholder="Merchant"
             onCommit={(raw) => setMeta({ merchantName: raw })}
+            align="center"
             className="w-full text-lg font-black tracking-tight"
           />
           <div className="mt-3">
@@ -122,18 +90,24 @@ function Review() {
             Printed totals (sets the LBP/USD rate)
           </p>
           <div className="grid grid-cols-2 gap-3">
-            <HeaderInput
+            <BlurCommitInput
               value={meta.printedTotalLbp}
               numeric
               placeholder="Total LL"
-              onCommit={(raw) => setMeta({ printedTotalLbp: num(raw) })}
+              onCommit={(raw) =>
+                setMeta({ printedTotalLbp: parseNumericInput(raw) })
+              }
+              align="center"
               className="w-full rounded-md border border-border py-1.5 text-sm tabular-nums"
             />
-            <HeaderInput
+            <BlurCommitInput
               value={meta.printedTotalUsd}
               numeric
               placeholder="Total $"
-              onCommit={(raw) => setMeta({ printedTotalUsd: num(raw) })}
+              onCommit={(raw) =>
+                setMeta({ printedTotalUsd: parseNumericInput(raw) })
+              }
+              align="center"
               className="w-full rounded-md border border-border py-1.5 text-sm tabular-nums"
             />
           </div>

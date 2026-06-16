@@ -6,9 +6,9 @@ import type { Id } from 'convex/_generated/dataModel'
 // Read option factories (live over WebSocket via the Convex adapter). The whole
 // bill is one document, so a read is a single getBill / getBillByToken.
 export const billQueries = {
-  detail: (id: Id<'bills'>) => convexQuery(api.bills.getBill, { id }),
+  detail: (id: Id<'bills'>) => convexQuery(api.bills.queries.getBill, { id }),
   byToken: (shareToken: string) =>
-    convexQuery(api.bills.getBillByToken, { shareToken }),
+    convexQuery(api.bills.queries.getBillByToken, { shareToken }),
 }
 
 // Editing is local-first (see src/lib/billEditor.ts): React state owns the bill
@@ -17,15 +17,21 @@ export const billQueries = {
 // Convex pushes the flushed doc back to every subscriber.
 
 export function useCreateBill() {
-  return useMutation({ mutationFn: useConvexMutation(api.bills.createBill) })
+  return useMutation({
+    mutationFn: useConvexMutation(api.bills.mutations.createBill),
+  })
 }
 
 export function useSaveWorking() {
-  return useMutation({ mutationFn: useConvexMutation(api.bills.saveWorking) })
+  return useMutation({
+    mutationFn: useConvexMutation(api.bills.mutations.saveWorking),
+  })
 }
 
 export function usePublish() {
-  return useMutation({ mutationFn: useConvexMutation(api.bills.publish) })
+  return useMutation({
+    mutationFn: useConvexMutation(api.bills.mutations.publish),
+  })
 }
 
 // ---------------------------------------------------------------------------
@@ -33,11 +39,13 @@ export function usePublish() {
 // ---------------------------------------------------------------------------
 
 export function useGenerateUploadUrl() {
-  return useMutation({ mutationFn: useConvexMutation(api.bills.generateUploadUrl) })
+  return useMutation({
+    mutationFn: useConvexMutation(api.bills.uploads.generateUploadUrl),
+  })
 }
 
 export function useAttachImageAndExtract() {
   return useMutation({
-    mutationFn: useConvexMutation(api.bills.attachImageAndExtract),
+    mutationFn: useConvexMutation(api.bills.uploads.attachImageAndExtract),
   })
 }

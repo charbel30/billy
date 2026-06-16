@@ -1,16 +1,12 @@
-import { useEffect, useState } from 'react'
 import { AnimatePresence, motion } from 'motion/react'
-import type { WorkingMeta } from '~/hooks/useBillEditor'
+import type { WorkingMeta } from '~/lib/bill/types'
 import { Switch } from '~/components/ui/switch'
 import { cn } from '~/lib/utils'
+import { parseNumericInput } from '~/lib/number'
+import { BlurCommitInput } from './BlurCommitInput'
 
 // Service charge / tax are OFF by default and collapsed (ui-flow-vision.md). The
 // switch reveals the amounts and the even/proportional split mode.
-
-function num(raw: string): number {
-  const n = Number(raw.replace(/[^0-9.-]/g, ''))
-  return Number.isFinite(n) ? n : 0
-}
 
 function MiniField({
   label,
@@ -21,17 +17,13 @@ function MiniField({
   value: number
   onCommit: (n: number) => void
 }) {
-  const initial = String(value)
-  const [draft, setDraft] = useState(initial)
-  useEffect(() => setDraft(initial), [initial])
   return (
     <label className="flex flex-col gap-1 text-xs text-muted-foreground">
       {label}
-      <input
-        inputMode="decimal"
-        value={draft}
-        onChange={(e) => setDraft(e.target.value)}
-        onBlur={() => draft !== initial && onCommit(num(draft))}
+      <BlurCommitInput
+        numeric
+        value={value}
+        onCommit={(raw) => onCommit(parseNumericInput(raw))}
         className="rounded-md border border-border bg-background px-2 py-1 text-sm text-foreground tabular-nums outline-none focus:ring-2 focus:ring-ring"
       />
     </label>

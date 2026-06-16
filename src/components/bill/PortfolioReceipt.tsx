@@ -2,10 +2,7 @@ import { motion } from 'motion/react'
 import type { Portfolio, ClaimedLine } from '~/lib/split'
 import type { Currency } from '~/components/CurrencyToggle'
 import { formatLbp, formatUsd, toUsd } from '~/lib/currency'
-
-function fmtUnits(n: number): string {
-  return Number.isInteger(n) ? String(n) : n.toFixed(2)
-}
+import { formatUnits } from '~/lib/format'
 
 // One person's slice of the bill, rendered like their own little receipt
 // (ui-flow-vision.md): their lines, then a USD headline total with LBP under it.
@@ -46,7 +43,7 @@ export function PortfolioReceipt({
         {lines.map((l) => (
           <div key={l.itemId} className="flex justify-between gap-2 tabular-nums">
             <span className="truncate text-muted-foreground">
-              {fmtUnits(l.units)}× {l.name}
+              {formatUnits(l.units)}× {l.name}
             </span>
             <span>{fmt(l.lbp)}</span>
           </div>

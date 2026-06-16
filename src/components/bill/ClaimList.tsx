@@ -3,12 +3,9 @@ import { RiAddLine, RiSubtractLine, RiGroupLine } from '@remixicon/react'
 import type { Claim, LineItem, Person } from '~/lib/types'
 import { claimedUnits, effectiveUnitPrice, remainingUnits } from '~/lib/split'
 import { formatLbp, formatUsd, toUsd } from '~/lib/currency'
+import { DEFAULT_PERSON_COLOR } from '~/lib/bill/constants'
+import { formatUnits } from '~/lib/format'
 import { cn } from '~/lib/utils'
-
-/** Whole numbers plain, fractions to 2dp (e.g. "0.33"). */
-function fmtUnits(n: number): string {
-  return Number.isInteger(n) ? String(n) : n.toFixed(2)
-}
 
 function unitsFor(claims: Claim[], itemId: string, personId: string): number {
   return claims.find((c) => c.itemId === itemId && c.personId === personId)?.units ?? 0
@@ -53,7 +50,7 @@ export function ClaimList({
                   {formatLbp(unit)}
                   {rate ? ` · ${formatUsd(toUsd(unit, rate))}` : ''} / unit ·{' '}
                   <span className={cn(remaining > 0 ? 'text-amber-600' : '')}>
-                    {fmtUnits(remaining)} of {fmtUnits(item.qty)} left
+                    {formatUnits(remaining)} of {formatUnits(item.qty)} left
                   </span>
                 </div>
               </div>
@@ -79,7 +76,7 @@ export function ClaimList({
                       transition={{ duration: 0.15 }}
                       className="inline-block font-semibold tabular-nums"
                     >
-                      {fmtUnits(mine)}
+                      {formatUnits(mine)}
                     </motion.span>
                   </AnimatePresence>
                 </div>
@@ -115,9 +112,12 @@ export function ClaimList({
                     >
                       <span
                         className="size-2 rounded-full"
-                        style={{ backgroundColor: colorById.get(c.personId) ?? '#999' }}
+                        style={{
+                          backgroundColor:
+                            colorById.get(c.personId) ?? DEFAULT_PERSON_COLOR,
+                        }}
                       />
-                      {fmtUnits(c.units)}
+                      {formatUnits(c.units)}
                     </motion.span>
                   ))}
                 </AnimatePresence>

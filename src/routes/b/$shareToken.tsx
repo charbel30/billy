@@ -1,7 +1,6 @@
 import { useState } from 'react'
 import { createFileRoute } from '@tanstack/react-router'
 import { useSuspenseQuery } from '@tanstack/react-query'
-import type { Id } from 'convex/_generated/dataModel'
 import { Loader } from '~/components/Loader'
 import { CurrencyToggle, type Currency } from '~/components/CurrencyToggle'
 import { PortfolioReceipt } from '~/components/bill/PortfolioReceipt'

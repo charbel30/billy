@@ -11,10 +11,10 @@
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as ScanRouteImport } from './routes/scan'
 import { Route as IndexRouteImport } from './routes/index'
-import { Route as SummaryBillIdRouteImport } from './routes/summary.$billId'
-import { Route as SplitBillIdRouteImport } from './routes/split.$billId'
-import { Route as ReviewBillIdRouteImport } from './routes/review.$billId'
-import { Route as BShareTokenRouteImport } from './routes/b.$shareToken'
+import { Route as SummaryBillIdRouteImport } from './routes/summary/$billId'
+import { Route as SplitBillIdRouteImport } from './routes/split/$billId'
+import { Route as ReviewBillIdRouteImport } from './routes/review/$billId'
+import { Route as BShareTokenRouteImport } from './routes/b/$shareToken'
 
 const ScanRoute = ScanRouteImport.update({
   id: '/scan',
