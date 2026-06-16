@@ -22,7 +22,7 @@ bills (one row = one whole bill)
   imageRef?, shareToken, status            // PENDING | READY | PUBLISHED
   lineItems: [{ id, name, qty, unitPrice, lineTotal, confidence }]
   people:    [{ id, name, color }]         // starts with "self"
-  claims:    [{ itemId, personId, units }] // unit-by-unit, NOT equal fractions
+  claims:    [{ itemId, personId, units }] // units is a NUMBER (fractional allowed)
 ```
 - `id`s are **client-generated strings inside the document** (no Convex `Id` juggling).
 - Arrays are validated with `v.object`/`v.array` — still end-to-end typed, just denormalized.
@@ -30,6 +30,26 @@ bills (one row = one whole bill)
   (the debounced flush) and **`publish({ id })`**.
 - Editing in local state means the **optimistic-update layer in `queries.ts` is removed**.
 - Split math becomes **`person share = Σ claimed_units × unitPrice`** (rework `split.ts`).
+
+## Resolved decisions (bill phase)
+
+- **`lineTotal` is always the source of truth.** Derive `effectiveUnitPrice = lineTotal / qty`
+  and split with it, so per-person totals always reconcile to the printed bill even when
+  `qty × unitPrice` disagrees (discounts, rounding, weight items).
+- **`claims.units` is a single fractional number** — no separate "mode". Handles every line:
+  - countable (qty > 1, integer) → `+1 / −1` steppers in the UI;
+  - shared / indivisible (qty 1, or non-integer/weight) → a "share evenly among…" picker that
+    writes fractional units (e.g. 0.333 each for a 3-way pizza).
+  - Person's share for a line = `claimedUnits × effectiveUnitPrice`.
+- **Leftover (unclaimed) units are normal, not an error.** They mean counting stopped, the line
+  was comped, or someone already paid it. Surface them as "remaining on the bill," with an
+  explicit user decision (e.g. mark paid / removed / ignore) — TBD how that's recorded.
+- **Flush = full-document replace** (not array patch). Bills are tiny; replace is simplest and
+  idempotent. Revisit only for very large docs or live multi-writer claim.
+- **Sync/offline (all adopted):** load-once then local-state-owns-while-dirty; a `version`/
+  `updatedAt` field to detect "edited elsewhere" (last-write-wins otherwise); flush on debounce
+  **and** on `visibilitychange`/`pagehide`/route-change; mirror working state to `localStorage`
+  and replay on reconnect.
 
 ## Why
 
@@ -54,12 +74,17 @@ bills (one row = one whole bill)
 - **Live multi-person claim (Phase 2):** if we ever want it, options to research — re-normalize
   just the `claims` into rows then; or per-person sub-documents; or a CRDT / OT layer; or accept
   last-write-wins with presence hints. Decide which is least disruptive given this doc model.
-- **Debounce/flush strategy:** interval vs idle vs flush-on-`blur`/`visibilitychange`/`beforeunload`
-  and on route change, so nothing is lost when leaving mid-edit.
-- **Local persistence & offline:** mirror working state to `localStorage` for refresh-safety and
-  true offline-at-the-table; reconcile/sync on reconnect. Define the merge rule.
-- **Server-push vs local edits:** while the editor is "dirty," don't let an incoming subscription
-  push clobber in-progress local state; load-once-then-local-owns. Nail this pattern down.
+- **Discounts / negative lines:** how comps, deposits, and discount rows appear (negative line
+  items vs bill-level adjustment) and how they distribute. They also break the reconcile checksum.
+- **Leftover-units recording:** how the "remaining on the bill" decision is stored (paid / removed
+  / ignore) and whether it affects the grand total.
+- **Orphan-claim reconcile:** when an item is deleted or its qty edited below claimed units,
+  `saveWorking` must drop/scale the affected claims (no cascade now that it's one JSON doc).
+- **`visibilitychange`/`pagehide` reliability on mobile:** confirm the event that actually fires
+  before a backgrounded mobile tab is killed (`beforeunload` is unreliable on iOS Safari).
+- **Share-as-image:** client-side render of the bill summary to PNG for WhatsApp sharing.
+- **Extraction eval set:** 20–30 real Lebanese receipts (clean/occluded/Arabic/discounted) to
+  tune the prompt and measure checksum pass-rate; drives quality more than model choice.
 - **Published immutability:** should `PUBLISHED` be a frozen snapshot separate from an editable
   copy (re-open → new working version)? Decide history semantics.
 - **Gemini 3 structured output:** we currently prompt for JSON + strip fences because
