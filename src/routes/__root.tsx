@@ -12,12 +12,13 @@ import { TanStackRouterDevtools } from "@tanstack/react-router-devtools";
 import * as React from "react";
 import { Toaster } from "react-hot-toast";
 import type { QueryClient } from "@tanstack/react-query";
+import { RiHistoryLine, RiWallet3Line } from "@remixicon/react";
 import { DefaultCatchBoundary } from "~/components/DefaultCatchBoundary";
 import { DirectionProvider } from "~/components/ui/direction";
 import { NotFound } from "~/components/NotFound";
 import appCss from "~/styles/app.css?url";
+import { appContent } from "~/lib/appContent";
 import { seo } from "~/utils/seo";
-import { Loader } from "~/components/Loader";
 
 export const Route = createRootRouteWithContext<{
   queryClient: QueryClient;
@@ -73,7 +74,9 @@ export const Route = createRootRouteWithContext<{
 function RootComponent() {
   return (
     <RootDocument>
-      <Outlet />
+      <AppLayout>
+        <Outlet />
+      </AppLayout>
     </RootDocument>
   );
 }
@@ -86,24 +89,8 @@ function RootDocument({ children }: { children: React.ReactNode }) {
       </head>
       <body>
         <DirectionProvider direction="ltr">
-          <div className="min-h-screen flex flex-col">
-            <header className="bg-card border-b border-border flex items-center justify-between py-3 px-4 sm:px-6">
-              <div className="flex items-center gap-3">
-                <Link to="/" className="block leading-tight">
-                  <div className="font-black text-lg sm:text-xl text-foreground">
-                    Receipt Splitter
-                  </div>
-                  <div className="text-xs text-muted-foreground">LBP &amp; USD, split fairly</div>
-                </Link>
-                <LoadingIndicator />
-              </div>
-            </header>
-
-            <main className="grow flex flex-col">
-              {children}
-              <Toaster />
-            </main>
-          </div>
+          {children}
+          <Toaster />
         </DirectionProvider>
         <ReactQueryDevtools />
         <TanStackRouterDevtools position="bottom-right" />
@@ -113,15 +100,50 @@ function RootDocument({ children }: { children: React.ReactNode }) {
   );
 }
 
+function AppLayout({ children }: { children: React.ReactNode }) {
+  return (
+    <div className="min-h-screen flex flex-col bg-background text-foreground">
+      <header className="sticky top-0 z-30 border-b border-border/40 bg-background/85 px-4 py-3 backdrop-blur-xl sm:px-6">
+        <div className="mx-auto grid h-10 w-full max-w-7xl grid-cols-[1fr_auto_1fr] items-center">
+          <Link
+            to="/"
+            aria-label="Go to scanner"
+            className="grid size-10 place-items-center rounded-full text-muted-foreground transition-colors hover:bg-primary/10 active:scale-95"
+          >
+            <RiWallet3Line className="size-5" />
+          </Link>
+
+          <Link to="/" className="text-base font-bold tracking-tight text-foreground">
+            {appContent.name}
+          </Link>
+
+          <div className="flex items-center justify-end gap-2">
+            <LoadingIndicator />
+            <button
+              type="button"
+              aria-label="History"
+              className="grid size-10 place-items-center rounded-full text-muted-foreground transition-colors hover:bg-primary/10 active:scale-95"
+            >
+              <RiHistoryLine className="size-5" />
+            </button>
+          </div>
+        </div>
+      </header>
+
+      <main className="grow flex flex-col">{children}</main>
+    </div>
+  );
+}
+
 function LoadingIndicator() {
   const isLoading = useRouterState({ select: (s) => s.isLoading });
   return (
     <div
-      className={`h-12 transition-all duration-300 ${
+      className={`size-5 transition-all duration-300 ${
         isLoading ? `opacity-100 delay-300` : `opacity-0 delay-0`
       }`}
     >
-      <Loader />
+      <div className="size-5 animate-spin rounded-full border-2 border-muted border-t-primary" />
     </div>
   );
 }
