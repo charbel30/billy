@@ -3,6 +3,7 @@ import { Badge } from '~/components/ui/badge'
 import { ClaimList } from '~/components/bill/ClaimList'
 import { SplitHero } from '~/components/bill/SplitHero'
 import { PersonRail } from '~/components/bill/PersonRail'
+import { MobileSplitSheet } from '~/components/bill/MobileSplitSheet'
 import { BillSummary, type BillSummaryBill } from '~/components/bill/BillSummary'
 import { computePortfolios } from '~/lib/split'
 import { formatLbp } from '~/lib/currency'
@@ -68,9 +69,8 @@ export function BillSplitWorkspace({
   savingMessage?: string | null
   summaryDescription?: string
 }) {
-  const activePerson = people.find((p) => p.id === activeId) ?? null
-
-  // Per-person totals power the panel rows; computed once over the whole bill.
+  // Per-person portfolios power the panel totals + the tap-to-reveal breakdowns;
+  // computed once over the whole bill.
   const portfolios = computePortfolios({
     lineItems: bill.lineItems,
     people: bill.people,
@@ -81,7 +81,8 @@ export function BillSplitWorkspace({
     serviceSplitMode: bill.serviceSplitMode,
     rate: bill.rate,
   })
-  const totalsByPerson = new Map(portfolios.map((p) => [p.personId, p.totalUsd]))
+  const portfolioByPerson = new Map(portfolios.map((p) => [p.personId, p]))
+  const grandLbp = portfolios.reduce((s, p) => s + p.totalLbp, 0)
 
   const header = (
     <div>
@@ -103,6 +104,7 @@ export function BillSplitWorkspace({
   )
 
   // Compact view: nothing to claim (finalized, or a guest who hasn't joined).
+  // Here the full summary IS the point, so keep it.
   if (!showClaims) {
     return (
       <div className="mx-auto w-full max-w-md space-y-4 p-4 sm:p-6">
@@ -133,10 +135,17 @@ export function BillSplitWorkspace({
           onSelect={onSelect}
           onAdd={onAdd}
           onRemove={onRemove}
-          totalsByPerson={totalsByPerson}
+          portfolioByPerson={portfolioByPerson}
+          lineItems={bill.lineItems}
+          claims={bill.claims}
+          rate={bill.rate}
+          serviceChargeOn={bill.serviceChargeOn}
           addLabel={addLabel}
           addPlaceholder={addPlaceholder}
         />
+        <p className="mt-2 px-1 text-[11px] text-muted-foreground">
+          Tap a person's avatar to see their items.
+        </p>
       </div>
     </>
   )
@@ -164,7 +173,7 @@ export function BillSplitWorkspace({
             lineItems={bill.lineItems}
             people={bill.people}
             claims={bill.claims}
-            activePerson={activePerson}
+            activePerson={people.find((p) => p.id === activeId) ?? null}
             rate={bill.rate}
             onStep={onStep}
             onShareEvenly={onShareEvenly}
@@ -175,12 +184,6 @@ export function BillSplitWorkspace({
           {savingMessage ? (
             <p className="text-xs text-muted-foreground">{savingMessage}</p>
           ) : null}
-
-          <BillSummary
-            bill={bill}
-            title={bill.status === 'FINALIZED' ? 'Final receipt' : 'Live totals'}
-            description={summaryDescription}
-          />
         </div>
 
         {/* Desktop: sticky person panel + actions */}
@@ -192,22 +195,23 @@ export function BillSplitWorkspace({
         </aside>
       </div>
 
-      {/* Mobile: fixed participant bar + action */}
-      <div className="fixed inset-x-0 bottom-0 z-30 bg-gradient-to-t from-background via-background/95 to-background/0 px-4 pb-4 pt-8 lg:hidden">
-        <div className="mx-auto max-w-md space-y-2 rounded-[2rem] bg-muted/95 p-3 shadow-[0_-18px_54px_rgba(0,0,0,0.10)] ring-1 ring-border/60 backdrop-blur-xl">
-          {panelExtra ? <div>{panelExtra}</div> : null}
-          <PersonRail
-            variant="bar"
-            people={people}
-            activeId={activeId}
-            onSelect={onSelect}
-            onAdd={onAdd}
-            totalsByPerson={totalsByPerson}
-            addPlaceholder={addPlaceholder}
-          />
-          {actionSlot ? <div className="space-y-2">{actionSlot}</div> : null}
-        </div>
-      </div>
+      {/* Mobile: expandable bottom sheet (bar + breakdowns) */}
+      <MobileSplitSheet
+        people={people}
+        breakdownPeople={bill.people}
+        activeId={activeId}
+        onSelect={onSelect}
+        onAdd={onAdd}
+        portfolioByPerson={portfolioByPerson}
+        lineItems={bill.lineItems}
+        claims={bill.claims}
+        rate={bill.rate}
+        serviceChargeOn={bill.serviceChargeOn}
+        grandLbp={grandLbp}
+        panelExtra={panelExtra}
+        actionSlot={actionSlot}
+        addPlaceholder={addPlaceholder}
+      />
     </div>
   )
 }

@@ -2,6 +2,7 @@ import { motion } from 'motion/react'
 import type { Portfolio, ClaimedLine } from '~/lib/split'
 import { formatLbp, formatUsd, toUsd } from '~/lib/currency'
 import { formatUnits } from '~/lib/format'
+import { cn } from '~/lib/utils'
 import { PersonAvatar } from './PersonAvatar'
 
 // One person's slice of the bill, rendered like their own little receipt
@@ -11,18 +12,25 @@ export function PortfolioReceipt({
   lines,
   rate,
   serviceChargeOn,
+  bare = false,
 }: {
   portfolio: Portfolio
   lines: ClaimedLine[]
   rate: number | null | undefined
   serviceChargeOn: boolean
+  // `bare` drops the card chrome for embedding inside a popover / sheet that
+  // already provides its own surface.
+  bare?: boolean
 }) {
   return (
     <motion.div
       layout
       initial={{ opacity: 0, y: 8 }}
       animate={{ opacity: 1, y: 0 }}
-      className="rounded-3xl bg-background/85 p-4 shadow-[0_14px_34px_rgba(0,0,0,0.04)] ring-1 ring-border/35"
+      className={cn(
+        !bare &&
+          'rounded-3xl bg-background/85 p-4 shadow-[0_14px_34px_rgba(0,0,0,0.04)] ring-1 ring-border/35',
+      )}
     >
       <div className="flex items-center gap-2">
         <PersonAvatar name={portfolio.name} color={portfolio.color} size="sm" />
