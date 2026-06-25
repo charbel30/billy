@@ -3,12 +3,7 @@ export const scanHubCopy = {
   scanningStatus: 'Reading receipt',
   primaryAction: 'Start Scan',
   recentTitle: 'Recent bill scans',
-  emptyRecent: 'Scanned receipts will show here once history is connected.',
+  emptyRecent: 'Your scanned bills will show up here.',
   uploadError: 'Upload failed',
   fallbackError: 'Something went wrong',
 }
-
-export const recentScanPlaceholders = [
-  { name: "Mario's receipt" },
-  { name: 'Market receipt' },
-]

@@ -1,3 +1,4 @@
+import { useEffect } from 'react'
 import { createFileRoute, useNavigate } from '@tanstack/react-router'
 import { useSuspenseQuery } from '@tanstack/react-query'
 import { RiArrowLeftLine } from '@remixicon/react'
@@ -6,6 +7,7 @@ import { Loader } from '~/components/Loader'
 import { Button } from '~/components/ui/button'
 import { BillSummary } from '~/components/bill/BillSummary'
 import { billQueries } from '~/queries'
+import { recordBill } from '~/lib/billHistory'
 
 export const Route = createFileRoute('/summary/$billId')({
   component: Summary,
@@ -22,6 +24,10 @@ function Summary() {
   const navigate = useNavigate()
   const { data: bill } = useSuspenseQuery(billQueries.detail(billId))
   const finalized = bill.status === 'FINALIZED'
+
+  useEffect(() => {
+    recordBill({ billId, step: 'summary', name: bill.merchantName })
+  }, [billId, bill.merchantName])
 
   return (
     <div className="mx-auto w-full max-w-md p-4 sm:p-6 space-y-4">

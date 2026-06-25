@@ -14,9 +14,14 @@ import {
   useCreateBill,
   useGenerateUploadUrl,
 } from '~/queries'
-import { getLastBill, type LastBill } from '~/lib/lastBill'
+import type { Id } from 'convex/_generated/dataModel'
+import {
+  clearBillHistory,
+  getBillHistory,
+  type BillHistoryEntry,
+} from '~/lib/billHistory'
 import { cn } from '~/lib/utils'
-import { recentScanPlaceholders, scanHubCopy } from './scannerHubContent'
+import { scanHubCopy } from './scannerHubContent'
 import '@fontsource-variable/figtree/wght.css'
 
 export function ScannerHub() {
@@ -27,25 +32,32 @@ export function ScannerHub() {
   const cameraInputRef = useRef<HTMLInputElement>(null)
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState<string | null>(null)
-  const [lastBill, setLastBillState] = useState<LastBill | null>(null)
+  const [history, setHistory] = useState<BillHistoryEntry[]>([])
 
-  // Read the last-worked-on bill on mount (client-only / localStorage).
+  // Read local bill history on mount (client-only / localStorage).
   useEffect(() => {
-    setLastBillState(getLastBill())
+    setHistory(getBillHistory())
   }, [])
+
+  const lastBill = history[0] ?? null
 
   function startScan() {
     if (busy) return
     cameraInputRef.current?.click()
   }
 
-  function resumeLastBill() {
-    if (!lastBill) return
-    const { billId, step } = lastBill
-    if (step === 'split') navigate({ to: '/split/$billId', params: { billId } })
-    else if (step === 'summary')
+  function openBill(entry: BillHistoryEntry) {
+    const billId = entry.billId as Id<'bills'>
+    if (entry.step === 'split')
+      navigate({ to: '/split/$billId', params: { billId } })
+    else if (entry.step === 'summary')
       navigate({ to: '/summary/$billId', params: { billId } })
     else navigate({ to: '/review/$billId', params: { billId } })
+  }
+
+  function clearHistory() {
+    clearBillHistory()
+    setHistory([])
   }
 
   async function handleFile(e: React.ChangeEvent<HTMLInputElement>) {
@@ -98,7 +110,7 @@ export function ScannerHub() {
         {lastBill ? (
           <button
             type="button"
-            onClick={resumeLastBill}
+            onClick={() => openBill(lastBill)}
             className="group flex items-center justify-between gap-3 rounded-3xl border border-border bg-card px-4 py-3 text-left shadow-[0_1px_3px_rgba(0,0,0,0.06),0_10px_30px_rgba(0,0,0,0.05)] transition-[transform,border-color] hover:border-foreground/20 active:scale-[0.99]"
           >
             <span className="flex min-w-0 items-center gap-3">
@@ -106,8 +118,8 @@ export function ScannerHub() {
                 <RiRestartLine className="size-5" />
               </span>
               <span className="min-w-0">
-                <span className="block text-sm font-bold">
-                  Resume your bill
+                <span className="block truncate text-sm font-bold">
+                  Resume {lastBill.name?.trim() || 'your bill'}
                 </span>
                 <span className="block truncate text-xs text-muted-foreground">
                   Pick up where you left off · {lastBill.step}
@@ -150,7 +162,11 @@ export function ScannerHub() {
             {error ? <p className="text-center text-sm text-destructive">{error}</p> : null}
           </section>
 
-          <RecentScanPanel />
+          <RecentScanPanel
+            entries={history}
+            onOpen={openBill}
+            onClear={clearHistory}
+          />
         </main>
       </div>
     </div>
@@ -222,31 +238,108 @@ function ScannerCorners() {
   )
 }
 
-function RecentScanPanel() {
+const STEP_LABEL: Record<BillHistoryEntry['step'], string> = {
+  review: 'Reviewing',
+  split: 'Splitting',
+  summary: 'Summary',
+}
+
+function timeAgo(at: number): string {
+  const s = Math.max(0, (Date.now() - at) / 1000)
+  if (s < 60) return 'just now'
+  const m = s / 60
+  if (m < 60) return `${Math.floor(m)}m ago`
+  const h = m / 60
+  if (h < 24) return `${Math.floor(h)}h ago`
+  const d = h / 24
+  if (d < 7) return `${Math.floor(d)}d ago`
+  return new Date(at).toLocaleDateString()
+}
+
+const COLLAPSED_COUNT = 3
+
+function RecentScanPanel({
+  entries,
+  onOpen,
+  onClear,
+}: {
+  entries: BillHistoryEntry[]
+  onOpen: (entry: BillHistoryEntry) => void
+  onClear: () => void
+}) {
+  const [expanded, setExpanded] = useState(false)
+  const hasMore = entries.length > COLLAPSED_COUNT
+  const visible = expanded ? entries : entries.slice(0, COLLAPSED_COUNT)
+
   return (
     <section className="rounded-4xl bg-card/80 p-4 shadow-[0_16px_48px_rgba(0,0,0,0.06)] ring-1 ring-border/50 backdrop-blur md:p-6">
-      <div className="mb-3 flex items-center justify-between">
+      <div className="mb-3 flex items-center justify-between gap-2">
         <h2 className="text-lg font-bold">{scanHubCopy.recentTitle}</h2>
-        <span className="rounded-full bg-muted px-3 py-1 text-xs font-semibold text-muted-foreground">
-          {recentScanPlaceholders.length}
-        </span>
+        <div className="flex items-center gap-2">
+          {entries.length > 0 ? (
+            <button
+              type="button"
+              onClick={onClear}
+              className="rounded-full px-2.5 py-1 text-xs font-semibold text-muted-foreground transition-colors hover:text-destructive"
+            >
+              Clear
+            </button>
+          ) : null}
+          <span className="rounded-full bg-muted px-3 py-1 text-xs font-semibold text-muted-foreground tabular-nums">
+            {entries.length}
+          </span>
+        </div>
       </div>
 
-      <div className="space-y-2">
-        {recentScanPlaceholders.map((scan) => (
-          <div
-            key={scan.name}
-            className="flex items-center gap-3 rounded-xl bg-muted/70 px-4 py-3"
-          >
-            <span className="grid size-10 place-items-center rounded-full bg-primary/10 text-primary">
-              <RiFileList3Line className="size-5" />
-            </span>
-            <span className="font-semibold">{scan.name}</span>
+      {entries.length === 0 ? (
+        <p className="text-pretty text-sm text-muted-foreground">
+          {scanHubCopy.emptyRecent}
+        </p>
+      ) : (
+        <>
+          <div className="space-y-2">
+            <AnimatePresence initial={false}>
+              {visible.map((entry) => (
+                <motion.button
+                  key={entry.billId}
+                  layout
+                  type="button"
+                  onClick={() => onOpen(entry)}
+                  initial={{ opacity: 0, y: 6 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  exit={{ opacity: 0, y: -6 }}
+                  transition={{ type: 'spring', duration: 0.3, bounce: 0 }}
+                  whileTap={{ scale: 0.98 }}
+                  className="group flex w-full items-center gap-3 rounded-2xl bg-muted/60 px-4 py-3 text-left transition-colors hover:bg-muted"
+                >
+                  <span className="grid size-10 shrink-0 place-items-center rounded-full bg-primary/10 text-primary">
+                    <RiFileList3Line className="size-5" />
+                  </span>
+                  <span className="min-w-0 flex-1">
+                    <span className="block truncate font-semibold">
+                      {entry.name?.trim() || 'Untitled bill'}
+                    </span>
+                    <span className="block truncate text-xs text-muted-foreground">
+                      {STEP_LABEL[entry.step]} · {timeAgo(entry.at)}
+                    </span>
+                  </span>
+                  <RiArrowRightLine className="size-5 shrink-0 text-muted-foreground transition-transform group-hover:translate-x-0.5" />
+                </motion.button>
+              ))}
+            </AnimatePresence>
           </div>
-        ))}
-      </div>
 
-      <p className="mt-4 text-pretty text-sm text-muted-foreground">{scanHubCopy.emptyRecent}</p>
+          {hasMore ? (
+            <button
+              type="button"
+              onClick={() => setExpanded((v) => !v)}
+              className="mt-3 w-full rounded-full py-2 text-xs font-bold text-primary transition-colors hover:bg-primary/10"
+            >
+              {expanded ? 'Show less' : `Show all ${entries.length}`}
+            </button>
+          ) : null}
+        </>
+      )}
     </section>
   )
 }

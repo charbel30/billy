@@ -20,6 +20,7 @@ import {
   useSaveHostClaims,
   useShareHostItemEvenly,
 } from '~/queries'
+import { recordBill } from '~/lib/billHistory'
 import type { Claim } from '~/lib/types'
 
 export const Route = createFileRoute('/split/$billId')({
@@ -56,6 +57,11 @@ function Split() {
 
   const finalized = bill.status === 'FINALIZED'
   const shared = bill.status === 'PUBLISHED' || finalized
+
+  // Remember this bill locally for the scan page's resume + recent list.
+  useEffect(() => {
+    recordBill({ billId, step: 'split', name: bill.merchantName })
+  }, [billId, bill.merchantName])
 
   const workspaceBill = {
     merchantName: bill.merchantName,

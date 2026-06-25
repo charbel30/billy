@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { createFileRoute, useNavigate } from '@tanstack/react-router'
 import {
   RiAddLine,
@@ -26,6 +26,7 @@ import {
   ELEVATED_CARD_HOVER,
   LOW_CONFIDENCE_THRESHOLD,
 } from '~/lib/bill/constants'
+import { recordBill } from '~/lib/billHistory'
 import { cn } from '~/lib/utils'
 import type { LineItem } from '~/lib/types'
 import type { WorkingMeta } from '~/lib/bill/types'
@@ -47,6 +48,10 @@ function Review() {
   const { bill, setMeta, addLineItem, updateLineItem, removeLineItem } = editor
   const { meta } = bill
   const canContinue = bill.lineItems.length > 0 && canPersistWorkingBill(bill)
+
+  useEffect(() => {
+    recordBill({ billId, step: 'review', name: meta.merchantName })
+  }, [billId, meta.merchantName])
 
   const recon = reconcile({
     lineItems: bill.lineItems,

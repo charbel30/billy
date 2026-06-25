@@ -20,7 +20,6 @@ import {
   RiWallet3Line,
 } from "@remixicon/react";
 import { cn } from "~/lib/utils";
-import { setLastBill } from "~/lib/lastBill";
 import { DefaultCatchBoundary } from "~/components/DefaultCatchBoundary";
 import { DirectionProvider } from "~/components/ui/direction";
 import { NotFound } from "~/components/NotFound";
@@ -163,11 +162,6 @@ function HeaderCenter() {
       return null;
     },
   });
-
-  // Remember the bill in view so the scan page can offer a resume shortcut.
-  React.useEffect(() => {
-    if (nav) setLastBill(nav);
-  }, [nav?.billId, nav?.step]);
 
   if (!nav) {
     return <BrandMark />;
