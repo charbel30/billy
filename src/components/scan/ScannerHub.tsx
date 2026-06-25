@@ -1,7 +1,7 @@
 import { useRef, useState } from 'react'
 import { useNavigate } from '@tanstack/react-router'
 import imageCompression from 'browser-image-compression'
-import { motion } from 'motion/react'
+import { AnimatePresence, motion } from 'motion/react'
 import {
   RiCameraLine,
   RiFileList3Line,
@@ -85,13 +85,24 @@ export function ScannerHub() {
               type="button"
               onClick={startScan}
               disabled={busy}
-              className="flex w-full items-center justify-center gap-2 rounded-full bg-primary px-6 py-4 text-base font-bold text-primary-foreground shadow-[0_16px_48px_rgba(0,0,0,0.08)] transition-all duration-200 active:scale-[0.96] disabled:pointer-events-none disabled:opacity-70"
+              className="flex w-full items-center justify-center gap-2 rounded-full bg-primary px-6 py-4 text-base font-bold text-primary-foreground shadow-[0_16px_48px_rgba(0,0,0,0.08)] transition-[transform,opacity] duration-200 active:scale-[0.96] disabled:pointer-events-none disabled:opacity-70"
             >
-              {busy ? (
-                <RiLoader4Line className="size-5 animate-spin" />
-              ) : (
-                <RiCameraLine className="size-5" />
-              )}
+              <AnimatePresence mode="wait" initial={false}>
+                <motion.span
+                  key={busy ? 'busy' : 'idle'}
+                  className="grid place-items-center"
+                  initial={{ scale: 0.25, opacity: 0, filter: 'blur(4px)' }}
+                  animate={{ scale: 1, opacity: 1, filter: 'blur(0px)' }}
+                  exit={{ scale: 0.25, opacity: 0, filter: 'blur(4px)' }}
+                  transition={{ type: 'spring', duration: 0.3, bounce: 0 }}
+                >
+                  {busy ? (
+                    <RiLoader4Line className="size-5 animate-spin" />
+                  ) : (
+                    <RiCameraLine className="size-5" />
+                  )}
+                </motion.span>
+              </AnimatePresence>
               {busy ? scanHubCopy.scanningStatus : scanHubCopy.primaryAction}
             </button>
 
@@ -184,7 +195,7 @@ function RecentScanPanel() {
         {recentScanPlaceholders.map((scan) => (
           <div
             key={scan.name}
-            className="flex items-center gap-3 rounded-3xl bg-muted/70 px-4 py-3"
+            className="flex items-center gap-3 rounded-xl bg-muted/70 px-4 py-3"
           >
             <span className="grid size-10 place-items-center rounded-full bg-primary/10 text-primary">
               <RiFileList3Line className="size-5" />
@@ -194,7 +205,7 @@ function RecentScanPanel() {
         ))}
       </div>
 
-      <p className="mt-4 text-sm text-muted-foreground">{scanHubCopy.emptyRecent}</p>
+      <p className="mt-4 text-pretty text-sm text-muted-foreground">{scanHubCopy.emptyRecent}</p>
     </section>
   )
 }

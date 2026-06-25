@@ -66,7 +66,7 @@ export function ClaimList({
                   aria-label="Remove one"
                   disabled={!activePerson || mine <= 0}
                   onClick={() => activePerson && onStep(item.id, activePerson.id, -1)}
-                  className="grid size-8 place-items-center rounded-full border border-border disabled:opacity-30 hover:bg-muted"
+                  className="grid size-10 place-items-center rounded-full border border-border disabled:opacity-30 hover:bg-muted transition-[transform,background-color] active:scale-[0.96]"
                 >
                   <RiSubtractLine className="size-4" />
                 </button>
@@ -89,7 +89,7 @@ export function ClaimList({
                   aria-label="Add one"
                   disabled={!activePerson || remaining <= 0.0001}
                   onClick={() => activePerson && onStep(item.id, activePerson.id, +1)}
-                  className="grid size-8 place-items-center rounded-full border border-border disabled:opacity-30 hover:bg-muted"
+                  className="grid size-10 place-items-center rounded-full border border-border disabled:opacity-30 hover:bg-muted transition-[transform,background-color] active:scale-[0.96]"
                   style={
                     activePerson && remaining > 0.0001
                       ? { backgroundColor: activePerson.color, color: 'white', borderColor: 'transparent' }
@@ -132,7 +132,7 @@ export function ClaimList({
                   onClick={() =>
                     onShareEvenly(item.id, sharePeople.map((p) => p.id))
                   }
-                  className="inline-flex items-center gap-1 text-xs text-muted-foreground hover:text-foreground"
+                  className="inline-flex items-center gap-1 text-xs text-muted-foreground hover:text-foreground transition-[transform,color] active:scale-[0.96]"
                 >
                   <RiGroupLine className="size-3.5" /> split evenly
                 </button>

@@ -68,7 +68,7 @@ function PersonPicker({
             onClick={() => onSelect(p.id)}
             style={active ? { backgroundColor: p.color } : undefined}
             className={cn(
-              'inline-flex items-center gap-1.5 rounded-full border px-3 py-1.5 text-sm transition-colors',
+              'inline-flex items-center gap-1.5 rounded-full border px-3 py-1.5 text-sm transition-[transform,background-color,border-color,color] active:scale-[0.96]',
               active
                 ? 'border-transparent text-white'
                 : 'border-border hover:bg-muted',

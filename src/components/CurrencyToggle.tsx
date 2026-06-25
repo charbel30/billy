@@ -20,7 +20,7 @@ export function CurrencyToggle({
           type="button"
           onClick={() => onChange(c)}
           className={cn(
-            'px-3 py-1 text-sm rounded-3xl transition-colors',
+            'px-3 py-1 text-sm rounded-3xl transition-[transform,background-color,color] active:scale-[0.96]',
             value === c
               ? 'bg-primary text-primary-foreground'
               : 'text-muted-foreground hover:text-foreground',

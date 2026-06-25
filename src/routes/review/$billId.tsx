@@ -224,7 +224,7 @@ function AuditLineItems({
       <button
         type="button"
         onClick={onAdd}
-        className="flex w-full items-center justify-center gap-2 rounded-4xl border-2 border-dashed border-primary/30 px-4 py-4 text-sm font-bold text-primary transition-colors hover:bg-primary/10"
+        className="flex w-full items-center justify-center gap-2 rounded-4xl border-2 border-dashed border-primary/30 px-4 py-4 text-sm font-bold text-primary transition-[transform,background-color] hover:bg-primary/10 active:scale-[0.96]"
       >
         <RiAddLine className="size-5" />
         Add item
@@ -298,7 +298,7 @@ function AuditLineItem({
         </div>
 
         <div className="mt-4 grid grid-cols-[5.5rem_minmax(0,1fr)_2.5rem] gap-2">
-          <label className="rounded-[1.35rem] bg-muted/65 px-3 py-2">
+          <label className="rounded-xl bg-muted/65 px-3 py-2">
             <span className="block text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">
               Qty
             </span>
@@ -311,7 +311,7 @@ function AuditLineItem({
             />
           </label>
 
-          <div className="min-w-0 rounded-[1.35rem] bg-muted/65 px-3 py-2">
+          <div className="min-w-0 rounded-xl bg-muted/65 px-3 py-2">
             <span className="block text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">
               Unit price
             </span>
@@ -323,7 +323,7 @@ function AuditLineItem({
           <button
             type="button"
             onClick={() => onRemove(item.id)}
-            className="grid place-items-center rounded-[1.35rem] bg-muted/65 text-muted-foreground transition-colors hover:bg-destructive/10 hover:text-destructive"
+            className="grid place-items-center rounded-xl bg-muted/65 text-muted-foreground transition-[transform,background-color,color] hover:bg-destructive/10 hover:text-destructive active:scale-[0.96]"
             aria-label="Remove item"
           >
             <RiDeleteBin6Line className="size-5" />
@@ -363,7 +363,7 @@ function AuditLineItem({
             <button
               type="button"
               onClick={() => onRemove(item.id)}
-              className="ml-1 inline-flex items-center text-muted-foreground opacity-0 transition-colors hover:text-destructive group-hover:opacity-100"
+              className="ml-1 inline-flex size-7 items-center justify-center rounded-full text-muted-foreground opacity-0 transition-[transform,color,opacity] hover:text-destructive active:scale-[0.96] group-hover:opacity-100"
               aria-label="Remove item"
             >
               <RiDeleteBin6Line className="size-4" />

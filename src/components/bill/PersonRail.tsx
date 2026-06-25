@@ -40,11 +40,12 @@ export function PersonRail({
               initial={{ opacity: 0, scale: 0.8 }}
               animate={{ opacity: 1, scale: 1 }}
               exit={{ opacity: 0, scale: 0.8 }}
+              whileTap={{ scale: 0.96 }}
               type="button"
               onClick={() => onSelect(p.id)}
               style={active ? { backgroundColor: p.color } : undefined}
               className={cn(
-                'inline-flex items-center gap-1.5 rounded-full border px-3 py-1.5 text-sm transition-colors',
+                'inline-flex items-center gap-1.5 rounded-full border px-3 py-1.5 text-sm transition-[background-color,border-color,color]',
                 active
                   ? 'border-transparent text-white'
                   : 'border-border hover:bg-muted',
@@ -64,7 +65,7 @@ export function PersonRail({
                     e.stopPropagation()
                     onRemove(p.id)
                   }}
-                  className="opacity-60 hover:opacity-100"
+                  className="opacity-60 hover:opacity-100 transition-opacity p-0.5 -m-0.5"
                 >
                   <RiCloseLine className="size-3.5" />
                 </span>
@@ -86,7 +87,7 @@ export function PersonRail({
           type="button"
           onClick={submit}
           aria-label="Add person"
-          className="text-muted-foreground hover:text-foreground"
+          className="grid size-7 place-items-center rounded-full text-muted-foreground hover:text-foreground transition-[transform,color] active:scale-[0.96]"
         >
           <RiAddLine className="size-4" />
         </button>

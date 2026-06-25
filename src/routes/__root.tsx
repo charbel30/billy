@@ -102,13 +102,13 @@ function RootDocument({ children }: { children: React.ReactNode }) {
 
 function AppLayout({ children }: { children: React.ReactNode }) {
   return (
-    <div className="min-h-screen flex flex-col bg-background text-foreground">
+    <div className="min-h-screen flex flex-col bg-background text-foreground antialiased">
       <header className="sticky top-0 z-30 border-b border-border/40 bg-background/85 px-4 py-3 backdrop-blur-xl sm:px-6">
         <div className="mx-auto grid h-10 w-full max-w-7xl grid-cols-[1fr_auto_1fr] items-center">
           <Link
             to="/"
             aria-label="Go to scanner"
-            className="grid size-10 place-items-center rounded-full text-muted-foreground transition-colors hover:bg-primary/10 active:scale-95"
+            className="grid size-10 place-items-center rounded-full text-muted-foreground transition-colors hover:bg-primary/10 active:scale-[0.96]"
           >
             <RiWallet3Line className="size-5" />
           </Link>
@@ -122,7 +122,7 @@ function AppLayout({ children }: { children: React.ReactNode }) {
             <button
               type="button"
               aria-label="History"
-              className="grid size-10 place-items-center rounded-full text-muted-foreground transition-colors hover:bg-primary/10 active:scale-95"
+              className="grid size-10 place-items-center rounded-full text-muted-foreground transition-colors hover:bg-primary/10 active:scale-[0.96]"
             >
               <RiHistoryLine className="size-5" />
             </button>
@@ -139,7 +139,7 @@ function LoadingIndicator() {
   const isLoading = useRouterState({ select: (s) => s.isLoading });
   return (
     <div
-      className={`size-5 transition-all duration-300 ${
+      className={`size-5 transition-opacity duration-300 ${
         isLoading ? `opacity-100 delay-300` : `opacity-0 delay-0`
       }`}
     >
