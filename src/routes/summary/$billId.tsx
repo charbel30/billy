@@ -26,7 +26,7 @@ function Summary() {
   return (
     <div className="mx-auto w-full max-w-md p-4 sm:p-6 space-y-4">
       {!finalized ? (
-        <div className="rounded-xl border border-amber-200 bg-amber-50 px-3 py-2 text-sm text-amber-800">
+        <div className="rounded-3xl bg-amber-50 px-4 py-3 text-sm text-amber-700">
           This is a live preview. Finalize the split when everyone is done to
           lock the receipt.
         </div>

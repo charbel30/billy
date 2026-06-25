@@ -4,14 +4,12 @@ import { useSuspenseQuery } from '@tanstack/react-query'
 import toast from 'react-hot-toast'
 import {
   RiArrowRightLine,
-  RiCheckLine,
-  RiFileCopyLine,
   RiLockLine,
+  RiShareLine,
 } from '@remixicon/react'
 import type { Id } from 'convex/_generated/dataModel'
 import { Loader } from '~/components/Loader'
 import { Button } from '~/components/ui/button'
-import { PersonRail } from '~/components/bill/PersonRail'
 import { BillSplitWorkspace } from '~/components/bill/BillSplitWorkspace'
 import {
   billQueries,
@@ -56,7 +54,6 @@ function Split() {
     }
   }, [bill.people, activeId])
 
-  const activePerson = bill.people.find((p) => p.id === activeId) ?? null
   const finalized = bill.status === 'FINALIZED'
   const shared = bill.status === 'PUBLISHED' || finalized
 
@@ -125,9 +122,29 @@ function Split() {
     void shareHostItemEvenly.mutateAsync({ id: billId, itemId, personIds })
   }
 
-  async function copySplitLink() {
-    const token = await publish.mutateAsync({ id: billId })
-    const url = `${window.location.origin}/b/${token}`
+  async function shareSplitLink() {
+    // The token exists from creation, so we can build the URL synchronously and
+    // keep the tap gesture alive for navigator.share on iOS. Flip the bill to
+    // PUBLISHED in the background (don't await — that would consume the gesture).
+    const url = `${window.location.origin}/join/${bill.shareToken}`
+    if (!shared) void publish.mutateAsync({ id: billId })
+
+    // Prefer the native share sheet (the nice path on iPhone); fall back to the
+    // clipboard, then to surfacing the raw link as a last resort.
+    if (typeof navigator.share === 'function') {
+      try {
+        await navigator.share({
+          title: `Split: ${bill.merchantName || 'the bill'}`,
+          text: 'Join the split and claim your items',
+          url,
+        })
+        return
+      } catch (err) {
+        // User dismissed the sheet — don't fall through to a confusing copy.
+        if (err instanceof DOMException && err.name === 'AbortError') return
+      }
+    }
+
     try {
       await navigator.clipboard.writeText(url)
       toast.success('Split link copied')
@@ -163,18 +180,11 @@ function Split() {
           ) : null}
         </>
       }
-      editorSlot={
-        finalized ? null : (
-          <PersonRail
-            people={bill.people}
-            activeId={activeId}
-            onSelect={setActiveId}
-            onAdd={addPerson}
-            onRemove={removePerson}
-          />
-        )
-      }
-      activePerson={activePerson}
+      people={bill.people}
+      activeId={activeId}
+      onSelect={setActiveId}
+      onAdd={finalized ? undefined : addPerson}
+      onRemove={finalized ? undefined : removePerson}
       onStep={stepClaim}
       onShareEvenly={shareEvenly}
       showClaims={!finalized}
@@ -198,11 +208,11 @@ function Split() {
             <Button
               size="lg"
               className="w-full"
-              onClick={() => void copySplitLink()}
+              onClick={() => void shareSplitLink()}
               disabled={publish.isPending}
             >
-              {shared ? <RiCheckLine /> : <RiFileCopyLine />}
-              {shared ? 'Copy split link again' : 'Invite people to split'}
+              <RiShareLine />
+              {shared ? 'Share split link again' : 'Invite people to split'}
             </Button>
             <Button
               size="lg"

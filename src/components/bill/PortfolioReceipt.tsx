@@ -1,8 +1,8 @@
 import { motion } from 'motion/react'
 import type { Portfolio, ClaimedLine } from '~/lib/split'
-import type { Currency } from '~/components/CurrencyToggle'
 import { formatLbp, formatUsd, toUsd } from '~/lib/currency'
 import { formatUnits } from '~/lib/format'
+import { PersonAvatar } from './PersonAvatar'
 
 // One person's slice of the bill, rendered like their own little receipt
 // (ui-flow-vision.md): their lines, then a USD headline total with LBP under it.
@@ -10,30 +10,22 @@ export function PortfolioReceipt({
   portfolio,
   lines,
   rate,
-  currency,
   serviceChargeOn,
 }: {
   portfolio: Portfolio
   lines: ClaimedLine[]
   rate: number | null | undefined
-  currency: Currency
   serviceChargeOn: boolean
 }) {
-  const fmt = (lbp: number) =>
-    currency === 'LBP' ? formatLbp(lbp) : formatUsd(toUsd(lbp, rate))
-
   return (
     <motion.div
       layout
       initial={{ opacity: 0, y: 8 }}
       animate={{ opacity: 1, y: 0 }}
-      className="rounded-2xl border border-border bg-card p-4"
+      className="rounded-3xl bg-background/85 p-4 shadow-[0_14px_34px_rgba(0,0,0,0.04)] ring-1 ring-border/35"
     >
       <div className="flex items-center gap-2">
-        <span
-          className="size-3 rounded-full"
-          style={{ backgroundColor: portfolio.color }}
-        />
+        <PersonAvatar name={portfolio.name} color={portfolio.color} size="sm" />
         <span className="font-bold">{portfolio.name}</span>
       </div>
 
@@ -45,7 +37,7 @@ export function PortfolioReceipt({
             <span className="truncate text-muted-foreground">
               {formatUnits(l.units)}× {l.name}
             </span>
-            <span>{fmt(l.lbp)}</span>
+            <span>{formatUsd(toUsd(l.lbp, rate))}</span>
           </div>
         ))}
         {lines.length === 0 && (
@@ -56,7 +48,7 @@ export function PortfolioReceipt({
       {serviceChargeOn && portfolio.serviceShareLbp !== 0 && (
         <div className="mt-1 flex justify-between text-xs text-muted-foreground tabular-nums">
           <span>service &amp; tax</span>
-          <span>{fmt(portfolio.serviceShareLbp)}</span>
+          <span>{formatUsd(toUsd(portfolio.serviceShareLbp, rate))}</span>
         </div>
       )}
 
@@ -67,7 +59,7 @@ export function PortfolioReceipt({
           Total
         </span>
         <div className="text-right">
-          <div className="text-2xl font-black">
+          <div className="text-2xl font-black tracking-tight text-primary">
             {formatUsd(toUsd(portfolio.totalLbp, rate))}
           </div>
           <div className="text-xs text-muted-foreground tabular-nums">

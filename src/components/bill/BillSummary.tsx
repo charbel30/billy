@@ -1,5 +1,3 @@
-import { useState } from 'react'
-import { CurrencyToggle, type Currency } from '~/components/CurrencyToggle'
 import { AnimatedAmount } from '~/components/bill/AnimatedAmount'
 import { PortfolioReceipt } from '~/components/bill/PortfolioReceipt'
 import { computePortfolios, personClaimedLines } from '~/lib/split'
@@ -18,6 +16,8 @@ export interface BillSummaryBill {
   rate?: number | null
 }
 
+// Per-person "little receipts" plus the grand total. USD is the headline figure
+// with LBP underneath (matches the redesigned review screen) — no currency toggle.
 export function BillSummary({
   bill,
   title = 'Totals',
@@ -29,7 +29,6 @@ export function BillSummary({
   description?: string
   className?: string
 }) {
-  const [currency, setCurrency] = useState<Currency>('USD')
   const portfolios = computePortfolios({
     lineItems: bill.lineItems,
     people: bill.people,
@@ -44,18 +43,15 @@ export function BillSummary({
 
   return (
     <section className={cn('space-y-3', className)}>
-      <div className="flex items-center justify-between">
-        <div>
-          <h2 className="font-black">{title}</h2>
-          {description ? (
-            <p className="text-sm text-muted-foreground">{description}</p>
-          ) : null}
-        </div>
-        <CurrencyToggle value={currency} onChange={setCurrency} />
+      <div>
+        <h2 className="text-lg font-black tracking-tight">{title}</h2>
+        {description ? (
+          <p className="text-sm text-muted-foreground">{description}</p>
+        ) : null}
       </div>
 
       {!bill.rate && (
-        <p className="text-sm text-amber-600">
+        <p className="rounded-3xl bg-amber-50 px-4 py-3 text-sm text-amber-700">
           No rate set — USD shows as $0.00. Add the venue rate on the review
           screen.
         </p>
@@ -68,19 +64,25 @@ export function BillSummary({
             portfolio={p}
             lines={personClaimedLines(p.personId, bill.lineItems, bill.claims)}
             rate={bill.rate}
-            currency={currency}
             serviceChargeOn={bill.serviceChargeOn}
           />
         ))}
       </div>
 
-      <div className="flex items-center justify-between rounded-xl border border-border p-3">
-        <span className="text-muted-foreground">Grand total</span>
-        <AnimatedAmount
-          value={currency === 'LBP' ? grandLbp : toUsd(grandLbp, bill.rate)}
-          format={currency === 'LBP' ? formatLbp : formatUsd}
-          className="text-lg font-black"
-        />
+      <div className="flex items-center justify-between rounded-3xl bg-muted/70 px-4 py-3 ring-1 ring-border/40">
+        <span className="font-bold text-muted-foreground">Grand total</span>
+        <div className="text-right">
+          <AnimatedAmount
+            value={toUsd(grandLbp, bill.rate)}
+            format={formatUsd}
+            className="block text-xl font-black tracking-tight text-primary"
+          />
+          <AnimatedAmount
+            value={grandLbp}
+            format={formatLbp}
+            className="block text-xs font-semibold text-muted-foreground"
+          />
+        </div>
       </div>
     </section>
   )

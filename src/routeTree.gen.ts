@@ -14,7 +14,7 @@ import { Route as IndexRouteImport } from './routes/index'
 import { Route as SummaryBillIdRouteImport } from './routes/summary/$billId'
 import { Route as SplitBillIdRouteImport } from './routes/split/$billId'
 import { Route as ReviewBillIdRouteImport } from './routes/review/$billId'
-import { Route as BShareTokenRouteImport } from './routes/b/$shareToken'
+import { Route as JoinShareTokenRouteImport } from './routes/join/$shareToken'
 
 const ScanRoute = ScanRouteImport.update({
   id: '/scan',
@@ -41,16 +41,16 @@ const ReviewBillIdRoute = ReviewBillIdRouteImport.update({
   path: '/review/$billId',
   getParentRoute: () => rootRouteImport,
 } as any)
-const BShareTokenRoute = BShareTokenRouteImport.update({
-  id: '/b/$shareToken',
-  path: '/b/$shareToken',
+const JoinShareTokenRoute = JoinShareTokenRouteImport.update({
+  id: '/join/$shareToken',
+  path: '/join/$shareToken',
   getParentRoute: () => rootRouteImport,
 } as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/scan': typeof ScanRoute
-  '/b/$shareToken': typeof BShareTokenRoute
+  '/join/$shareToken': typeof JoinShareTokenRoute
   '/review/$billId': typeof ReviewBillIdRoute
   '/split/$billId': typeof SplitBillIdRoute
   '/summary/$billId': typeof SummaryBillIdRoute
@@ -58,7 +58,7 @@ export interface FileRoutesByFullPath {
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/scan': typeof ScanRoute
-  '/b/$shareToken': typeof BShareTokenRoute
+  '/join/$shareToken': typeof JoinShareTokenRoute
   '/review/$billId': typeof ReviewBillIdRoute
   '/split/$billId': typeof SplitBillIdRoute
   '/summary/$billId': typeof SummaryBillIdRoute
@@ -67,7 +67,7 @@ export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
   '/scan': typeof ScanRoute
-  '/b/$shareToken': typeof BShareTokenRoute
+  '/join/$shareToken': typeof JoinShareTokenRoute
   '/review/$billId': typeof ReviewBillIdRoute
   '/split/$billId': typeof SplitBillIdRoute
   '/summary/$billId': typeof SummaryBillIdRoute
@@ -77,7 +77,7 @@ export interface FileRouteTypes {
   fullPaths:
     | '/'
     | '/scan'
-    | '/b/$shareToken'
+    | '/join/$shareToken'
     | '/review/$billId'
     | '/split/$billId'
     | '/summary/$billId'
@@ -85,7 +85,7 @@ export interface FileRouteTypes {
   to:
     | '/'
     | '/scan'
-    | '/b/$shareToken'
+    | '/join/$shareToken'
     | '/review/$billId'
     | '/split/$billId'
     | '/summary/$billId'
@@ -93,7 +93,7 @@ export interface FileRouteTypes {
     | '__root__'
     | '/'
     | '/scan'
-    | '/b/$shareToken'
+    | '/join/$shareToken'
     | '/review/$billId'
     | '/split/$billId'
     | '/summary/$billId'
@@ -102,7 +102,7 @@ export interface FileRouteTypes {
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   ScanRoute: typeof ScanRoute
-  BShareTokenRoute: typeof BShareTokenRoute
+  JoinShareTokenRoute: typeof JoinShareTokenRoute
   ReviewBillIdRoute: typeof ReviewBillIdRoute
   SplitBillIdRoute: typeof SplitBillIdRoute
   SummaryBillIdRoute: typeof SummaryBillIdRoute
@@ -145,11 +145,11 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ReviewBillIdRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/b/$shareToken': {
-      id: '/b/$shareToken'
-      path: '/b/$shareToken'
-      fullPath: '/b/$shareToken'
-      preLoaderRoute: typeof BShareTokenRouteImport
+    '/join/$shareToken': {
+      id: '/join/$shareToken'
+      path: '/join/$shareToken'
+      fullPath: '/join/$shareToken'
+      preLoaderRoute: typeof JoinShareTokenRouteImport
       parentRoute: typeof rootRouteImport
     }
   }
@@ -158,7 +158,7 @@ declare module '@tanstack/react-router' {
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   ScanRoute: ScanRoute,
-  BShareTokenRoute: BShareTokenRoute,
+  JoinShareTokenRoute: JoinShareTokenRoute,
   ReviewBillIdRoute: ReviewBillIdRoute,
   SplitBillIdRoute: SplitBillIdRoute,
   SummaryBillIdRoute: SummaryBillIdRoute,
