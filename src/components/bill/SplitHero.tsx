@@ -4,9 +4,10 @@ import { effectiveUnitPrice, totalRemainingLbp } from '~/lib/split'
 import { formatLbp, formatUsd, toUsd } from '~/lib/currency'
 import { AnimatedAmount } from './AnimatedAmount'
 
-// The "remaining to split" hero (ui-flow-vision.md). A big USD figure with the
-// LBP underneath, the total bill alongside, and a progress bar that shrinks as
-// units get claimed — reaching empty when the whole receipt is assigned.
+// The "remaining to split" hero (ui-flow-vision.md). A bold, primary-tinted card
+// so it reads as the focal point (not floating muted whitespace): the remaining
+// figure leads, with the total bill + % claimed as an aligned footer row, and a
+// progress bar that fills as the receipt gets assigned.
 export function SplitHero({
   lineItems,
   claims,
@@ -25,44 +26,39 @@ export function SplitHero({
   const done = remaining <= 0.5
 
   return (
-    <section className="rounded-4xl bg-muted/80 p-5 shadow-[0_18px_56px_rgba(0,0,0,0.06)] ring-1 ring-border/40 backdrop-blur sm:p-6">
-      <div className="flex items-end justify-between gap-4">
-        <div className="min-w-0">
-          <p className="text-xs font-semibold uppercase tracking-widest text-muted-foreground">
-            {done ? 'All assigned 🎉' : 'Remaining to split'}
-          </p>
-          <AnimatedAmount
-            value={toUsd(remaining, rate)}
-            format={formatUsd}
-            className="mt-1 block text-4xl font-black tracking-tight text-primary sm:text-5xl"
-          />
-          <AnimatedAmount
-            value={remaining}
-            format={formatLbp}
-            className="mt-1 block text-sm font-semibold text-primary/70"
-          />
-        </div>
-        <div className="shrink-0 text-right">
-          <p className="text-xs font-semibold text-muted-foreground">Total bill</p>
-          <AnimatedAmount
-            value={toUsd(total, rate)}
-            format={formatUsd}
-            className="mt-1 block text-lg font-black tracking-tight tabular-nums"
-          />
-          <AnimatedAmount
-            value={total}
-            format={formatLbp}
-            className="block text-xs font-semibold text-muted-foreground"
-          />
-        </div>
-      </div>
+    <section className="rounded-4xl border border-primary/15 bg-primary/[0.06] p-5 shadow-[0_1px_3px_rgba(0,0,0,0.06),0_16px_44px_rgba(79,55,138,0.10)] sm:p-6">
+      <p className="text-xs font-semibold uppercase tracking-widest text-primary/70">
+        {done ? 'All assigned 🎉' : 'Remaining to split'}
+      </p>
+      <AnimatedAmount
+        value={toUsd(remaining, rate)}
+        format={formatUsd}
+        className="mt-1 block text-5xl font-black tracking-tight text-primary tabular-nums"
+      />
+      <AnimatedAmount
+        value={remaining}
+        format={formatLbp}
+        className="mt-0.5 block text-sm font-semibold text-primary/60 tabular-nums"
+      />
 
-      <div className="mt-4 h-2 overflow-hidden rounded-full bg-background/70">
+      <div className="mt-4 h-2.5 overflow-hidden rounded-full bg-primary/10">
         <motion.div
           className="h-full rounded-full bg-primary"
           animate={{ width: `${claimedPct}%` }}
           transition={{ type: 'spring', stiffness: 120, damping: 20 }}
         />
+      </div>
+
+      <div className="mt-3 flex items-center justify-between text-xs font-semibold">
+        <span className="text-muted-foreground">
+          Total bill{' '}
+          <span className="text-foreground tabular-nums">
+            {formatUsd(toUsd(total, rate))}
+          </span>
+        </span>
+        <span className="text-muted-foreground tabular-nums">
+          {Math.round(claimedPct)}% claimed
+        </span>
       </div>
     </section>
   )

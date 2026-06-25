@@ -79,10 +79,10 @@ export function ClaimList({
               exit={{ opacity: 0, y: -8, filter: 'blur(4px)' }}
               transition={{ type: 'spring', duration: 0.4, bounce: 0 }}
               className={cn(
-                'rounded-3xl border transition-[box-shadow,background-color,border-color]',
+                'rounded-3xl border transition-[box-shadow,background-color,border-color,opacity]',
                 done
-                  ? 'border-border/50 bg-muted/40 p-3'
-                  : 'border-border/70 bg-background p-4 shadow-[0_2px_6px_rgba(0,0,0,0.04),0_14px_34px_rgba(0,0,0,0.05)] hover:border-border hover:shadow-[0_4px_10px_rgba(0,0,0,0.05),0_18px_44px_rgba(0,0,0,0.08)]',
+                  ? 'border-dashed border-border/70 bg-muted p-2.5 opacity-75'
+                  : 'border-border bg-card p-4 shadow-[0_1px_3px_rgba(0,0,0,0.08),0_12px_30px_rgba(0,0,0,0.10)] hover:border-foreground/20 hover:shadow-[0_2px_6px_rgba(0,0,0,0.10),0_18px_44px_rgba(0,0,0,0.14)]',
               )}
             >
               <div className="flex items-start justify-between gap-3">
@@ -126,7 +126,10 @@ export function ClaimList({
 
               <motion.div
                 layout="position"
-                className="mt-3 flex items-center justify-between gap-3"
+                className={cn(
+                  'flex items-center justify-between gap-3',
+                  done ? 'mt-2' : 'mt-3',
+                )}
               >
                 {/* Claimants — tap a pill to drop one of that person's units */}
                 <div className="flex min-w-0 flex-1 flex-wrap items-center gap-1.5">
