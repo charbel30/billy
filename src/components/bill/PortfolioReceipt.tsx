@@ -2,6 +2,7 @@ import { motion } from 'motion/react'
 import type { Portfolio, ClaimedLine } from '~/lib/split'
 import { formatLbp, formatUsd, toUsd } from '~/lib/currency'
 import { formatUnits } from '~/lib/format'
+import { ELEVATED_CARD } from '~/lib/bill/constants'
 import { cn } from '~/lib/utils'
 import { PersonAvatar } from './PersonAvatar'
 
@@ -27,10 +28,7 @@ export function PortfolioReceipt({
       layout
       initial={{ opacity: 0, y: 8 }}
       animate={{ opacity: 1, y: 0 }}
-      className={cn(
-        !bare &&
-          'rounded-3xl bg-background/85 p-4 shadow-[0_14px_34px_rgba(0,0,0,0.04)] ring-1 ring-border/35',
-      )}
+      className={cn(!bare && cn('rounded-3xl p-4', ELEVATED_CARD))}
     >
       <div className="flex items-center gap-2">
         <PersonAvatar name={portfolio.name} color={portfolio.color} size="sm" />

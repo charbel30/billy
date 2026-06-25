@@ -10,6 +10,7 @@ import type { Claim, LineItem, Person } from '~/lib/types'
 import { effectiveUnitPrice, remainingUnits } from '~/lib/split'
 import { formatLbp, formatUsd, toUsd } from '~/lib/currency'
 import { formatUnits } from '~/lib/format'
+import { ELEVATED_CARD, ELEVATED_CARD_HOVER } from '~/lib/bill/constants'
 import { PersonAvatar } from './PersonAvatar'
 import { cn } from '~/lib/utils'
 
@@ -82,7 +83,7 @@ export function ClaimList({
                 'rounded-3xl border transition-[box-shadow,background-color,border-color,opacity]',
                 done
                   ? 'border-dashed border-border/70 bg-muted p-2.5 opacity-75'
-                  : 'border-border bg-card p-4 shadow-[0_1px_3px_rgba(0,0,0,0.08),0_12px_30px_rgba(0,0,0,0.10)] hover:border-foreground/20 hover:shadow-[0_2px_6px_rgba(0,0,0,0.10),0_18px_44px_rgba(0,0,0,0.14)]',
+                  : cn(ELEVATED_CARD, ELEVATED_CARD_HOVER, 'p-4'),
               )}
             >
               <div className="flex items-start justify-between gap-3">

@@ -167,18 +167,12 @@ function Split() {
       bill={workspaceBill}
       description="Pick a person, claim their items, and invite everyone from this same screen."
       notice={
-        <>
-          {shared && !finalized ? (
-            <div className="rounded-xl border border-border bg-muted/40 px-3 py-2 text-xs text-muted-foreground">
-              This split link is live. Guests can join and claim their own items.
-            </div>
-          ) : null}
-          {finalized ? (
-            <div className="rounded-xl border border-border bg-muted/40 px-3 py-2 text-xs text-muted-foreground">
-              This split is finalized, so edits are locked for everyone.
-            </div>
-          ) : null}
-        </>
+        finalized ? (
+          <div className="flex items-center gap-2.5 rounded-2xl bg-muted px-4 py-2.5 text-xs font-medium text-muted-foreground ring-1 ring-border/60">
+            <RiLockLine className="size-4 shrink-0" />
+            This split is finalized, so edits are locked for everyone.
+          </div>
+        ) : null
       }
       people={bill.people}
       activeId={activeId}

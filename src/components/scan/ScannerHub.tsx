@@ -1,17 +1,20 @@
-import { useRef, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { useNavigate } from '@tanstack/react-router'
 import imageCompression from 'browser-image-compression'
 import { AnimatePresence, motion } from 'motion/react'
 import {
+  RiArrowRightLine,
   RiCameraLine,
   RiFileList3Line,
   RiLoader4Line,
+  RiRestartLine,
 } from '@remixicon/react'
 import {
   useAttachImageAndExtract,
   useCreateBill,
   useGenerateUploadUrl,
 } from '~/queries'
+import { getLastBill, type LastBill } from '~/lib/lastBill'
 import { cn } from '~/lib/utils'
 import { recentScanPlaceholders, scanHubCopy } from './scannerHubContent'
 import '@fontsource-variable/figtree/wght.css'
@@ -24,10 +27,25 @@ export function ScannerHub() {
   const cameraInputRef = useRef<HTMLInputElement>(null)
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  const [lastBill, setLastBillState] = useState<LastBill | null>(null)
+
+  // Read the last-worked-on bill on mount (client-only / localStorage).
+  useEffect(() => {
+    setLastBillState(getLastBill())
+  }, [])
 
   function startScan() {
     if (busy) return
     cameraInputRef.current?.click()
+  }
+
+  function resumeLastBill() {
+    if (!lastBill) return
+    const { billId, step } = lastBill
+    if (step === 'split') navigate({ to: '/split/$billId', params: { billId } })
+    else if (step === 'summary')
+      navigate({ to: '/summary/$billId', params: { billId } })
+    else navigate({ to: '/review/$billId', params: { billId } })
   }
 
   async function handleFile(e: React.ChangeEvent<HTMLInputElement>) {
@@ -77,6 +95,29 @@ export function ScannerHub() {
       />
 
       <div className="mx-auto flex w-full max-w-md flex-col gap-6 md:max-w-5xl">
+        {lastBill ? (
+          <button
+            type="button"
+            onClick={resumeLastBill}
+            className="group flex items-center justify-between gap-3 rounded-3xl border border-border bg-card px-4 py-3 text-left shadow-[0_1px_3px_rgba(0,0,0,0.06),0_10px_30px_rgba(0,0,0,0.05)] transition-[transform,border-color] hover:border-foreground/20 active:scale-[0.99]"
+          >
+            <span className="flex min-w-0 items-center gap-3">
+              <span className="grid size-10 shrink-0 place-items-center rounded-full bg-primary/10 text-primary">
+                <RiRestartLine className="size-5" />
+              </span>
+              <span className="min-w-0">
+                <span className="block text-sm font-bold">
+                  Resume your bill
+                </span>
+                <span className="block truncate text-xs text-muted-foreground">
+                  Pick up where you left off · {lastBill.step}
+                </span>
+              </span>
+            </span>
+            <RiArrowRightLine className="size-5 shrink-0 text-muted-foreground transition-transform group-hover:translate-x-0.5" />
+          </button>
+        ) : null}
+
         <main className="grid gap-6 md:grid-cols-[minmax(20rem,28rem)_minmax(0,1fr)] md:items-start md:justify-center">
           <section className="space-y-5">
             <ScannerViewfinder busy={busy} />

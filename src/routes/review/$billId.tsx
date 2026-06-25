@@ -21,7 +21,12 @@ import { reconcile } from '~/lib/reconcile'
 import { formatLbp, formatUsd, toUsd } from '~/lib/currency'
 import { parseNumericInput } from '~/lib/number'
 import { canPersistWorkingBill } from '~/lib/bill/working'
-import { LOW_CONFIDENCE_THRESHOLD } from '~/lib/bill/constants'
+import {
+  ELEVATED_CARD,
+  ELEVATED_CARD_HOVER,
+  LOW_CONFIDENCE_THRESHOLD,
+} from '~/lib/bill/constants'
+import { cn } from '~/lib/utils'
 import type { LineItem } from '~/lib/types'
 import type { WorkingMeta } from '~/lib/bill/types'
 
@@ -204,12 +209,12 @@ function AuditLineItems({
 }) {
   return (
     <div className="space-y-4">
-      <div className="hidden gap-3 border-b border-border/70 pb-3 text-xs font-semibold uppercase tracking-wide text-muted-foreground sm:grid sm:grid-cols-[minmax(0,1fr)_9rem]">
+      <div className="hidden gap-3 px-4 text-xs font-semibold uppercase tracking-wide text-muted-foreground sm:grid sm:grid-cols-[minmax(0,1fr)_9rem]">
         <span>Item</span>
         <span className="text-right">Amount</span>
       </div>
 
-      <div className="space-y-3 sm:divide-y sm:divide-dashed sm:divide-border/70 sm:space-y-0">
+      <div className="space-y-3">
         {lineItems.map((item) => (
           <AuditLineItem
             key={item.id}
@@ -263,7 +268,7 @@ function AuditLineItem({
 
   return (
     <>
-      <div className="rounded-4xl bg-background/85 p-4 shadow-[0_14px_34px_rgba(0,0,0,0.04)] ring-1 ring-border/35 sm:hidden">
+      <div className={cn('rounded-3xl p-4 sm:hidden', ELEVATED_CARD)}>
         <div className="flex items-start justify-between gap-3">
           <div className="min-w-0 flex-1">
             <BlurCommitInput
@@ -331,7 +336,13 @@ function AuditLineItem({
         </div>
       </div>
 
-      <div className="group hidden grid-cols-[minmax(0,1fr)_9rem] gap-3 px-2 py-4 transition-colors hover:bg-muted/40 sm:grid">
+      <div
+        className={cn(
+          'group hidden grid-cols-[minmax(0,1fr)_9rem] gap-3 rounded-3xl p-4 transition-[box-shadow,border-color] sm:grid',
+          ELEVATED_CARD,
+          ELEVATED_CARD_HOVER,
+        )}
+      >
         <div className="min-w-0">
           <div className="flex min-w-0 items-start gap-2">
             <BlurCommitInput

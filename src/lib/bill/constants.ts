@@ -10,6 +10,14 @@ export const PERSON_COLORS = [
   '#f97316',
 ] as const
 
+// Shared "elevated item card" surface — a clear border + layered shadow on
+// bg-card. Used across the split / review / summary item & receipt cards so they
+// read as distinct, separated cards consistently.
+export const ELEVATED_CARD =
+  'border border-border bg-card shadow-[0_1px_3px_rgba(0,0,0,0.08),0_12px_30px_rgba(0,0,0,0.10)]'
+export const ELEVATED_CARD_HOVER =
+  'hover:border-foreground/20 hover:shadow-[0_2px_6px_rgba(0,0,0,0.10),0_18px_44px_rgba(0,0,0,0.14)]'
+
 export const DEFAULT_PERSON_COLOR = '#999'
 export const LOW_CONFIDENCE_THRESHOLD = 0.6
 export const SAVE_DELAY_MS = 5000

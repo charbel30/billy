@@ -1,4 +1,5 @@
 import type { ReactNode } from 'react'
+import { RiExchangeDollarLine, RiGroupLine } from '@remixicon/react'
 import { Badge } from '~/components/ui/badge'
 import { ClaimList } from '~/components/bill/ClaimList'
 import { SplitHero } from '~/components/bill/SplitHero'
@@ -85,21 +86,39 @@ export function BillSplitWorkspace({
   const grandLbp = portfolios.reduce((s, p) => s + p.totalLbp, 0)
 
   const header = (
-    <div>
-      <div className="flex items-center gap-2">
-        <h1 className="text-2xl font-black tracking-tight sm:text-3xl">
-          {bill.merchantName || 'Split it'}
-        </h1>
-        <Badge variant={bill.status === 'FINALIZED' ? 'secondary' : 'outline'}>
-          {statusLabel(bill.status)}
-        </Badge>
+    <div className="flex flex-wrap items-start justify-between gap-3">
+      <div className="flex min-w-0 items-center gap-3">
+        <div className="grid size-11 shrink-0 place-items-center rounded-2xl bg-primary/10 text-primary">
+          <RiGroupLine className="size-5" />
+        </div>
+        <div className="min-w-0">
+          <div className="flex items-center gap-2">
+            <h1 className="truncate text-2xl font-black tracking-tight sm:text-3xl">
+              {bill.merchantName || 'Split it'}
+            </h1>
+            <Badge
+              variant={bill.status === 'FINALIZED' ? 'secondary' : 'outline'}
+            >
+              {statusLabel(bill.status)}
+            </Badge>
+          </div>
+          <p className="mt-0.5 text-sm text-muted-foreground">{description}</p>
+        </div>
       </div>
-      <p className="mt-1 text-sm text-muted-foreground">{description}</p>
-      {bill.rate ? (
-        <p className="mt-0.5 text-xs text-muted-foreground tabular-nums">
-          {formatLbp(bill.rate)} / $1
-        </p>
-      ) : null}
+      <div className="flex shrink-0 flex-wrap items-center justify-end gap-2">
+        {bill.status === 'PUBLISHED' ? (
+          <span className="inline-flex items-center gap-1.5 rounded-full bg-emerald-500/10 px-3 py-1.5 text-xs font-semibold text-emerald-700 ring-1 ring-emerald-500/20">
+            <span className="size-2 rounded-full bg-emerald-500" />
+            Link live
+          </span>
+        ) : null}
+        {bill.rate ? (
+          <span className="inline-flex items-center gap-1.5 rounded-full bg-primary/10 px-3 py-1.5 text-xs font-semibold text-primary">
+            <RiExchangeDollarLine className="size-4" />
+            <span className="tabular-nums">$1 = {formatLbp(bill.rate)}</span>
+          </span>
+        ) : null}
+      </div>
     </div>
   )
 
