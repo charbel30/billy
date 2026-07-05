@@ -5,6 +5,10 @@ lets someone scan a receipt, review the extracted line items, split individual
 units between people, and publish a live share link with per-person totals in
 LBP and USD.
 
+Production/go-to-market plan: see [`ROADMAP.md`](./ROADMAP.md) — launch blockers, the
+"Billy for Venues" QR table-session product, pricing, and the Lebanon marketing plan.
+Deeper product ideas and pitch material: [`IDEAS.md`](./IDEAS.md).
+
 The app uses:
 
 - TanStack Start for routes, SSR, and app shell.
