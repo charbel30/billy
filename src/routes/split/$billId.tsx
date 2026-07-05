@@ -5,22 +5,32 @@ import toast from 'react-hot-toast'
 import {
   RiArrowRightLine,
   RiLockLine,
+  RiQrCodeLine,
   RiShareLine,
 } from '@remixicon/react'
 import type { Id } from 'convex/_generated/dataModel'
 import { Loader } from '~/components/Loader'
 import { Button } from '~/components/ui/button'
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+} from '~/components/ui/dialog'
 import { BillSplitWorkspace } from '~/components/bill/BillSplitWorkspace'
+import { ShareSplitCard } from '~/components/bill/ShareSplitCard'
 import {
   billQueries,
   useAddHostPerson,
   useFinalize,
   usePublish,
   useRemoveHostPerson,
+  useRevokeShare,
   useSaveHostClaims,
   useShareHostItemEvenly,
 } from '~/queries'
 import { recordBill } from '~/lib/billHistory'
+import { joinUrl } from '~/lib/shareText'
 import type { Claim } from '~/lib/types'
 
 export const Route = createFileRoute('/split/$billId')({
@@ -39,6 +49,8 @@ function Split() {
   const { data: bill } = useSuspenseQuery(billQueries.detail(billId))
   const publish = usePublish()
   const finalize = useFinalize()
+  const revokeShare = useRevokeShare()
+  const [qrOpen, setQrOpen] = useState(false)
   const addHostPerson = useAddHostPerson()
   const removeHostPerson = useRemoveHostPerson()
   const saveHostClaims = useSaveHostClaims()
@@ -132,7 +144,7 @@ function Split() {
     // The token exists from creation, so we can build the URL synchronously and
     // keep the tap gesture alive for navigator.share on iOS. Flip the bill to
     // PUBLISHED in the background (don't await — that would consume the gesture).
-    const url = `${window.location.origin}/join/${bill.shareToken}`
+    const url = joinUrl(bill.shareToken)
     if (!shared) void publish.mutateAsync({ id: billId })
 
     // Prefer the native share sheet (the nice path on iPhone); fall back to the
@@ -214,6 +226,17 @@ function Split() {
               <RiShareLine />
               {shared ? 'Share split link again' : 'Invite people to split'}
             </Button>
+            {shared ? (
+              <Button
+                size="lg"
+                variant="outline"
+                className="w-full"
+                onClick={() => setQrOpen(true)}
+              >
+                <RiQrCodeLine />
+                Show QR code
+              </Button>
+            ) : null}
             <Button
               size="lg"
               variant="destructive"
@@ -224,6 +247,21 @@ function Split() {
               <RiLockLine />
               Finalize split
             </Button>
+            <Dialog open={qrOpen} onOpenChange={setQrOpen}>
+              <DialogContent className="max-w-sm">
+                <DialogHeader>
+                  <DialogTitle>Scan to join the split</DialogTitle>
+                </DialogHeader>
+                <ShareSplitCard
+                  url={joinUrl(bill.shareToken)}
+                  merchantName={bill.merchantName}
+                  onRevoke={async () => {
+                    await revokeShare.mutateAsync({ id: billId })
+                    setQrOpen(false)
+                  }}
+                />
+              </DialogContent>
+            </Dialog>
           </div>
         )
       }

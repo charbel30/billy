@@ -12,14 +12,35 @@ import {
   useJoinSplit,
   useSaveGuestClaims,
 } from '~/queries'
+import { seo } from '~/utils/seo'
+import { formatLbp, formatUsd, toUsd } from '~/lib/currency'
+import { LegalFooter } from '~/components/LegalFooter'
 import type { Claim } from '~/lib/types'
 
 export const Route = createFileRoute('/join/$shareToken')({
   component: GuestView,
   pendingComponent: () => <Loader />,
   loader: async ({ params, context: { queryClient } }) => {
-    await queryClient.ensureQueryData(billQueries.byToken(params.shareToken))
+    const bill = await queryClient.ensureQueryData(
+      billQueries.byToken(params.shareToken),
+    )
+    // Feeds the OG tags below — this link unfurls in WhatsApp group chats,
+    // so the preview should already say whose bill it is and how much.
+    const totalLbp = bill.lineItems.reduce((s, li) => s + li.lineTotal, 0)
+    return { merchantName: bill.merchantName, totalLbp, rate: bill.rate }
   },
+  head: ({ loaderData }) => ({
+    meta: seo({
+      title: loaderData?.merchantName
+        ? `Split at ${loaderData.merchantName} — Billy`
+        : 'Join the split — Billy',
+      description: loaderData
+        ? `${formatUsd(toUsd(loaderData.totalLbp, loaderData.rate))} / ${formatLbp(
+            loaderData.totalLbp,
+          )} on the bill. Claim your items and see your share in USD & LBP — no app needed.`
+        : 'Claim your items and see your share in USD & LBP — no app needed.',
+    }),
+  }),
 })
 
 const guestSessionKey = (shareToken: string) => `bill-guest:${shareToken}`
@@ -146,10 +167,11 @@ function GuestView() {
         <div className="rounded-3xl border border-border bg-card p-4">
           <h1 className="text-xl font-black">This split is not open yet</h1>
           <p className="mt-1 text-sm text-muted-foreground">
-            Ask the host to invite people from the split page, then come back to
-            this link.
+            Ask the host to invite people from the split page. This page
+            updates by itself the moment the split opens — no need to refresh.
           </p>
         </div>
+        <LegalFooter />
       </div>
     )
   }
@@ -162,6 +184,7 @@ function GuestView() {
           title={bill.merchantName || 'Final receipt'}
           description="This split is finalized, so the receipt is read-only."
         />
+        <LegalFooter />
       </div>
     )
   }

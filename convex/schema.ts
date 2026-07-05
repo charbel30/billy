@@ -102,6 +102,10 @@ const schema = defineSchema({
 
     shareToken: v.string(), // unguessable
     status: billStatus,
+    // Set when the vision call failed or returned garbage — the review screen
+    // offers "scan again / enter manually" instead of a silent empty bill.
+    // Cleared on the next successful extraction or re-scan attempt.
+    extractionError: v.optional(v.string()),
     // Bumped on every saveWorking flush; lets a viewer detect "edited elsewhere"
     // (last-write-wins otherwise).
     version: v.number(),
@@ -110,7 +114,10 @@ const schema = defineSchema({
     lineItems: v.array(lineItem),
     people: v.array(person), // seeded with a "self" person on create
     claims: v.array(claim),
-  }).index('by_share_token', ['shareToken']),
+  })
+    .index('by_share_token', ['shareToken'])
+    // Powers the TTL purge cron (oldest-inactive first).
+    .index('by_updatedAt', ['updatedAt']),
 })
 export default schema
 

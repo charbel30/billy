@@ -88,6 +88,7 @@ export const applyExtraction = internalMutation({
       lineItems: items,
       claims: [], // fresh extraction means nothing has been claimed yet
       imageRef: undefined, // delete-after-extract: clear the ref (spec §10)
+      extractionError: undefined, // this extraction succeeded
       status:
         checksum.ok && !hasLowConfidence && !hasImplausibleLbp
           ? 'PENDING'
@@ -96,6 +97,27 @@ export const applyExtraction = internalMutation({
       updatedAt: Date.now(),
     })
 
+    return null
+  },
+})
+
+// The vision call threw or returned unparseable output. Keep the message
+// user-safe (the raw error is in the action's logs) and let the review screen
+// offer scan-again / manual entry. Only items-less bills are marked — a re-scan
+// that fails must not clobber a previously successful extraction's status.
+export const markExtractionFailed = internalMutation({
+  args: { billId: v.id('bills') },
+  returns: v.null(),
+  handler: async (ctx, { billId }) => {
+    const bill = await ctx.db.get(billId)
+    if (!bill) return null
+    await ctx.db.patch(billId, {
+      extractionError: "We couldn't read this receipt.",
+      imageRef: undefined,
+      status: bill.lineItems.length > 0 ? bill.status : 'NEEDS_REVIEW',
+      version: bill.version + 1,
+      updatedAt: Date.now(),
+    })
     return null
   },
 })

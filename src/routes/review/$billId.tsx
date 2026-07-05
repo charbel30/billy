@@ -1,9 +1,11 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { createFileRoute, useNavigate } from '@tanstack/react-router'
+import { useSuspenseQuery } from '@tanstack/react-query'
 import {
   RiAddLine,
   RiAlertLine,
   RiArrowRightLine,
+  RiCameraLine,
   RiDeleteBin6Line,
   RiExchangeDollarLine,
   RiLoader4Line,
@@ -16,6 +18,7 @@ import { Switch } from '~/components/ui/switch'
 import { BlurCommitInput } from '~/components/bill/BlurCommitInput'
 import { AnimatedAmount } from '~/components/bill/AnimatedAmount'
 import { useBillEditor } from '~/hooks/useBillEditor'
+import { scanErrorMessage, useScanUpload } from '~/hooks/useScanUpload'
 import { billQueries } from '~/queries'
 import { reconcile } from '~/lib/reconcile'
 import { formatLbp, formatUsd, toUsd } from '~/lib/currency'
@@ -48,6 +51,10 @@ function Review() {
   const { bill, setMeta, addLineItem, updateLineItem, removeLineItem } = editor
   const { meta } = bill
   const canContinue = bill.lineItems.length > 0 && canPersistWorkingBill(bill)
+  // Raw server doc (live) — carries extraction failure state the editor's
+  // working copy doesn't track.
+  const { data: serverBill } = useSuspenseQuery(billQueries.detail(billId))
+  const [failureDismissed, setFailureDismissed] = useState(false)
 
   useEffect(() => {
     recordBill({ billId, step: 'review', name: meta.merchantName })
@@ -69,6 +76,13 @@ function Review() {
       </div>
 
       {editor.extracting ? <ExtractingBanner /> : null}
+
+      {serverBill.extractionError && !editor.extracting && !failureDismissed ? (
+        <ExtractionFailedBanner
+          billId={billId}
+          onDismiss={() => setFailureDismissed(true)}
+        />
+      ) : null}
 
       <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_22rem] lg:items-start">
         <section className="rounded-4xl bg-card/80 p-4 shadow-[0_18px_56px_rgba(0,0,0,0.06)] ring-1 ring-border/50 backdrop-blur sm:p-6 lg:p-8">
@@ -187,6 +201,71 @@ function RateField({
       <p className="text-xs text-muted-foreground">
         Only change this if the venue used a different rate.
       </p>
+    </div>
+  )
+}
+
+// Extraction failed (vision call threw / returned garbage). Never a dead end:
+// re-scan into the SAME bill, or dismiss and type the items in by hand.
+function ExtractionFailedBanner({
+  billId,
+  onDismiss,
+}: {
+  billId: Id<'bills'>
+  onDismiss: () => void
+}) {
+  const scan = useScanUpload()
+  const inputRef = useRef<HTMLInputElement>(null)
+  const [error, setError] = useState<string | null>(null)
+
+  async function handleFile(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0]
+    e.target.value = ''
+    if (!file) return
+    setError(null)
+    try {
+      await scan.rescan(billId, file)
+    } catch (err) {
+      setError(scanErrorMessage(err, 'Something went wrong'))
+    }
+  }
+
+  return (
+    <div className="mb-5 rounded-3xl bg-destructive/10 p-4 text-sm ring-1 ring-destructive/20">
+      <input
+        ref={inputRef}
+        type="file"
+        accept="image/*"
+        capture="environment"
+        className="hidden"
+        disabled={scan.busy}
+        onChange={(e) => void handleFile(e)}
+      />
+      <p className="font-bold text-destructive">
+        We couldn&apos;t read this receipt.
+      </p>
+      <p className="mt-1 text-muted-foreground">
+        Try a clearer photo — flatten the receipt and get the whole bill in
+        frame — or add the items by hand below.
+      </p>
+      <div className="mt-3 flex flex-wrap gap-2">
+        <Button
+          size="sm"
+          onClick={() => inputRef.current?.click()}
+          disabled={scan.busy}
+        >
+          {scan.busy ? (
+            <RiLoader4Line className="animate-spin" />
+          ) : (
+            <RiCameraLine />
+          )}
+          {scan.busy ? 'Reading receipt...' : 'Scan again'}
+        </Button>
+        <Button size="sm" variant="outline" onClick={onDismiss}>
+          Enter items manually
+        </Button>
+      </div>
+      {error ? <p className="mt-2 text-destructive">{error}</p> : null}
     </div>
   )
 }

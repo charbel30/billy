@@ -27,6 +27,7 @@ export const billDocValidator = v.object({
   imageRef: v.optional(v.string()),
   shareToken: v.string(),
   status: billStatus,
+  extractionError: v.optional(v.string()),
   version: v.number(),
   updatedAt: v.optional(v.number()),
   lineItems: v.array(lineItem),

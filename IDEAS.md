@@ -163,10 +163,10 @@ From `src/lib/split.ts` + the claim UX:
 
 | Idea | Phase | Why there |
 |---|---|---|
-| Photo preview/retake before extraction | **A** | cuts Gemini waste + bad first impressions |
-| WhatsApp text summary + summary-screen share/QR | **A** | the viral loop, near-zero effort |
-| Demo bill (sample receipt) | **A** | landing page + every pitch depends on it |
-| OG preview on `/join` | **A** | part of landing/OG work already planned |
+| Photo preview/retake before extraction | **A — ✅ shipped 2026-07** | cuts Gemini waste + bad first impressions |
+| WhatsApp text summary + summary-screen share/QR | **A — ✅ shipped 2026-07** | the viral loop, near-zero effort |
+| Demo bill (sample receipt) | **A — ✅ shipped 2026-07** | landing page + every pitch depends on it |
+| OG preview on `/join` | **A — ✅ shipped 2026-07** | part of landing/OG work already planned |
 | Settle-up layer (mark paid, payment note, progress) | **B** | completes the loop; the venue demo needs it |
 | Tip line + venue presets | **B** | the qlub-style venue pitch number |
 | Multi-photo long receipts | **B** | club tabs won't fit one frame |

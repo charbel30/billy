@@ -1,22 +1,68 @@
-import { v } from 'convex/values'
+import { ConvexError, v } from 'convex/values'
 import { mutation } from '../_generated/server'
 import { internal } from '../_generated/api'
 import { invariant } from '../lib/invariant'
 import * as imageStore from '../lib/imageStore'
+import { assertExtractionEnabled, rateLimiter } from '../lib/rateLimits'
+
+// Scan mutations are public and unauthenticated, and extraction is the only
+// paid path — so both steps are rate limited per device (client-generated id;
+// honest-user guardrail) with a global daily budget as the real backstop.
+
+function assertDeviceId(deviceId: string) {
+  if (deviceId.trim().length < 8) throw new ConvexError('Invalid device id')
+}
 
 export const generateUploadUrl = mutation({
-  args: {},
+  args: { deviceId: v.string() },
   returns: v.string(),
-  handler: async (ctx) => await imageStore.createUploadTarget(ctx),
+  handler: async (ctx, { deviceId }) => {
+    assertDeviceId(deviceId)
+    const { ok } = await rateLimiter.limit(ctx, 'uploadUrlPerDevice', {
+      key: deviceId,
+    })
+    if (!ok) {
+      throw new ConvexError(
+        'Too many scans from this device — try again in a bit.',
+      )
+    }
+    return await imageStore.createUploadTarget(ctx)
+  },
 })
 
 export const attachImageAndExtract = mutation({
-  args: { billId: v.id('bills'), imageRef: v.string() },
+  args: {
+    billId: v.id('bills'),
+    imageRef: v.string(),
+    deviceId: v.string(),
+  },
   returns: v.null(),
-  handler: async (ctx, { billId, imageRef }) => {
+  handler: async (ctx, { billId, imageRef, deviceId }) => {
+    assertDeviceId(deviceId)
+    assertExtractionEnabled()
+    const perDevice = await rateLimiter.limit(ctx, 'extractPerDevice', {
+      key: deviceId,
+    })
+    if (!perDevice.ok) {
+      throw new ConvexError(
+        'Too many scans from this device — try again in a bit.',
+      )
+    }
+    const global = await rateLimiter.limit(ctx, 'extractGlobalDaily')
+    if (!global.ok) {
+      throw new ConvexError(
+        "Billy is very busy today and scanning is paused. Try again later or enter the bill manually.",
+      )
+    }
+
     const bill = await ctx.db.get(billId)
     invariant(bill, `missing bill ${billId}`)
-    await ctx.db.patch(billId, { imageRef, updatedAt: Date.now() })
+    // New attempt: clear any previous failure so the review UI resets.
+    await ctx.db.patch(billId, {
+      imageRef,
+      extractionError: undefined,
+      updatedAt: Date.now(),
+    })
     await ctx.scheduler.runAfter(0, internal.extraction.actions.extractReceipt, {
       billId,
       imageRef,

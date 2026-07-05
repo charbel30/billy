@@ -22,6 +22,18 @@ export function useCreateBill() {
   })
 }
 
+export function useCreateDemoBill() {
+  return useMutation({
+    mutationFn: useConvexMutation(api.bills.mutations.createDemoBill),
+  })
+}
+
+export function useRevokeShare() {
+  return useMutation({
+    mutationFn: useConvexMutation(api.bills.mutations.revokeShare),
+  })
+}
+
 export function useSaveWorking() {
   return useMutation({
     mutationFn: useConvexMutation(api.bills.mutations.saveWorking),

@@ -19,6 +19,7 @@ import type * as extraction_prompt from "../extraction/prompt.js";
 import type * as extraction_vision from "../extraction/vision.js";
 import type * as lib_imageStore from "../lib/imageStore.js";
 import type * as lib_invariant from "../lib/invariant.js";
+import type * as lib_rateLimits from "../lib/rateLimits.js";
 
 import type {
   ApiFromModules,
@@ -38,6 +39,7 @@ declare const fullApi: ApiFromModules<{
   "extraction/vision": typeof extraction_vision;
   "lib/imageStore": typeof lib_imageStore;
   "lib/invariant": typeof lib_invariant;
+  "lib/rateLimits": typeof lib_rateLimits;
 }>;
 
 /**
@@ -66,4 +68,6 @@ export declare const internal: FilterApi<
   FunctionReference<any, "internal">
 >;
 
-export declare const components: {};
+export declare const components: {
+  rateLimiter: import("@convex-dev/rate-limiter/_generated/component.js").ComponentApi<"rateLimiter">;
+};

@@ -1,6 +1,7 @@
-import { v } from 'convex/values'
+import { ConvexError, v } from 'convex/values'
 import { mutation, type MutationCtx } from '../_generated/server'
 import { invariant } from '../lib/invariant'
+import { rateLimiter } from '../lib/rateLimits'
 import { claim, lineItem, person, type Bill, type Claim, type LineItem, type Person } from '../schema'
 import { metaValidator } from './validators'
 import { DEFAULT_RATE, deriveRate } from '../../src/lib/currency'
@@ -9,6 +10,9 @@ import { newClientId, newShareToken, nextPersonColor } from '../../src/lib/bill/
 import { reconcileClaims } from '../../src/lib/bill/edits'
 
 const MAX_NAME_LENGTH = 48
+// Hard ceiling on participants — a leaked share link must not let strangers
+// spam a bill with unlimited "people" (the rate limiter slows it, this stops it).
+const MAX_PEOPLE = 30
 
 const guestClaimInput = v.object({
   itemId: v.string(),
@@ -120,6 +124,21 @@ function createGuestPerson(
   }
 }
 
+function assertRoomForPerson(bill: Bill) {
+  if (bill.people.length >= MAX_PEOPLE) {
+    throw new ConvexError('This bill already has the maximum number of people')
+  }
+}
+
+async function limitGuestJoin(ctx: MutationCtx, billId: string) {
+  const { ok } = await rateLimiter.limit(ctx, 'guestJoinPerBill', {
+    key: billId,
+  })
+  if (!ok) {
+    throw new ConvexError('Too many people joining at once — try again in a minute.')
+  }
+}
+
 function assertSharedForGuestWrites(bill: Bill) {
   if (bill.status === 'FINALIZED') {
     throw new Error('This split has been finalized')
@@ -190,9 +209,19 @@ export const createBill = mutation({
   args: {
     merchantName: v.optional(v.string()),
     currencyPrimary: v.optional(v.string()),
+    deviceId: v.string(),
   },
   returns: v.id('bills'),
   handler: async (ctx, args) => {
+    if (args.deviceId.trim().length < 8) {
+      throw new ConvexError('Invalid device id')
+    }
+    const { ok } = await rateLimiter.limit(ctx, 'createBillPerDevice', {
+      key: args.deviceId,
+    })
+    if (!ok) {
+      throw new ConvexError('Too many new bills from this device — try again in a bit.')
+    }
     return await ctx.db.insert('bills', {
       merchantName: args.merchantName ?? '',
       currencyPrimary: args.currencyPrimary ?? 'LBP',
@@ -210,6 +239,70 @@ export const createBill = mutation({
       version: 0,
       updatedAt: now(),
       lineItems: [],
+      people: [
+        {
+          id: newClientId(),
+          name: DEFAULT_PERSON_NAME,
+          color: nextPersonColor(0),
+        },
+      ],
+      claims: [],
+    })
+  },
+})
+
+// The Maison Zola receipt from the build spec (appendix A): items reconcile
+// exactly to 19,440,000 LL / $216 at the receipt's own 90,000 rate. Lets the
+// landing page and in-person pitches demo the full flow with zero camera,
+// zero network luck, and zero Gemini spend.
+const DEMO_LINES: Array<[name: string, qty: number, lineTotalLbp: number]> = [
+  ['Captain Morgan White', 1, 1_260_000],
+  ['Chivas 12Y Glass', 5, 6_300_000],
+  ['Almaza – 33cl', 1, 540_000],
+  ['Water Btl Small', 3, 810_000],
+  ['Mini Burger Bonbon', 1, 2_070_000],
+  ['Diet Pepsi', 1, 360_000],
+  ['Diet Seven Up', 1, 360_000],
+  ['Water Btl Large', 1, 900_000],
+  ['Passion Fruit Martini', 1, 1_260_000],
+  ['Midori Sour MZ', 3, 3_780_000],
+  ['Satyr White Glass', 2, 1_800_000],
+]
+
+export const createDemoBill = mutation({
+  args: { deviceId: v.string() },
+  returns: v.id('bills'),
+  handler: async (ctx, { deviceId }) => {
+    if (deviceId.trim().length < 8) throw new ConvexError('Invalid device id')
+    const { ok } = await rateLimiter.limit(ctx, 'createBillPerDevice', {
+      key: deviceId,
+    })
+    if (!ok) {
+      throw new ConvexError('Too many new bills from this device — try again in a bit.')
+    }
+    return await ctx.db.insert('bills', {
+      merchantName: 'Maison Zola (sample)',
+      branch: 'Gemmayze, Beirut',
+      currencyPrimary: 'LBP',
+      rate: 90_000,
+      rateSource: 'receipt',
+      serviceCharge: 0,
+      tax: 0,
+      serviceChargeOn: false,
+      serviceSplitMode: 'proportional',
+      printedTotalLbp: 19_440_000,
+      printedTotalUsd: 216,
+      shareToken: newShareToken(),
+      status: 'READY',
+      version: 0,
+      updatedAt: now(),
+      lineItems: DEMO_LINES.map(([name, qty, lineTotal]) => ({
+        id: newClientId(),
+        name,
+        qty,
+        unitPrice: lineTotal / qty,
+        lineTotal,
+      })),
       people: [
         {
           id: newClientId(),
@@ -305,6 +398,28 @@ export const finalize = mutation({
   },
 })
 
+// Unpublish: rotate the share token so the old link stops resolving, and drop
+// back to READY so guests can no longer write. Publishing again issues the new
+// link. (Spec §10: tokens must be revocable — a leaked link shouldn't live forever.)
+export const revokeShare = mutation({
+  args: { id: v.id('bills') },
+  returns: v.null(),
+  handler: async (ctx, { id }) => {
+    const bill = await ctx.db.get(id)
+    invariant(bill, `missing bill ${id}`)
+    if (bill.status === 'FINALIZED') {
+      throw new ConvexError('This split has been finalized')
+    }
+    await ctx.db.patch(id, {
+      shareToken: newShareToken(),
+      status: bill.status === 'PUBLISHED' ? 'READY' : bill.status,
+      version: bill.version + 1,
+      updatedAt: now(),
+    })
+    return null
+  },
+})
+
 export const addHostPerson = mutation({
   args: {
     id: v.id('bills'),
@@ -315,6 +430,7 @@ export const addHostPerson = mutation({
     const bill = await ctx.db.get(id)
     invariant(bill, `missing bill ${id}`)
     assertEditableSplit(bill)
+    assertRoomForPerson(bill)
     const nextPerson: Person = {
       id: newClientId(),
       name: cleanName(name),
@@ -443,6 +559,8 @@ export const joinSplit = mutation({
       return { personId: existing.id }
     }
 
+    assertRoomForPerson(bill)
+    await limitGuestJoin(ctx, bill._id)
     const nextPerson = createGuestPerson(bill, clean, guestSessionId)
     await ctx.db.patch(bill._id, {
       people: [...bill.people, nextPerson],
@@ -464,6 +582,8 @@ export const addGuestPerson = mutation({
     assertGuestSessionId(guestSessionId)
     const bill = await getBillByShareToken(ctx, shareToken)
     assertSharedForGuestWrites(bill)
+    assertRoomForPerson(bill)
+    await limitGuestJoin(ctx, bill._id)
     const nextPerson = createGuestPerson(bill, cleanName(name), guestSessionId)
     await ctx.db.patch(bill._id, {
       people: [...bill.people, nextPerson],

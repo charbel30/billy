@@ -1,19 +1,17 @@
 import { useEffect, useRef, useState } from 'react'
 import { useNavigate } from '@tanstack/react-router'
-import imageCompression from 'browser-image-compression'
 import { AnimatePresence, motion } from 'motion/react'
 import {
   RiArrowRightLine,
   RiCameraLine,
+  RiCheckLine,
   RiFileList3Line,
   RiLoader4Line,
   RiRestartLine,
 } from '@remixicon/react'
-import {
-  useAttachImageAndExtract,
-  useCreateBill,
-  useGenerateUploadUrl,
-} from '~/queries'
+import { useCreateDemoBill } from '~/queries'
+import { scanErrorMessage, useScanUpload } from '~/hooks/useScanUpload'
+import { getDeviceId } from '~/lib/deviceId'
 import type { Id } from 'convex/_generated/dataModel'
 import {
   clearBillHistory,
@@ -21,18 +19,23 @@ import {
   type BillHistoryEntry,
 } from '~/lib/billHistory'
 import { cn } from '~/lib/utils'
+import { LegalFooter } from '~/components/LegalFooter'
 import { scanHubCopy } from './scannerHubContent'
 import '@fontsource-variable/figtree/wght.css'
 
 export function ScannerHub() {
   const navigate = useNavigate()
-  const createBill = useCreateBill()
-  const generateUploadUrl = useGenerateUploadUrl()
-  const attach = useAttachImageAndExtract()
+  const scan = useScanUpload()
+  const createDemoBill = useCreateDemoBill()
   const cameraInputRef = useRef<HTMLInputElement>(null)
-  const [busy, setBusy] = useState(false)
+  // Photo picked but not yet confirmed — extraction is a paid call, so the
+  // user gets one look ("readable? whole receipt in frame?") before we send it.
+  const [pending, setPending] = useState<{ file: File; url: string } | null>(
+    null,
+  )
   const [error, setError] = useState<string | null>(null)
   const [history, setHistory] = useState<BillHistoryEntry[]>([])
+  const busy = scan.busy || createDemoBill.isPending
 
   // Read local bill history on mount (client-only / localStorage).
   useEffect(() => {
@@ -60,34 +63,50 @@ export function ScannerHub() {
     setHistory([])
   }
 
-  async function handleFile(e: React.ChangeEvent<HTMLInputElement>) {
+  function handleFile(e: React.ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0]
     // Reset so picking the same file again still fires onChange.
     e.target.value = ''
     if (!file) return
-    setBusy(true)
+    setError(null)
+    setPending((prev) => {
+      if (prev) URL.revokeObjectURL(prev.url)
+      return { file, url: URL.createObjectURL(file) }
+    })
+  }
+
+  function retake() {
+    if (busy) return
+    setPending((prev) => {
+      if (prev) URL.revokeObjectURL(prev.url)
+      return null
+    })
+    cameraInputRef.current?.click()
+  }
+
+  async function confirmPhoto() {
+    if (!pending || busy) return
     setError(null)
     try {
-      // Shrink before upload because image tokens dominate extraction cost.
-      const compressed = await imageCompression(file, {
-        maxSizeMB: 0.8,
-        maxWidthOrHeight: 2000,
-        useWebWorker: true,
-      })
-      const billId = await createBill.mutateAsync({})
-      const uploadUrl = await generateUploadUrl.mutateAsync({})
-      const res = await fetch(uploadUrl, {
-        method: 'POST',
-        headers: { 'Content-Type': compressed.type },
-        body: compressed,
-      })
-      if (!res.ok) throw new Error(scanHubCopy.uploadError)
-      const { storageId } = (await res.json()) as { storageId: string }
-      await attach.mutateAsync({ billId, imageRef: storageId })
+      const billId = await scan.scanNew(pending.file)
+      URL.revokeObjectURL(pending.url)
+      setPending(null)
       navigate({ to: '/review/$billId', params: { billId } })
     } catch (err) {
-      setError(err instanceof Error ? err.message : scanHubCopy.fallbackError)
-      setBusy(false)
+      setError(scanErrorMessage(err, scanHubCopy.fallbackError))
+    }
+  }
+
+  async function trySampleBill() {
+    if (busy) return
+    setError(null)
+    try {
+      const billId = await createDemoBill.mutateAsync({
+        deviceId: getDeviceId(),
+      })
+      navigate({ to: '/review/$billId', params: { billId } })
+    } catch (err) {
+      setError(scanErrorMessage(err, scanHubCopy.fallbackError))
     }
   }
 
@@ -132,32 +151,69 @@ export function ScannerHub() {
 
         <main className="grid gap-6 md:grid-cols-[minmax(20rem,28rem)_minmax(0,1fr)] md:items-start md:justify-center">
           <section className="space-y-5">
-            <ScannerViewfinder busy={busy} />
+            <ScannerViewfinder busy={busy} previewUrl={pending?.url ?? null} />
 
-            <button
-              type="button"
-              onClick={startScan}
-              disabled={busy}
-              className="flex w-full items-center justify-center gap-2 rounded-full bg-primary px-6 py-4 text-base font-bold text-primary-foreground shadow-[0_16px_48px_rgba(0,0,0,0.08)] transition-[transform,opacity] duration-200 active:scale-[0.96] disabled:pointer-events-none disabled:opacity-70"
-            >
-              <AnimatePresence mode="wait" initial={false}>
-                <motion.span
-                  key={busy ? 'busy' : 'idle'}
-                  className="grid place-items-center"
-                  initial={{ scale: 0.25, opacity: 0, filter: 'blur(4px)' }}
-                  animate={{ scale: 1, opacity: 1, filter: 'blur(0px)' }}
-                  exit={{ scale: 0.25, opacity: 0, filter: 'blur(4px)' }}
-                  transition={{ type: 'spring', duration: 0.3, bounce: 0 }}
+            {pending ? (
+              <div className="grid grid-cols-[minmax(0,1fr)_auto] gap-2">
+                <button
+                  type="button"
+                  onClick={() => void confirmPhoto()}
+                  disabled={busy}
+                  className="flex items-center justify-center gap-2 rounded-full bg-primary px-6 py-4 text-base font-bold text-primary-foreground shadow-[0_16px_48px_rgba(0,0,0,0.08)] transition-[transform,opacity] duration-200 active:scale-[0.96] disabled:pointer-events-none disabled:opacity-70"
                 >
                   {busy ? (
                     <RiLoader4Line className="size-5 animate-spin" />
                   ) : (
-                    <RiCameraLine className="size-5" />
+                    <RiCheckLine className="size-5" />
                   )}
-                </motion.span>
-              </AnimatePresence>
-              {busy ? scanHubCopy.scanningStatus : scanHubCopy.primaryAction}
-            </button>
+                  {busy ? scanHubCopy.scanningStatus : 'Use this photo'}
+                </button>
+                <button
+                  type="button"
+                  onClick={retake}
+                  disabled={busy}
+                  className="flex items-center justify-center gap-2 rounded-full bg-muted px-5 py-4 text-base font-bold text-foreground transition-[transform,opacity] duration-200 active:scale-[0.96] disabled:pointer-events-none disabled:opacity-70"
+                >
+                  <RiRestartLine className="size-5" />
+                  Retake
+                </button>
+              </div>
+            ) : (
+              <>
+                <button
+                  type="button"
+                  onClick={startScan}
+                  disabled={busy}
+                  className="flex w-full items-center justify-center gap-2 rounded-full bg-primary px-6 py-4 text-base font-bold text-primary-foreground shadow-[0_16px_48px_rgba(0,0,0,0.08)] transition-[transform,opacity] duration-200 active:scale-[0.96] disabled:pointer-events-none disabled:opacity-70"
+                >
+                  <AnimatePresence mode="wait" initial={false}>
+                    <motion.span
+                      key={busy ? 'busy' : 'idle'}
+                      className="grid place-items-center"
+                      initial={{ scale: 0.25, opacity: 0, filter: 'blur(4px)' }}
+                      animate={{ scale: 1, opacity: 1, filter: 'blur(0px)' }}
+                      exit={{ scale: 0.25, opacity: 0, filter: 'blur(4px)' }}
+                      transition={{ type: 'spring', duration: 0.3, bounce: 0 }}
+                    >
+                      {busy ? (
+                        <RiLoader4Line className="size-5 animate-spin" />
+                      ) : (
+                        <RiCameraLine className="size-5" />
+                      )}
+                    </motion.span>
+                  </AnimatePresence>
+                  {busy ? scanHubCopy.scanningStatus : scanHubCopy.primaryAction}
+                </button>
+                <button
+                  type="button"
+                  onClick={() => void trySampleBill()}
+                  disabled={busy}
+                  className="mx-auto block rounded-full px-4 py-1.5 text-sm font-semibold text-primary transition-colors hover:bg-primary/10 disabled:pointer-events-none disabled:opacity-70"
+                >
+                  Try a sample bill — no camera needed
+                </button>
+              </>
+            )}
 
             {error ? <p className="text-center text-sm text-destructive">{error}</p> : null}
           </section>
@@ -168,12 +224,40 @@ export function ScannerHub() {
             onClear={clearHistory}
           />
         </main>
+
+        <LegalFooter />
       </div>
     </div>
   )
 }
 
-function ScannerViewfinder({ busy }: { busy: boolean }) {
+function ScannerViewfinder({
+  busy,
+  previewUrl,
+}: {
+  busy: boolean
+  previewUrl: string | null
+}) {
+  if (previewUrl) {
+    return (
+      <section className="relative aspect-[3/4] overflow-hidden rounded-4xl border border-border/70 bg-muted">
+        <img
+          src={previewUrl}
+          alt="Receipt photo preview"
+          className="absolute inset-0 size-full object-contain"
+        />
+        <ScannerCorners />
+        <div className="absolute inset-x-0 bottom-8 flex justify-center">
+          <div className="rounded-full bg-background/80 px-4 py-2 text-xs font-semibold text-muted-foreground shadow-sm backdrop-blur">
+            {busy
+              ? scanHubCopy.scanningStatus
+              : 'Readable? Whole receipt in frame?'}
+          </div>
+        </div>
+      </section>
+    )
+  }
+
   return (
     <section className="relative aspect-[3/4] overflow-hidden rounded-4xl border border-border/70 bg-muted">
       <ScannerCorners />

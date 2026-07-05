@@ -1,13 +1,16 @@
 import { useEffect } from 'react'
 import { createFileRoute, useNavigate } from '@tanstack/react-router'
 import { useSuspenseQuery } from '@tanstack/react-query'
-import { RiArrowLeftLine } from '@remixicon/react'
+import toast from 'react-hot-toast'
+import { RiArrowLeftLine, RiChat1Line } from '@remixicon/react'
 import type { Id } from 'convex/_generated/dataModel'
 import { Loader } from '~/components/Loader'
 import { Button } from '~/components/ui/button'
 import { BillSummary } from '~/components/bill/BillSummary'
-import { billQueries } from '~/queries'
+import { ShareSplitCard } from '~/components/bill/ShareSplitCard'
+import { billQueries, useRevokeShare } from '~/queries'
 import { recordBill } from '~/lib/billHistory'
+import { buildTotalsMessage, joinUrl } from '~/lib/shareText'
 
 export const Route = createFileRoute('/summary/$billId')({
   component: Summary,
@@ -23,7 +26,30 @@ function Summary() {
   const billId = Route.useParams().billId as Id<'bills'>
   const navigate = useNavigate()
   const { data: bill } = useSuspenseQuery(billQueries.detail(billId))
+  const revokeShare = useRevokeShare()
   const finalized = bill.status === 'FINALIZED'
+  const shared = bill.status === 'PUBLISHED' || finalized
+
+  async function shareTotalsText() {
+    const text = buildTotalsMessage(
+      bill,
+      shared ? joinUrl(bill.shareToken) : null,
+    )
+    if (typeof navigator.share === 'function') {
+      try {
+        await navigator.share({ text })
+        return
+      } catch (err) {
+        if (err instanceof DOMException && err.name === 'AbortError') return
+      }
+    }
+    try {
+      await navigator.clipboard.writeText(text)
+      toast.success('Totals copied — paste them in the group chat')
+    } catch {
+      toast(text)
+    }
+  }
 
   useEffect(() => {
     recordBill({ billId, step: 'summary', name: bill.merchantName })
@@ -47,6 +73,35 @@ function Summary() {
             : 'Preview only. The split can still change.'
         }
       />
+
+      <Button
+        size="lg"
+        className="w-full"
+        onClick={() => void shareTotalsText()}
+        disabled={bill.people.length === 0}
+      >
+        <RiChat1Line />
+        Share totals as text
+      </Button>
+
+      {shared ? (
+        <section className="rounded-3xl border border-border bg-card p-4">
+          <h2 className="mb-3 text-center text-sm font-bold text-muted-foreground">
+            Guests can scan to {finalized ? 'see the receipt' : 'claim items'}
+          </h2>
+          <ShareSplitCard
+            url={joinUrl(bill.shareToken)}
+            merchantName={bill.merchantName}
+            onRevoke={
+              finalized
+                ? undefined
+                : async () => {
+                    await revokeShare.mutateAsync({ id: billId })
+                  }
+            }
+          />
+        </section>
+      ) : null}
 
       {!finalized ? (
         <Button

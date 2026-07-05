@@ -5,6 +5,13 @@ Strategy decided 2026-07: **venue-led, dual-track** — the free consumer splitt
 viral funnel; a venue subscription ("Billy for Venues": QR table sessions) is the revenue
 engine and the pitch centerpiece.
 
+> **Status (2026-07-05): Phase A is 8/10 shipped** — rate limiting + kill switch, legal
+> pages, extraction-failure UX, token revoke + guest cap + TTL cron, QR codes, photo
+> preview, WhatsApp totals export, demo bill, and `/join` OG previews are live (deployed
+> to the dev Convex; `pnpm build` + `tsc` clean). Remaining before public launch:
+> analytics/Sentry (needs account keys) and the marketing landing page. See the phase
+> checklists in §7 and the per-item notes in §2.
+
 This document is the single source of truth for: what to polish, what to build for venues,
 how to price it, and how to market it in Lebanon. Implementation happens against the
 checkbox lists in §7. Deeper product ideas and pitch material from the 2026-07 code
@@ -70,52 +77,49 @@ scale. The guest page is the billboard ("powered by Billy" + a "split your own b
 What must ship before pointing the public (and pilot venues) at the app. Current state
 verified 2026-07 against the codebase.
 
-### 2.1 Rate limiting on the extraction pipeline — **the #1 risk**
-`createBill`, `generateUploadUrl`, `attachImageAndExtract` are public, unauthenticated
-mutations; anyone can script unlimited Gemini vision calls (real $ per call). Client-side
-compression and the AI-Gateway 24h cache (`convex/extraction/vision.ts`) only soften it.
-- Add `@convex-dev/rate-limiter` with per-session and global caps (e.g. N scans/hour per
-  session id, global daily budget breaker).
-- Require an anonymous session id argument on scan mutations so limits have a key.
-- Add a Convex env-var kill switch for extraction (spend emergency brake).
+### 2.1 Rate limiting on the extraction pipeline — ✅ shipped (was the #1 risk)
+Implemented with `@convex-dev/rate-limiter` (`convex/lib/rateLimits.ts`,
+`convex/convex.config.ts`). Scan mutations now require a `deviceId` (persistent anonymous
+id, `src/lib/deviceId.ts`) and enforce:
+- per-device token buckets (~12 scans/hour on upload + extract, 30 bills/hour on create);
+- a **global daily budget of 1,000 extractions** — the real backstop against key rotation;
+- kill switch: `npx convex env set EXTRACTION_DISABLED 1` pauses scanning with a friendly
+  ConvexError surfaced in the scanner UI.
 
-### 2.2 Legal pages
-None exist today, and images transit Cloudflare AI Gateway → Google. Blocker for pitching
-businesses.
-- `/privacy` and `/terms` routes: plain-language cloud-OCR disclosure, "image is deleted
-  right after extraction" (true today — `convex/extraction/actions.ts` deletes best-effort),
-  data retention, contact.
-- Note on Lebanon **Law 81/2018** (personal data): minimize collection, confirm declaration
-  obligations before charging money.
-- Link both from the scanner footer and the guest page.
+### 2.2 Legal pages — ✅ shipped
+`/privacy` + `/terms` routes (`src/routes/privacy.tsx`, `src/routes/terms.tsx`): plain-
+language cloud-OCR disclosure, delete-after-extraction, 60-day retention, Law 81/2018
+note, fair-use clause. Linked via `LegalFooter` on the scanner and guest pages.
+- ⚠️ The contact email is a **placeholder** (`billy.leb@gmail.com`) — set the real one.
+- Still to do before charging money: confirm Law 81/2018 declaration obligations.
 
-### 2.3 Extraction-failure UX
-Today a failed/unparseable extraction throws inside the action and the bill sits silently
-in `PENDING` with zero items — a dead end for the user.
-- Persist an explicit failure marker on the bill (extend status or add an `extractionError`
-  field in `convex/schema.ts`).
-- Review route: show "We couldn't read this receipt" with **Retake photo** and **Enter
-  items manually** (the editor already supports manual add via `src/lib/bill/edits.ts` —
-  just surface the path).
+### 2.3 Extraction-failure UX — ✅ shipped
+`extractionError` field on bills (`convex/schema.ts`); the extraction action catches
+failures and calls `markExtractionFailed` (`convex/bills/extraction.ts`) instead of dying
+silently. The review route shows a "We couldn't read this receipt" banner with **Scan
+again** (re-uploads into the *same* bill via `useScanUpload.rescan`) and **Enter items
+manually**. Plus: the scanner now shows a **photo preview with Use/Retake** before the
+paid Gemini call, and a "Try a sample bill" demo entry (seeded Maison Zola receipt,
+`createDemoBill`).
 
-### 2.4 Share-token expiry/revocation + bill cleanup
-Tokens are unguessable but live forever; bills accumulate unbounded; `convex/crons.ts` is
-an empty placeholder.
-- Host "unpublish/revoke link" mutation (rotate `shareToken`).
-- Cron: purge or archive bills after N days of inactivity (spec §10 already calls for TTL).
-- Cap guests per bill (`joinSplit`/`addGuestPerson` currently unlimited — a leaked link can
-  be spammed).
+### 2.4 Share-token expiry/revocation + bill cleanup — ✅ shipped
+- `revokeShare` mutation rotates the token and drops the bill back to `READY`; surfaced
+  as "Revoke this link" in the share UI (`ShareSplitCard`).
+- Daily cron purges bills untouched for 60 days (`convex/crons.ts`, `by_updatedAt` index).
+- Guests capped at 30 people/bill + a per-bill join rate limit.
 
-### 2.5 Analytics + error monitoring
-Nothing today — and the venue pitch needs numbers.
+### 2.5 Analytics + error monitoring — ⏳ next up
+Nothing yet — and the venue pitch needs numbers. **Blocked on creating accounts/keys.**
 - Product analytics (PostHog or Plausible): scans, extraction success rate, publishes,
   guest joins per bill, claim completion.
 - Error monitoring (Sentry) on both the browser and Convex actions.
 
-### 2.6 QR code for share links
-No QR anywhere today; sharing is native-share/clipboard (`src/routes/split/$billId.tsx`).
-- Add `qrcode.react`; show a QR alongside the share action on split/summary.
-- This tiny feature is also the seed of venue mode (§3) — build it QR-first.
+### 2.6 QR code for share links — ✅ shipped
+`qrcode.react` + `ShareSplitCard` (`src/components/bill/ShareSplitCard.tsx`): QR dialog
+("Show QR code") on the split screen, inline share card on the summary — which previously
+had no share affordance at all. Shipped alongside: **"Share totals as text"** on the
+summary (WhatsApp-ready per-person totals, `src/lib/shareText.ts`) and **OG previews on
+`/join`** (merchant + bill total in the WhatsApp unfurl).
 
 ### 2.7 Optional accounts (prerequisite for venues)
 Hosts are identified only by possession of `billId` in localStorage; clearing the browser
@@ -269,16 +273,16 @@ venue sessions/night, claim completion rate, venue retention month-over-month.
 ## 7. Phased execution
 
 ### Phase A — consumer launch hardening (§2.1–2.6)
-- [ ] Rate limiting + spend kill switch on extraction pipeline
-- [ ] `/privacy` + `/terms` routes, linked from footer and guest page
-- [ ] Extraction-failure state + retake / manual-entry UX
-- [ ] Share-token revoke, guest cap, bill TTL cleanup cron
-- [ ] Analytics (PostHog/Plausible) + Sentry
-- [ ] QR code on split/summary share (summary currently has no share affordance at all)
-- [ ] Landing page + OG/WhatsApp link previews (the `/join` route unfurl is the one that matters)
-- [ ] Photo preview/retake confirm before extraction (cuts wasted Gemini calls) — IDEAS §2
-- [ ] WhatsApp text summary export from summary screen — IDEAS §3
-- [ ] Demo bill: seeded sample receipt, zero extraction cost (landing page + every pitch) — IDEAS §6
+- [x] Rate limiting + spend kill switch on extraction pipeline (`@convex-dev/rate-limiter`; per-device buckets + global daily budget; `EXTRACTION_DISABLED` env kill switch)
+- [x] `/privacy` + `/terms` routes, linked from footer and guest page (contact email is a placeholder — set the real one)
+- [x] Extraction-failure state + retake / manual-entry UX (`extractionError` on the bill; review banner re-scans into the same bill)
+- [x] Share-token revoke (`revokeShare` rotates the token), guest cap (30 people + join rate limit), bill TTL cleanup cron (60 days inactive)
+- [ ] Analytics (PostHog/Plausible) + Sentry — needs accounts/keys
+- [x] QR code on split (dialog) + summary (inline share card)
+- [ ] Landing page — OG/WhatsApp unfurl on `/join` is done; the marketing page itself remains
+- [x] Photo preview/retake confirm before extraction — IDEAS §2
+- [x] WhatsApp text summary export from summary screen — IDEAS §3
+- [x] Demo bill: seeded Maison Zola receipt, zero extraction cost ("Try a sample bill" on the scanner) — IDEAS §6
 - **Exit criteria:** app is safe to post publicly; funnel metrics flowing.
 
 ### Phase B — venue MVP + pilots (§2.7, §3)
