@@ -81,7 +81,7 @@ Start with the shape, then the client flow, then the backend flow:
 - `src/routes/split/$billId.tsx`: split screen where people claim item units.
 - `src/routes/summary/$billId.tsx`: owner summary screen that computes totals and
   publishes/copies the share link.
-- `src/routes/b/$shareToken.tsx`: read-only guest view for a published share link.
+- `src/routes/join/$shareToken.tsx`: read-only guest view for a published share link.
 
 ### Query And Editor Wiring
 
