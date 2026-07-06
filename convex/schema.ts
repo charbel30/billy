@@ -106,10 +106,13 @@ const schema = defineSchema({
     // offers "scan again / enter manually" instead of a silent empty bill.
     // Cleared on the next successful extraction or re-scan attempt.
     extractionError: v.optional(v.string()),
+    // Action-retrier run id while an extraction is in flight; how the run's
+    // onComplete callback finds this bill. Cleared on success or final failure.
+    extractionRunId: v.optional(v.string()),
     // Bumped on every saveWorking flush; lets a viewer detect "edited elsewhere"
     // (last-write-wins otherwise).
     version: v.number(),
-    updatedAt: v.optional(v.number()),
+    updatedAt: v.number(),
 
     lineItems: v.array(lineItem),
     people: v.array(person), // seeded with a "self" person on create
@@ -117,7 +120,9 @@ const schema = defineSchema({
   })
     .index('by_share_token', ['shareToken'])
     // Powers the TTL purge cron (oldest-inactive first).
-    .index('by_updatedAt', ['updatedAt']),
+    .index('by_updatedAt', ['updatedAt'])
+    // Powers the extraction onComplete callback (run id → bill).
+    .index('by_extractionRunId', ['extractionRunId']),
 })
 export default schema
 

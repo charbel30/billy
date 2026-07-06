@@ -100,7 +100,8 @@ silently. The review route shows a "We couldn't read this receipt" banner with *
 again** (re-uploads into the *same* bill via `useScanUpload.rescan`) and **Enter items
 manually**. Plus: the scanner now shows a **photo preview with Use/Retake** before the
 paid Gemini call, and a "Try a sample bill" demo entry (seeded Maison Zola receipt,
-`createDemoBill`).
+`createDemoBill`). Since 2026-07-06, transient vision-API failures are retried with
+backoff (`@convex-dev/action-retrier`) before the failure banner ever shows.
 
 ### 2.4 Share-token expiry/revocation + bill cleanup — ✅ shipped
 - `revokeShare` mutation rotates the token and drops the bill back to `READY`; surfaced
@@ -124,7 +125,12 @@ summary (WhatsApp-ready per-person totals, `src/lib/shareText.ts`) and **OG prev
 ### 2.7 Optional accounts (prerequisite for venues)
 Hosts are identified only by possession of `billId` in localStorage; clearing the browser
 loses everything and host mutations have zero authorization.
-- Convex Auth with phone/Google login (optional for consumers, required for venues).
+- **Better Auth component** (`@convex-dev/better-auth`) with Google login + email magic
+  link (optional for consumers, required for venues). Decided 2026-07 over Convex Auth:
+  Convex Auth is still beta ("may change in backward-incompatible ways") and has no
+  TanStack Start guide; Better Auth has an official Start guide, and its anonymous
+  plugin maps onto the existing guest-session model if guests ever upgrade to accounts.
+  Magic-link email delivery via the `@convex-dev/resend` component. See §8.
 - `users` table; stamp `ownerId` (already reserved in `convex/schema.ts`) on creation;
   add ownership guards to host mutations (`saveWorking`, `publish`, `finalize`, …).
 - Anonymous flow must keep working exactly as today.
@@ -283,10 +289,11 @@ venue sessions/night, claim completion rate, venue retention month-over-month.
 - [x] Photo preview/retake confirm before extraction — IDEAS §2
 - [x] WhatsApp text summary export from summary screen — IDEAS §3
 - [x] Demo bill: seeded Maison Zola receipt, zero extraction cost ("Try a sample bill" on the scanner) — IDEAS §6
+- [x] Extraction retries on transient vision failures (`@convex-dev/action-retrier`, §8)
 - **Exit criteria:** app is safe to post publicly; funnel metrics flowing.
 
 ### Phase B — venue MVP + pilots (§2.7, §3)
-- [ ] Convex Auth (optional consumer, required venue) + ownership guards on host mutations
+- [ ] Auth via `@convex-dev/better-auth` + `@convex-dev/resend` (optional consumer, required venue) + ownership guards on host mutations (§2.7, §8)
 - [ ] `venues` table + `bills.venueId` + `by_venue` index
 - [ ] Venue dashboard route + "new table session" flow + table naming
 - [ ] Re-scan merge (`src/lib/bill/merge.ts` + mutation + staff confirm UI)
@@ -317,3 +324,42 @@ venue sessions/night, claim completion rate, venue retention month-over-month.
 - [ ] Card billing rails (Areeba / foreign entity)
 - [ ] Settlement/payments exploration **with licensing homework** (BDL/AML)
 - [ ] Native host app if on-device OCR / offline-at-the-table becomes a must
+
+---
+
+## 8. Platform choices — Convex components & integrations
+
+Decided 2026-07-06 against the [Convex components catalog](https://www.convex.dev/components).
+Components are open-source packages mounted in `convex/convex.config.ts`; they have no
+separate price — they bill as ordinary function calls / DB I/O on our deployment.
+
+### Chosen (by phase)
+
+| Need (roadmap ref) | Choice | Phase | Status |
+|---|---|---|---|
+| Abuse control on the paid extraction path (§2.1) | `@convex-dev/rate-limiter` | A | ✅ shipped |
+| Retry transient vision-API failures before surfacing an error (§2.3, IDEAS §2) | `@convex-dev/action-retrier` | A | ✅ shipped 2026-07-06 |
+| Product analytics (§2.5) | `posthog-js` (browser) + `@posthog/convex` component (backend events: extraction success rate) | A | ⏳ blocked on account/keys |
+| Error monitoring (§2.5) | `@sentry/react` (browser) + Convex dashboard → Sentry exception reporting for functions | A | ⏳ blocked on keys |
+| Accounts: consumer optional, venue required (§2.7) | `@convex-dev/better-auth` — over Convex Auth: that's still beta with no TanStack Start guide; Better Auth has an official Start guide and an anonymous plugin matching our guest sessions | B | decided |
+| Magic-link / OTP email delivery for auth (§2.7) | `@convex-dev/resend` | B | with auth |
+| PWA installability for staff phones (§2.8) | `vite-plugin-pwa` (npm plugin, not a component) | B | |
+| Venue per-night reports at scale (IDEAS §5) | `@convex-dev/aggregate` — v1 can be plain `by_venue` indexed queries; adopt aggregate when counts/sums over many bills get hot | C | |
+| Per-venue closing-time auto-finalize (IDEAS §5) | `@convex-dev/crons` (runtime-registered crons; static `convex/crons.ts` covers today's fixed TTL purge) | C | |
+| First non-additive schema change | `@convex-dev/migrations` — venue fields are additive so nothing needed yet; adopt at the first widen-migrate-narrow | as needed | |
+| Arabic/French i18n (§2.8, Phase C) | library TBD (Paraglide vs react-i18next) — decide when scheduled | C | |
+
+### Considered and rejected (so we stop re-litigating)
+
+- **Payments components (Stripe/Polar/…)** — §4 says manual collection (cash/Whish/OMT)
+  until real scale; no payment-rail engineering.
+- **WhatsApp Cloud API component** — sharing is client-side `wa.me` links + OG previews;
+  business-API messaging is a different product with Meta approval overhead.
+- **Workpool / workflow** — extraction is a single action; the rate limiter's global
+  daily budget already caps throughput. Revisit only if multi-step venue pipelines appear.
+- **Action cache / LLM cache** — every receipt image is unique; nothing to cache.
+- **`@convex-dev/r2`** — `convex/lib/imageStore.ts` is already the storage seam; images
+  are deleted right after extraction, so Convex storage costs stay ~zero. Swap only if
+  that changes.
+- **Presence** — "who's on the split" is polish; Convex push already makes claims live.
+  Maybe a venue staff-view nicety in C/D.

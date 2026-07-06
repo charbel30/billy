@@ -4,6 +4,7 @@ import { internal } from '../_generated/api'
 import { invariant } from '../lib/invariant'
 import * as imageStore from '../lib/imageStore'
 import { assertExtractionEnabled, rateLimiter } from '../lib/rateLimits'
+import { retrier } from '../lib/retrier'
 
 // Scan mutations are public and unauthenticated, and extraction is the only
 // paid path — so both steps are rate limited per device (client-generated id;
@@ -57,15 +58,20 @@ export const attachImageAndExtract = mutation({
 
     const bill = await ctx.db.get(billId)
     invariant(bill, `missing bill ${billId}`)
+    // Run under the retrier: transient vision failures back off and retry, and
+    // only the run's final outcome reaches onExtractionComplete.
+    const runId = await retrier.run(
+      ctx,
+      internal.extraction.actions.extractReceipt,
+      { billId, imageRef },
+      { onComplete: internal.bills.extraction.onExtractionComplete },
+    )
     // New attempt: clear any previous failure so the review UI resets.
     await ctx.db.patch(billId, {
       imageRef,
       extractionError: undefined,
+      extractionRunId: runId,
       updatedAt: Date.now(),
-    })
-    await ctx.scheduler.runAfter(0, internal.extraction.actions.extractReceipt, {
-      billId,
-      imageRef,
     })
     return null
   },

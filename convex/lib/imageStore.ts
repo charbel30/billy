@@ -20,7 +20,7 @@ export async function readImage(
 }
 
 export async function deleteImage(
-  ctx: ActionCtx,
+  ctx: ActionCtx | MutationCtx,
   imageRef: string,
 ): Promise<void> {
   const fileId = imageRef as Id<'_storage'>

@@ -86,12 +86,15 @@ external calls MUST be Convex **actions**.
 
 Flow: `ScannerHub` compresses the photo (`browser-image-compression`) → `createBill` →
 `generateUploadUrl` → POST to Convex storage → `attachImageAndExtract` patches `imageRef` and
-schedules `internal.extraction.actions.extractReceipt` (internalAction) → reads image bytes,
-calls **Gemini via Cloudflare AI Gateway** (`convex/extraction/vision.ts`, swappable
-`callVisionModel` seam; prompt in `convex/extraction/prompt.ts`) →
-`applyExtraction` (internalMutation) normalizes to LBP, runs the arithmetic checksum
-(`src/lib/reconcile.ts`), flags low-confidence/implausible items, sets `PENDING` or
-`NEEDS_REVIEW`, and deletes the image. Storage access goes through the
+runs `internal.extraction.actions.extractReceipt` (internalAction) via
+**`@convex-dev/action-retrier`** (`convex/lib/retrier.ts`: transient vision failures retry
+with backoff; final failure lands in `onExtractionComplete`, which marks the bill failed and
+deletes the image — `bills.extractionRunId` + the `by_extractionRunId` index map run → bill)
+→ the action reads image bytes, calls **Gemini via Cloudflare AI Gateway**
+(`convex/extraction/vision.ts`, swappable `callVisionModel` seam; prompt in
+`convex/extraction/prompt.ts`) → `applyExtraction` (internalMutation) normalizes to LBP,
+runs the arithmetic checksum (`src/lib/reconcile.ts`), flags low-confidence/implausible
+items, sets `PENDING` or `NEEDS_REVIEW`, and deletes the image. Storage access goes through the
 `convex/lib/imageStore.ts` seam (Convex storage today, R2 possible later).
 Rationale/eval plan: `convex-best-practices` skill, `rules/extraction-pipeline.md`.
 

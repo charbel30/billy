@@ -20,6 +20,7 @@ import type * as extraction_vision from "../extraction/vision.js";
 import type * as lib_imageStore from "../lib/imageStore.js";
 import type * as lib_invariant from "../lib/invariant.js";
 import type * as lib_rateLimits from "../lib/rateLimits.js";
+import type * as lib_retrier from "../lib/retrier.js";
 
 import type {
   ApiFromModules,
@@ -40,6 +41,7 @@ declare const fullApi: ApiFromModules<{
   "lib/imageStore": typeof lib_imageStore;
   "lib/invariant": typeof lib_invariant;
   "lib/rateLimits": typeof lib_rateLimits;
+  "lib/retrier": typeof lib_retrier;
 }>;
 
 /**
@@ -70,4 +72,5 @@ export declare const internal: FilterApi<
 
 export declare const components: {
   rateLimiter: import("@convex-dev/rate-limiter/_generated/component.js").ComponentApi<"rateLimiter">;
+  actionRetrier: import("@convex-dev/action-retrier/_generated/component.js").ComponentApi<"actionRetrier">;
 };

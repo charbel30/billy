@@ -1,5 +1,8 @@
+import { runIdValidator, runResultValidator } from '@convex-dev/action-retrier'
 import { v } from 'convex/values'
-import { internalMutation } from '../_generated/server'
+import { internalMutation, type MutationCtx } from '../_generated/server'
+import type { Doc } from '../_generated/dataModel'
+import * as imageStore from '../lib/imageStore'
 import type { LineItem } from '../schema'
 import { DEFAULT_RATE, deriveRate } from '../../src/lib/currency'
 import { newClientId } from '../../src/lib/bill/ids'
@@ -89,6 +92,7 @@ export const applyExtraction = internalMutation({
       claims: [], // fresh extraction means nothing has been claimed yet
       imageRef: undefined, // delete-after-extract: clear the ref (spec §10)
       extractionError: undefined, // this extraction succeeded
+      extractionRunId: undefined, // run resolved; onComplete becomes a no-op
       status:
         checksum.ok && !hasLowConfidence && !hasImplausibleLbp
           ? 'PENDING'
@@ -101,23 +105,49 @@ export const applyExtraction = internalMutation({
   },
 })
 
-// The vision call threw or returned unparseable output. Keep the message
-// user-safe (the raw error is in the action's logs) and let the review screen
-// offer scan-again / manual entry. Only items-less bills are marked — a re-scan
-// that fails must not clobber a previously successful extraction's status.
-export const markExtractionFailed = internalMutation({
-  args: { billId: v.id('bills') },
+// The vision call threw or returned unparseable output on every retry. Keep the
+// message user-safe (raw errors are in the action's logs) and let the review
+// screen offer scan-again / manual entry. Only items-less bills are marked — a
+// re-scan that fails must not clobber a previously successful extraction's status.
+async function markExtractionFailed(ctx: MutationCtx, bill: Doc<'bills'>) {
+  await ctx.db.patch(bill._id, {
+    extractionError: "We couldn't read this receipt.",
+    imageRef: undefined,
+    extractionRunId: undefined,
+    status: bill.lineItems.length > 0 ? bill.status : 'NEEDS_REVIEW',
+    version: bill.version + 1,
+    updatedAt: Date.now(),
+  })
+}
+
+// Action-retrier callback for extractReceipt runs (see attachImageAndExtract).
+// Success is a no-op — applyExtraction already updated the bill and cleared the
+// run id, so the lookup misses. Final failure surfaces the error and honors
+// delete-after-extract (the retry path keeps the image alive between attempts).
+export const onExtractionComplete = internalMutation({
+  args: { runId: runIdValidator, result: runResultValidator },
   returns: v.null(),
-  handler: async (ctx, { billId }) => {
-    const bill = await ctx.db.get(billId)
-    if (!bill) return null
-    await ctx.db.patch(billId, {
-      extractionError: "We couldn't read this receipt.",
-      imageRef: undefined,
-      status: bill.lineItems.length > 0 ? bill.status : 'NEEDS_REVIEW',
-      version: bill.version + 1,
-      updatedAt: Date.now(),
-    })
+  handler: async (ctx, { runId, result }) => {
+    const bill = await ctx.db
+      .query('bills')
+      .withIndex('by_extractionRunId', (q) => q.eq('extractionRunId', runId))
+      .unique()
+    if (!bill) return null // extraction succeeded, bill purged, or run superseded
+
+    if (result.type === 'success') {
+      await ctx.db.patch(bill._id, { extractionRunId: undefined })
+      return null
+    }
+
+    const imageRef = bill.imageRef
+    await markExtractionFailed(ctx, bill)
+    if (imageRef) {
+      try {
+        await imageStore.deleteImage(ctx, imageRef)
+      } catch {
+        // Already gone or not deletable.
+      }
+    }
     return null
   },
 })

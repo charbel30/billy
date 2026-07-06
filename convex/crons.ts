@@ -19,10 +19,7 @@ export const purgeStaleBills = internalMutation({
       .withIndex('by_updatedAt', (q) => q.lt('updatedAt', cutoff))
       .take(PURGE_BATCH)
     for (const bill of candidates) {
-      // Bills predating `updatedAt` sort first in this index; fall back to
-      // creation time so nothing recent is ever purged.
-      const lastTouched = bill.updatedAt ?? bill._creationTime
-      if (lastTouched < cutoff) await ctx.db.delete(bill._id)
+      await ctx.db.delete(bill._id)
     }
     // Full batch means there may be more; continue in a fresh transaction.
     if (candidates.length === PURGE_BATCH) {
