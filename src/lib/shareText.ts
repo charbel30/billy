@@ -14,6 +14,7 @@ export interface TotalsMessageBill {
   tax: number
   serviceChargeOn: boolean
   serviceSplitMode: ServiceSplitMode
+  tipPercent?: number | null
   rate?: number | null
 }
 
@@ -35,10 +36,12 @@ export function buildTotalsMessage(
     tax: bill.tax,
     serviceChargeOn: bill.serviceChargeOn,
     serviceSplitMode: bill.serviceSplitMode,
+    tipPercent: bill.tipPercent,
     rate: bill.rate,
   })
   const grandLbp = portfolios.reduce((s, p) => s + p.totalLbp, 0)
   const grandUsd = portfolios.reduce((s, p) => s + p.totalUsd, 0)
+  const tipLbp = portfolios.reduce((s, p) => s + p.tipShareLbp, 0)
 
   const lines: string[] = [
     `🧾 ${bill.merchantName.trim() || 'Bill split'} — split with Billy`,
@@ -52,7 +55,9 @@ export function buildTotalsMessage(
       `• ${p.name}: ${formatUsd(p.totalUsd)} / ${formatLbp(p.totalLbp)}${paidMark}`,
     )
   }
-  lines.push('', `Total: ${formatUsd(grandUsd)} / ${formatLbp(grandLbp)}`)
+  const tipNote =
+    tipLbp > 0 && bill.tipPercent ? ` (incl. ${bill.tipPercent}% tip)` : ''
+  lines.push('', `Total: ${formatUsd(grandUsd)} / ${formatLbp(grandLbp)}${tipNote}`)
   if (joinUrl) lines.push('', `Claim your items: ${joinUrl}`)
   return lines.join('\n')
 }

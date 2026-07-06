@@ -16,6 +16,7 @@ export interface Portfolio {
   color: string
   subtotalLbp: number
   serviceShareLbp: number
+  tipShareLbp: number
   totalLbp: number
   totalUsd: number
 }
@@ -28,6 +29,10 @@ export interface ComputePortfoliosInput {
   tax: number
   serviceChargeOn: boolean
   serviceSplitMode: ServiceSplitMode
+  // Tip on top of the bill, percent of the CLAIMED subtotal. Absent/0 → no tip.
+  // Always split proportionally (does not follow serviceSplitMode) and never
+  // part of the reconcile checksum.
+  tipPercent?: number | null
   rate: number | null | undefined
 }
 
@@ -117,6 +122,7 @@ export function computePortfolios(input: ComputePortfoliosInput): Portfolio[] {
     tax,
     serviceChargeOn,
     serviceSplitMode,
+    tipPercent,
     rate,
   } = input
 
@@ -147,23 +153,36 @@ export function computePortfolios(input: ComputePortfoliosInput): Portfolio[] {
     }
   }
 
+  // Tip: always proportional to subtotal, with its own largest-remainder pass
+  // so per-person tip lines sum exactly to the bill's tip.
+  const pct = tipPercent ?? 0
+  const tipTotal = pct > 0 ? Math.round(totalSubtotal * (pct / 100)) : 0
+  const tipRaw = people.map((p) =>
+    totalSubtotal > 0
+      ? tipTotal * ((subtotal.get(p.id) ?? 0) / totalSubtotal)
+      : 0,
+  )
+  const tipRounded = roundToTarget(tipRaw, tipTotal)
+
   // Round per-person totals so they sum exactly to the claimed grand total.
   const rawTotals = people.map(
-    (p) => (subtotal.get(p.id) ?? 0) + (serviceShare.get(p.id) ?? 0),
+    (p, i) => (subtotal.get(p.id) ?? 0) + (serviceShare.get(p.id) ?? 0) + tipRaw[i],
   )
-  const target = totalSubtotal + extras
+  const target = totalSubtotal + extras + tipTotal
   const roundedTotals = roundToTarget(rawTotals, target)
 
   return people.map((p, i) => {
     const totalLbp = roundedTotals[i]
     const sub = Math.round(subtotal.get(p.id) ?? 0)
+    const tipShareLbp = tipRounded[i]
     return {
       personId: p.id,
       name: p.name,
       color: p.color,
       subtotalLbp: sub,
-      // Keep service = total - subtotal so the row stays internally consistent.
-      serviceShareLbp: totalLbp - sub,
+      // Keep service = total - subtotal - tip so the row stays internally consistent.
+      serviceShareLbp: totalLbp - sub - tipShareLbp,
+      tipShareLbp,
       totalLbp,
       totalUsd: toUsd(totalLbp, rate),
     }

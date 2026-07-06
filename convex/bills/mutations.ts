@@ -14,6 +14,11 @@ const MAX_NAME_LENGTH = 48
 // Hard ceiling on participants — a leaked share link must not let strangers
 // spam a bill with unlimited "people" (the rate limiter slows it, this stops it).
 const MAX_PEOPLE = 30
+// New bills start with a 10% tip (the Lebanese norm); older bills have no
+// tipPercent and stay tip-free. See src/lib/bill/constants.ts if surfacing this
+// default client-side.
+const DEFAULT_TIP_PERCENT = 10
+const MAX_TIP_PERCENT = 30
 
 const guestClaimInput = v.object({
   itemId: v.string(),
@@ -262,6 +267,7 @@ export const createBill = mutation({
       tax: 0,
       serviceChargeOn: false,
       serviceSplitMode: 'proportional',
+      tipPercent: DEFAULT_TIP_PERCENT,
       shareToken: newShareToken(),
       status: 'PENDING',
       version: 0,
@@ -317,6 +323,7 @@ export const createDemoBill = mutation({
       tax: 0,
       serviceChargeOn: false,
       serviceSplitMode: 'proportional',
+      tipPercent: DEFAULT_TIP_PERCENT,
       printedTotalLbp: 19_440_000,
       printedTotalUsd: 216,
       shareToken: newShareToken(),
@@ -420,6 +427,71 @@ export const finalize = mutation({
     if (bill.status !== 'FINALIZED') {
       await ctx.db.patch(id, { status: 'FINALIZED', updatedAt: now() })
     }
+    return null
+  },
+})
+
+// Tip is bill-meta (host-only knob), so this is a normal bill patch with a
+// version bump — unlike claims. It's excluded from metaValidator on purpose:
+// this mutation is the ONLY writer, so a stale saveWorking flush can't touch it.
+export const setTipPercent = mutation({
+  args: {
+    id: v.id('bills'),
+    tipPercent: v.number(),
+  },
+  returns: v.null(),
+  handler: async (ctx, { id, tipPercent }) => {
+    const bill = await ctx.db.get(id)
+    invariant(bill, `missing bill ${id}`)
+    assertEditableSplit(bill)
+    assertFiniteNumber(tipPercent, 'Tip percent')
+    if (tipPercent < 0 || tipPercent > MAX_TIP_PERCENT) {
+      throw new Error(`Tip must be between 0 and ${MAX_TIP_PERCENT}%`)
+    }
+    await ctx.db.patch(id, {
+      tipPercent,
+      version: bill.version + 1,
+      updatedAt: now(),
+    })
+    return null
+  },
+})
+
+// End-of-split stall killer (roadmap Phase B): distribute every item's still-
+// unclaimed units evenly across ALL people, ADDING on top of existing claims
+// (unlike shareHostItemEvenly, which replaces an item's claims). Claims-only
+// write — no bill patch, no version bump, same as the other claim mutations.
+export const splitLeftoversEvenly = mutation({
+  args: { id: v.id('bills') },
+  returns: v.null(),
+  handler: async (ctx, { id }) => {
+    const bill = await ctx.db.get(id)
+    invariant(bill, `missing bill ${id}`)
+    assertEditableSplit(bill)
+    if (bill.people.length === 0) throw new Error('No people on the bill')
+
+    const currentClaims = toWireClaims(await claimRowsForBill(ctx, id))
+    const byKey = new Map(
+      currentClaims.map((c) => [`${c.itemId} ${c.personId}`, { ...c }]),
+    )
+    const claimedByItem = new Map<string, number>()
+    for (const c of currentClaims) {
+      claimedByItem.set(c.itemId, (claimedByItem.get(c.itemId) ?? 0) + c.units)
+    }
+
+    for (const item of bill.lineItems) {
+      const remaining = item.qty - (claimedByItem.get(item.id) ?? 0)
+      if (remaining <= 1e-6) continue
+      const share = remaining / bill.people.length
+      for (const p of bill.people) {
+        const key = `${item.id} ${p.id}`
+        const existing = byKey.get(key)
+        if (existing) existing.units += share
+        else byKey.set(key, { itemId: item.id, personId: p.id, units: share })
+      }
+    }
+
+    await syncClaimRows(ctx, id, [...byKey.values()])
     return null
   },
 })

@@ -1,12 +1,11 @@
 import { useEffect, useState } from 'react'
 import { createFileRoute, useNavigate } from '@tanstack/react-router'
 import { useSuspenseQuery } from '@tanstack/react-query'
-import toast from 'react-hot-toast'
 import {
   RiArrowRightLine,
+  RiGroupLine,
   RiLockLine,
   RiQrCodeLine,
-  RiShareLine,
 } from '@remixicon/react'
 import type { Id } from 'convex/_generated/dataModel'
 import { Loader } from '~/components/Loader'
@@ -27,9 +26,13 @@ import {
   useRemoveHostPerson,
   useRevokeShare,
   useSaveHostClaims,
+  useSetTipPercent,
   useShareHostItemEvenly,
+  useSplitLeftoversEvenly,
 } from '~/queries'
 import { recordBill } from '~/lib/billHistory'
+import { remainingUnits, totalRemainingLbp } from '~/lib/split'
+import { formatUsd, toUsd } from '~/lib/currency'
 import { joinUrl } from '~/lib/shareText'
 import type { Claim } from '~/lib/types'
 
@@ -50,7 +53,10 @@ function Split() {
   const publish = usePublish()
   const finalize = useFinalize()
   const revokeShare = useRevokeShare()
+  const setTipPercent = useSetTipPercent()
+  const splitLeftoversEvenly = useSplitLeftoversEvenly()
   const [qrOpen, setQrOpen] = useState(false)
+  const [finalizeOpen, setFinalizeOpen] = useState(false)
   const addHostPerson = useAddHostPerson()
   const removeHostPerson = useRemoveHostPerson()
   const saveHostClaims = useSaveHostClaims()
@@ -60,6 +66,8 @@ function Split() {
     bill.people[0]?.id ?? null,
   )
   const [conflictMessage, setConflictMessage] = useState<string | null>(null)
+  // The item whose claim write is round-tripping — drives the pending pulse.
+  const [stepPendingItemId, setStepPendingItemId] = useState<string | null>(null)
   // Keep an active person selected as people are added/removed.
   useEffect(() => {
     if (!bill.people.some((p) => p.id === activeId)) {
@@ -69,6 +77,12 @@ function Split() {
 
   const finalized = bill.status === 'FINALIZED'
   const shared = bill.status === 'PUBLISHED' || finalized
+
+  const remainingLbp = totalRemainingLbp(bill.lineItems, bill.claims)
+  const allClaimed = remainingLbp <= 0.5
+  const leftoverItemCount = bill.lineItems.filter(
+    (item) => remainingUnits(item, bill.claims) > 0.0001,
+  ).length
 
   // Remember this bill locally for the scan page's resume + recent list.
   useEffect(() => {
@@ -84,6 +98,7 @@ function Split() {
     tax: bill.tax,
     serviceChargeOn: bill.serviceChargeOn,
     serviceSplitMode: bill.serviceSplitMode,
+    tipPercent: bill.tipPercent,
     rate: bill.rate,
     status: bill.status,
   }
@@ -133,52 +148,42 @@ function Split() {
       (c) => c.itemId !== itemId,
     )
     if (nextUnits > 0) nextClaims.push({ itemId, units: nextUnits })
-    void savePersonClaims(personId, nextClaims)
+    setStepPendingItemId(itemId)
+    void savePersonClaims(personId, nextClaims).finally(() => {
+      // Only clear if a later tap hasn't moved the pending marker elsewhere.
+      setStepPendingItemId((cur) => (cur === itemId ? null : cur))
+    })
   }
 
   function shareEvenly(itemId: string, personIds: string[]) {
     void shareHostItemEvenly.mutateAsync({ id: billId, itemId, personIds })
   }
 
-  async function shareSplitLink() {
-    // The token exists from creation, so we can build the URL synchronously and
-    // keep the tap gesture alive for navigator.share on iOS. Flip the bill to
-    // PUBLISHED in the background (don't await — that would consume the gesture).
-    const url = joinUrl(bill.shareToken)
+  const pendingItemId =
+    stepPendingItemId ??
+    (shareHostItemEvenly.isPending
+      ? (shareHostItemEvenly.variables?.itemId ?? null)
+      : null)
+
+  // One button does it all: flip to PUBLISHED in the background (don't await —
+  // the dialog should open on the same tap) and show the QR + share link.
+  // navigator.share lives inside the dialog on its own fresh tap, which keeps
+  // iOS's user-gesture requirement happy.
+  function openInvite() {
     if (!shared) void publish.mutateAsync({ id: billId })
-
-    // Prefer the native share sheet (the nice path on iPhone); fall back to the
-    // clipboard, then to surfacing the raw link as a last resort.
-    if (typeof navigator.share === 'function') {
-      try {
-        await navigator.share({
-          title: `Split: ${bill.merchantName || 'the bill'}`,
-          text: 'Join the split and claim your items',
-          url,
-        })
-        return
-      } catch (err) {
-        // User dismissed the sheet — don't fall through to a confusing copy.
-        if (err instanceof DOMException && err.name === 'AbortError') return
-      }
-    }
-
-    try {
-      await navigator.clipboard.writeText(url)
-      toast.success('Split link copied')
-    } catch {
-      toast(url)
-    }
+    setQrOpen(true)
   }
 
-  async function finalizeSplit() {
-    const confirmed = window.confirm(
-      'Finalize this split? This locks edits for everyone and turns the summary into a read-only receipt.',
-    )
-    if (!confirmed) return
+  async function finalizeSplit(splitLeftovers: boolean) {
+    if (splitLeftovers) {
+      await splitLeftoversEvenly.mutateAsync({ id: billId })
+    }
     await finalize.mutateAsync({ id: billId })
+    setFinalizeOpen(false)
     navigate({ to: '/summary/$billId', params: { billId } })
   }
+
+  const finalizePending = finalize.isPending || splitLeftoversEvenly.isPending
 
   return (
     <BillSplitWorkspace
@@ -206,6 +211,13 @@ function Split() {
           ? 'Saving split...'
           : null
       }
+      onTipChange={
+        finalized
+          ? undefined
+          : (pct) => setTipPercent.mutate({ id: billId, tipPercent: pct })
+      }
+      tipPending={setTipPercent.isPending}
+      pendingItemId={pendingItemId}
       actionSlot={
         finalized ? (
           <Button
@@ -216,37 +228,30 @@ function Split() {
             View final summary <RiArrowRightLine />
           </Button>
         ) : (
-          <div className="grid gap-2">
-            <Button
-              size="lg"
-              className="w-full"
-              onClick={() => void shareSplitLink()}
-              disabled={publish.isPending}
-            >
-              <RiShareLine />
-              {shared ? 'Share split link again' : 'Invite people to split'}
-            </Button>
-            {shared ? (
+          <>
+            {/* Two actions side by side keeps the mobile dock short. When
+                everything is claimed, Finalize takes over as the primary. */}
+            <div className="grid grid-cols-2 gap-2">
               <Button
                 size="lg"
-                variant="outline"
-                className="w-full"
-                onClick={() => setQrOpen(true)}
+                variant={allClaimed ? 'outline' : 'default'}
+                onClick={openInvite}
+                disabled={publish.isPending}
               >
                 <RiQrCodeLine />
-                Show QR code
+                Invite
               </Button>
-            ) : null}
-            <Button
-              size="lg"
-              variant="destructive"
-              className="w-full"
-              onClick={() => void finalizeSplit()}
-              disabled={finalize.isPending}
-            >
-              <RiLockLine />
-              Finalize split
-            </Button>
+              <Button
+                size="lg"
+                variant={allClaimed ? 'default' : 'destructive'}
+                onClick={() => setFinalizeOpen(true)}
+                disabled={finalizePending}
+              >
+                <RiLockLine />
+                Finalize
+              </Button>
+            </div>
+
             <Dialog open={qrOpen} onOpenChange={setQrOpen}>
               <DialogContent className="max-w-sm">
                 <DialogHeader>
@@ -255,14 +260,93 @@ function Split() {
                 <ShareSplitCard
                   url={joinUrl(bill.shareToken)}
                   merchantName={bill.merchantName}
-                  onRevoke={async () => {
-                    await revokeShare.mutateAsync({ id: billId })
-                    setQrOpen(false)
-                  }}
+                  onRevoke={
+                    shared
+                      ? async () => {
+                          await revokeShare.mutateAsync({ id: billId })
+                          setQrOpen(false)
+                        }
+                      : undefined
+                  }
                 />
               </DialogContent>
             </Dialog>
-          </div>
+
+            <Dialog open={finalizeOpen} onOpenChange={setFinalizeOpen}>
+              <DialogContent className="max-w-sm">
+                {allClaimed ? (
+                  <>
+                    <DialogHeader>
+                      <DialogTitle>Finalize this split?</DialogTitle>
+                    </DialogHeader>
+                    <p className="text-sm text-muted-foreground">
+                      This locks edits for everyone and turns the summary into
+                      a read-only receipt.
+                    </p>
+                    <div className="grid gap-2">
+                      <Button
+                        size="lg"
+                        onClick={() => void finalizeSplit(false)}
+                        disabled={finalizePending}
+                      >
+                        <RiLockLine />
+                        Finalize split
+                      </Button>
+                      <Button
+                        size="lg"
+                        variant="outline"
+                        onClick={() => setFinalizeOpen(false)}
+                        disabled={finalizePending}
+                      >
+                        Cancel
+                      </Button>
+                    </div>
+                  </>
+                ) : (
+                  <>
+                    <DialogHeader>
+                      <DialogTitle>Some items are still unclaimed</DialogTitle>
+                    </DialogHeader>
+                    <p className="text-sm text-muted-foreground">
+                      <span className="font-semibold text-foreground tabular-nums">
+                        {formatUsd(toUsd(remainingLbp, bill.rate))}
+                      </span>{' '}
+                      across {leftoverItemCount}{' '}
+                      {leftoverItemCount === 1 ? 'item' : 'items'} has no owner
+                      yet. Split it evenly, or finalize with it left off
+                      everyone's totals.
+                    </p>
+                    <div className="grid gap-2">
+                      <Button
+                        size="lg"
+                        onClick={() => void finalizeSplit(true)}
+                        disabled={finalizePending}
+                      >
+                        <RiGroupLine />
+                        Split leftovers evenly
+                      </Button>
+                      <Button
+                        size="lg"
+                        variant="outline"
+                        onClick={() => void finalizeSplit(false)}
+                        disabled={finalizePending}
+                      >
+                        Finalize as is
+                      </Button>
+                      <Button
+                        size="lg"
+                        variant="ghost"
+                        onClick={() => setFinalizeOpen(false)}
+                        disabled={finalizePending}
+                      >
+                        Keep splitting
+                      </Button>
+                    </div>
+                  </>
+                )}
+              </DialogContent>
+            </Dialog>
+          </>
         )
       }
     />

@@ -22,6 +22,9 @@ export const billDocValidator = v.object({
   tax: v.number(),
   serviceChargeOn: v.boolean(),
   serviceSplitMode,
+  // Deliberately NOT in metaValidator below: tip changes only go through
+  // setTipPercent, so a stale saveWorking flush can never clobber it.
+  tipPercent: v.optional(v.number()),
   printedTotalLbp: v.optional(v.number()),
   printedTotalUsd: v.optional(v.number()),
   imageRef: v.optional(v.string()),

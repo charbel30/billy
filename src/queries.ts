@@ -54,6 +54,18 @@ export function useFinalize() {
   })
 }
 
+export function useSetTipPercent() {
+  return useMutation({
+    mutationFn: useConvexMutation(api.bills.mutations.setTipPercent),
+  })
+}
+
+export function useSplitLeftoversEvenly() {
+  return useMutation({
+    mutationFn: useConvexMutation(api.bills.mutations.splitLeftoversEvenly),
+  })
+}
+
 export function useAddHostPerson() {
   return useMutation({
     mutationFn: useConvexMutation(api.bills.mutations.addHostPerson),

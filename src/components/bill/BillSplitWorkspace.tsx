@@ -1,12 +1,19 @@
-import type { ReactNode } from 'react'
+import { useState } from 'react'
+import type { CSSProperties, ReactNode } from 'react'
 import { RiExchangeDollarLine, RiGroupLine } from '@remixicon/react'
 import { Badge } from '~/components/ui/badge'
 import { ClaimList } from '~/components/bill/ClaimList'
 import { SplitHero } from '~/components/bill/SplitHero'
 import { PersonRail } from '~/components/bill/PersonRail'
 import { MobileSplitSheet } from '~/components/bill/MobileSplitSheet'
+import { TipControl } from '~/components/bill/TipControl'
 import { BillSummary, type BillSummaryBill } from '~/components/bill/BillSummary'
-import { computePortfolios } from '~/lib/split'
+import {
+  computePortfolios,
+  effectiveUnitPrice,
+  remainingUnits,
+  totalRemainingLbp,
+} from '~/lib/split'
 import { formatLbp } from '~/lib/currency'
 import type { BillStatus, Person } from '~/lib/types'
 
@@ -47,6 +54,9 @@ export function BillSplitWorkspace({
   conflictMessage,
   savingMessage,
   summaryDescription = 'Updates live as people claim items.',
+  onTipChange,
+  tipPending = false,
+  pendingItemId,
 }: {
   bill: WorkspaceBill
   description: string
@@ -69,6 +79,11 @@ export function BillSplitWorkspace({
   conflictMessage?: string | null
   savingMessage?: string | null
   summaryDescription?: string
+  /** Host-only: makes the tip control render (expanded sheet + desktop aside). */
+  onTipChange?: (pct: number) => void
+  tipPending?: boolean
+  /** Item currently round-tripping a claim write — gets a pending pulse. */
+  pendingItemId?: string | null
 }) {
   // Per-person portfolios power the panel totals + the tap-to-reveal breakdowns;
   // computed once over the whole bill.
@@ -80,10 +95,40 @@ export function BillSplitWorkspace({
     tax: bill.tax,
     serviceChargeOn: bill.serviceChargeOn,
     serviceSplitMode: bill.serviceSplitMode,
+    tipPercent: bill.tipPercent,
     rate: bill.rate,
   })
   const portfolioByPerson = new Map(portfolios.map((p) => [p.personId, p]))
   const grandLbp = portfolios.reduce((s, p) => s + p.totalLbp, 0)
+  const tipLbp = portfolios.reduce((s, p) => s + p.tipShareLbp, 0)
+
+  // Live claim progress for the mobile dock's handle (SplitHero keeps its own
+  // identical math — both are cheap pure loops).
+  const remainingLbp = totalRemainingLbp(bill.lineItems, bill.claims)
+  const billTotalLbp = bill.lineItems.reduce(
+    (s, item) => s + item.qty * effectiveUnitPrice(item),
+    0,
+  )
+  const itemsTotal = bill.lineItems.length
+  const itemsClaimed = bill.lineItems.filter(
+    (item) => remainingUnits(item, bill.claims) <= 0.0001,
+  ).length
+  const shared = bill.status === 'PUBLISHED' || bill.status === 'FINALIZED'
+
+  // Bottom padding tracks the dock's measured collapsed height so the last
+  // item cards never hide under it (the old fixed pb-60 was too short).
+  const [dockHeight, setDockHeight] = useState(240)
+
+  const tipControl =
+    onTipChange && bill.status !== 'FINALIZED' ? (
+      <TipControl
+        value={bill.tipPercent ?? 0}
+        onChange={onTipChange}
+        pending={tipPending}
+        tipLbp={tipLbp}
+        rate={bill.rate}
+      />
+    ) : null
 
   const header = (
     <div className="flex flex-wrap items-start justify-between gap-3">
@@ -143,6 +188,11 @@ export function BillSplitWorkspace({
   const personPanel = (
     <>
       {panelExtra}
+      {tipControl ? (
+        <div className="rounded-3xl bg-background/70 px-4 py-3 ring-1 ring-border/40">
+          {tipControl}
+        </div>
+      ) : null}
       <div>
         <h2 className="mb-2 text-sm font-bold text-muted-foreground">
           {panelTitle}
@@ -159,6 +209,7 @@ export function BillSplitWorkspace({
           claims={bill.claims}
           rate={bill.rate}
           serviceChargeOn={bill.serviceChargeOn}
+          tipPercent={bill.tipPercent}
           addLabel={addLabel}
           addPlaceholder={addPlaceholder}
         />
@@ -170,7 +221,10 @@ export function BillSplitWorkspace({
   )
 
   return (
-    <div className="mx-auto w-full max-w-7xl px-4 pb-60 pt-4 sm:px-6 lg:px-10 lg:pb-10">
+    <div
+      className="mx-auto w-full max-w-7xl px-4 pb-[calc(var(--dock-h)+1.5rem)] pt-4 sm:px-6 lg:px-10 lg:pb-10"
+      style={{ '--dock-h': `${dockHeight}px` } as CSSProperties}
+    >
       <div className="mb-5">{header}</div>
 
       <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_22rem] lg:items-start">
@@ -198,6 +252,7 @@ export function BillSplitWorkspace({
             onShareEvenly={onShareEvenly}
             canShareEvenly={canShareEvenly}
             sharePeople={sharePeople}
+            pendingItemId={pendingItemId}
           />
 
           {savingMessage ? (
@@ -226,10 +281,18 @@ export function BillSplitWorkspace({
         claims={bill.claims}
         rate={bill.rate}
         serviceChargeOn={bill.serviceChargeOn}
+        tipPercent={bill.tipPercent}
         grandLbp={grandLbp}
+        shared={shared}
+        remainingLbp={remainingLbp}
+        billTotalLbp={billTotalLbp}
+        itemsClaimed={itemsClaimed}
+        itemsTotal={itemsTotal}
         panelExtra={panelExtra}
+        expandedExtra={tipControl}
         actionSlot={actionSlot}
         addPlaceholder={addPlaceholder}
+        onCollapsedHeightChange={setDockHeight}
       />
     </div>
   )

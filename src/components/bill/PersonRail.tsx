@@ -35,6 +35,7 @@ export function PersonRail({
   claims = [],
   rate,
   serviceChargeOn = false,
+  tipPercent,
   variant = 'panel',
   addLabel = 'Add person',
   addPlaceholder = 'Add person',
@@ -49,6 +50,7 @@ export function PersonRail({
   claims?: Claim[]
   rate?: number | null
   serviceChargeOn?: boolean
+  tipPercent?: number | null
   variant?: 'panel' | 'bar'
   addLabel?: string
   addPlaceholder?: string
@@ -140,6 +142,7 @@ export function PersonRail({
                       lines={personClaimedLines(p.id, lineItems, claims)}
                       rate={rate}
                       serviceChargeOn={serviceChargeOn}
+                      tipPercent={tipPercent}
                       bare
                     />
                   ) : null}

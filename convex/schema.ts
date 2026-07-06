@@ -104,6 +104,11 @@ const schema = defineSchema({
     tax: v.number(),
     serviceChargeOn: v.boolean(),
     serviceSplitMode,
+    // Tip on top of the printed bill, as a percent of the CLAIMED subtotal,
+    // distributed proportionally per person (split.ts). Separate from the
+    // receipt's service charge and never part of the reconcile checksum.
+    // Absent (older bills) means no tip; new bills start at 10.
+    tipPercent: v.optional(v.number()),
 
     // Extraction-only reference: what the receipt itself printed. Never edited by
     // hand (the manual printed-total input was dropped — it fought the line items

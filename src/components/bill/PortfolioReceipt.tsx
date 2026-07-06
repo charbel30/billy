@@ -4,6 +4,7 @@ import type { Portfolio, ClaimedLine } from '~/lib/split'
 import { formatLbp, formatUsd, toUsd } from '~/lib/currency'
 import { formatUnits } from '~/lib/format'
 import { ELEVATED_CARD } from '~/lib/bill/constants'
+import { itemEmoji } from '~/lib/bill/itemEmoji'
 import { cn } from '~/lib/utils'
 import { PersonAvatar } from './PersonAvatar'
 
@@ -14,6 +15,7 @@ export function PortfolioReceipt({
   lines,
   rate,
   serviceChargeOn,
+  tipPercent,
   bare = false,
   paidAt,
   onTogglePaid,
@@ -23,6 +25,8 @@ export function PortfolioReceipt({
   lines: ClaimedLine[]
   rate: number | null | undefined
   serviceChargeOn: boolean
+  /** Bill-level tip percent — only used for the tip line's label. */
+  tipPercent?: number | null
   // `bare` drops the card chrome for embedding inside a popover / sheet that
   // already provides its own surface.
   bare?: boolean
@@ -74,14 +78,18 @@ export function PortfolioReceipt({
       <div className="my-3 border-t border-dashed border-border" />
 
       <div className="space-y-1 text-sm">
-        {lines.map((l) => (
-          <div key={l.itemId} className="flex justify-between gap-2 tabular-nums">
-            <span className="truncate text-muted-foreground">
-              {formatUnits(l.units)}× {l.name}
-            </span>
-            <span>{formatUsd(toUsd(l.lbp, rate))}</span>
-          </div>
-        ))}
+        {lines.map((l) => {
+          const emoji = itemEmoji(l.name)
+          return (
+            <div key={l.itemId} className="flex justify-between gap-2 tabular-nums">
+              <span className="truncate text-muted-foreground">
+                {formatUnits(l.units)}× {emoji ? <span aria-hidden>{emoji} </span> : null}
+                {l.name}
+              </span>
+              <span>{formatUsd(toUsd(l.lbp, rate))}</span>
+            </div>
+          )
+        })}
         {lines.length === 0 && (
           <div className="text-sm text-muted-foreground">Nothing claimed yet</div>
         )}
@@ -91,6 +99,13 @@ export function PortfolioReceipt({
         <div className="mt-1 flex justify-between text-xs text-muted-foreground tabular-nums">
           <span>service &amp; tax</span>
           <span>{formatUsd(toUsd(portfolio.serviceShareLbp, rate))}</span>
+        </div>
+      )}
+
+      {portfolio.tipShareLbp !== 0 && (
+        <div className="mt-1 flex justify-between text-xs text-muted-foreground tabular-nums">
+          <span>tip{tipPercent ? ` (${tipPercent}%)` : ''}</span>
+          <span>{formatUsd(toUsd(portfolio.tipShareLbp, rate))}</span>
         </div>
       )}
 

@@ -13,6 +13,7 @@ export interface BillSummaryBill {
   tax: number
   serviceChargeOn: boolean
   serviceSplitMode: ServiceSplitMode
+  tipPercent?: number | null
   rate?: number | null
 }
 
@@ -47,9 +48,11 @@ export function BillSummary({
     tax: bill.tax,
     serviceChargeOn: bill.serviceChargeOn,
     serviceSplitMode: bill.serviceSplitMode,
+    tipPercent: bill.tipPercent,
     rate: bill.rate,
   })
   const grandLbp = portfolios.reduce((s, p) => s + p.totalLbp, 0)
+  const tipLbp = portfolios.reduce((s, p) => s + p.tipShareLbp, 0)
   const paidAtById = new Map(bill.people.map((p) => [p.id, p.paidAt]))
 
   return (
@@ -79,6 +82,7 @@ export function BillSummary({
               lines={personClaimedLines(p.personId, bill.lineItems, bill.claims)}
               rate={bill.rate}
               serviceChargeOn={bill.serviceChargeOn}
+              tipPercent={bill.tipPercent}
               paidAt={paidAtById.get(p.personId)}
               onTogglePaid={
                 toggleable ? (paid) => onTogglePaid(p.personId, paid) : undefined
@@ -90,7 +94,16 @@ export function BillSummary({
       </div>
 
       <div className="flex items-center justify-between rounded-3xl bg-muted/70 px-4 py-3 ring-1 ring-border/40">
-        <span className="font-bold text-muted-foreground">Grand total</span>
+        <div>
+          <span className="block font-bold text-muted-foreground">
+            Grand total
+          </span>
+          {tipLbp > 0 && bill.tipPercent ? (
+            <span className="block text-[11px] font-semibold text-muted-foreground/80">
+              incl. {bill.tipPercent}% tip
+            </span>
+          ) : null}
+        </div>
         <div className="text-right">
           <AnimatedAmount
             value={toUsd(grandLbp, bill.rate)}

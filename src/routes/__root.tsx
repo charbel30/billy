@@ -37,7 +37,8 @@ export const Route = createRootRouteWithContext<{
       },
       {
         name: "viewport",
-        content: "width=device-width, initial-scale=1",
+        // viewport-fit=cover exposes env(safe-area-inset-*) for the mobile dock.
+        content: "width=device-width, initial-scale=1, viewport-fit=cover",
       },
       ...seo({
         title: "Receipt Splitter — split a bill in LBP & USD",

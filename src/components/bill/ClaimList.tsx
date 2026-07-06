@@ -11,6 +11,8 @@ import { effectiveUnitPrice, remainingUnits } from '~/lib/split'
 import { formatLbp, formatUsd, toUsd } from '~/lib/currency'
 import { formatUnits } from '~/lib/format'
 import { ELEVATED_CARD, ELEVATED_CARD_HOVER } from '~/lib/bill/constants'
+import { itemEmoji } from '~/lib/bill/itemEmoji'
+import { tapHaptic } from '~/lib/haptics'
 import { PersonAvatar } from './PersonAvatar'
 import { cn } from '~/lib/utils'
 
@@ -40,6 +42,7 @@ export function ClaimList({
   onShareEvenly,
   canShareEvenly = true,
   sharePeople = people,
+  pendingItemId,
 }: {
   lineItems: LineItem[]
   people: Person[]
@@ -50,13 +53,29 @@ export function ClaimList({
   onShareEvenly: (itemId: string, personIds: string[]) => void
   canShareEvenly?: boolean
   sharePeople?: Person[]
+  /** Item with a claim write in flight — its unit count pulses while saving. */
+  pendingItemId?: string | null
 }) {
   const personById = new Map(people.map((p) => [p.id, p]))
+
+  function step(itemId: string, personId: string, delta: number) {
+    tapHaptic()
+    onStep(itemId, personId, delta)
+  }
+
+  // Unclaimed items float to the top; fully-claimed ones sink (stable sort, so
+  // receipt order is preserved within each group and `layout` animates the move).
+  const doneById = new Map(
+    lineItems.map((item) => [item.id, remainingUnits(item, claims) <= 0.0001]),
+  )
+  const sortedItems = [...lineItems].sort(
+    (a, b) => Number(doneById.get(a.id)) - Number(doneById.get(b.id)),
+  )
 
   return (
     <div className="space-y-3">
       <AnimatePresence initial={false}>
-        {lineItems.map((item) => {
+        {sortedItems.map((item) => {
           const remaining = remainingUnits(item, claims)
           const mine = activePerson ? unitsFor(claims, item.id, activePerson.id) : 0
           const claimants = claims.filter(
@@ -64,6 +83,8 @@ export function ClaimList({
           )
           const unit = effectiveUnitPrice(item)
           const done = remaining <= 0.0001
+          const pending = pendingItemId === item.id
+          const emoji = itemEmoji(item.name)
 
           // One light subtitle: per-unit price (when multi-qty) + how many units
           // are still free — kept as a count, not another money figure.
@@ -91,13 +112,18 @@ export function ClaimList({
                   <div className="flex items-center gap-2">
                     <h4
                       className={cn(
-                        'truncate font-black tracking-tight transition-colors',
+                        'flex min-w-0 items-baseline font-black tracking-tight transition-colors',
                         done
                           ? 'text-sm text-muted-foreground'
                           : 'text-base text-foreground',
                       )}
                     >
-                      {item.name}
+                      {emoji ? (
+                        <span aria-hidden className="mr-1.5 shrink-0">
+                          {emoji}
+                        </span>
+                      ) : null}
+                      <span className="truncate">{item.name}</span>
                     </h4>
                     {item.qty !== 1 ? (
                       <span className="shrink-0 rounded-full bg-muted px-2 py-0.5 text-xs font-semibold text-muted-foreground tabular-nums">
@@ -149,7 +175,7 @@ export function ClaimList({
                             exit={{ opacity: 0, scale: 0.6, filter: 'blur(4px)' }}
                             transition={{ type: 'spring', duration: 0.3, bounce: 0 }}
                             whileTap={{ scale: 0.96 }}
-                            onClick={() => onStep(item.id, c.personId, -1)}
+                            onClick={() => step(item.id, c.personId, -1)}
                             title={`${p?.name ?? 'Someone'} · ${formatUnits(c.units)} — tap to remove one`}
                             aria-label={`Remove one from ${p?.name ?? 'person'}`}
                             className={cn(
@@ -209,12 +235,13 @@ export function ClaimList({
                           type="button"
                           aria-label="Split evenly across everyone"
                           title="Split evenly across everyone"
-                          onClick={() =>
+                          onClick={() => {
+                            tapHaptic([8, 30, 8])
                             onShareEvenly(
                               item.id,
                               sharePeople.map((p) => p.id),
                             )
-                          }
+                          }}
                           className="grid size-9 place-items-center rounded-full text-muted-foreground transition-[transform,color,background-color] hover:bg-muted hover:text-foreground active:scale-[0.96]"
                         >
                           <RiGroupLine className="size-4" />
@@ -227,7 +254,7 @@ export function ClaimList({
                           aria-label="Remove one"
                           disabled={!activePerson || mine <= 0}
                           onClick={() =>
-                            activePerson && onStep(item.id, activePerson.id, -1)
+                            activePerson && step(item.id, activePerson.id, -1)
                           }
                           className="grid size-9 place-items-center rounded-full border border-border transition-[transform,background-color] hover:bg-muted active:scale-[0.96] disabled:opacity-30"
                         >
@@ -241,7 +268,12 @@ export function ClaimList({
                               animate={{ y: 0, opacity: 1 }}
                               exit={{ y: 8, opacity: 0 }}
                               transition={{ duration: 0.15 }}
-                              className="inline-block font-bold tabular-nums"
+                              className={cn(
+                                'inline-block font-bold tabular-nums',
+                                // Saving round-trip: pulse the count but keep the
+                                // buttons live — rapid multi-taps must keep working.
+                                pending && 'animate-pulse text-muted-foreground',
+                              )}
                             >
                               {formatUnits(mine)}
                             </motion.span>
@@ -252,9 +284,12 @@ export function ClaimList({
                           aria-label="Add one"
                           disabled={!activePerson || remaining <= 0.0001}
                           onClick={() =>
-                            activePerson && onStep(item.id, activePerson.id, +1)
+                            activePerson && step(item.id, activePerson.id, +1)
                           }
-                          className="grid size-9 place-items-center rounded-full border border-border transition-[transform,background-color] hover:bg-muted active:scale-[0.96] disabled:opacity-30"
+                          className={cn(
+                            'grid size-9 place-items-center rounded-full border border-border transition-[transform,background-color,opacity] hover:bg-muted active:scale-[0.96] disabled:opacity-30',
+                            pending && 'opacity-60',
+                          )}
                           style={
                             activePerson && remaining > 0.0001
                               ? {

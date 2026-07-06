@@ -76,6 +76,8 @@ function GuestView() {
   const [joinName, setJoinName] = useState('')
   const [activeId, setActiveId] = useState<string | null>(null)
   const [conflictMessage, setConflictMessage] = useState<string | null>(null)
+  // The item whose claim write is round-tripping — drives the pending pulse.
+  const [stepPendingItemId, setStepPendingItemId] = useState<string | null>(null)
 
   const joinSplit = useJoinSplit()
   const addGuestPerson = useAddGuestPerson()
@@ -151,7 +153,10 @@ function GuestView() {
       (c) => c.itemId !== itemId,
     )
     if (nextUnits > 0) nextClaims.push({ itemId, units: nextUnits })
-    void savePersonClaims(personId, nextClaims)
+    setStepPendingItemId(itemId)
+    void savePersonClaims(personId, nextClaims).finally(() => {
+      setStepPendingItemId((cur) => (cur === itemId ? null : cur))
+    })
   }
 
   function shareEvenly(itemId: string, personIds: string[]) {
@@ -259,6 +264,7 @@ function GuestView() {
       showClaims={joined}
       conflictMessage={conflictMessage}
       savingMessage={saveGuestClaims.isPending ? 'Saving claim...' : null}
+      pendingItemId={stepPendingItemId}
     />
   )
 }
