@@ -5,7 +5,6 @@ export function workingBillFromDoc(d: Doc<'bills'>): WorkingBill {
   return {
     lineItems: d.lineItems,
     people: d.people,
-    claims: d.claims,
     version: d.version,
     status: d.status,
     meta: {
@@ -44,11 +43,6 @@ export function sanitizeWorkingBill(w: WorkingBill): WorkingBill {
       color: p.color,
       ...(p.guestSessionId != null ? { guestSessionId: p.guestSessionId } : {}),
     })),
-    claims: w.claims.map((c) => ({
-      itemId: c.itemId,
-      personId: c.personId,
-      units: c.units,
-    })),
   }
 }
 
@@ -78,12 +72,6 @@ export function canPersistWorkingBill(w: WorkingBill): boolean {
     if (!person.name.trim() || !person.color.trim()) return false
   }
 
-  for (const claim of w.claims) {
-    if (!itemIds.has(claim.itemId)) return false
-    if (!personIds.has(claim.personId)) return false
-    if (!Number.isFinite(claim.units) || claim.units < 0) return false
-  }
-
   return true
 }
 
@@ -92,11 +80,7 @@ export function isValidWorkingBill(w: unknown): w is WorkingBill {
   if (!w || typeof w !== 'object') return false
   const o = w as Record<string, unknown>
   if (typeof o.version !== 'number') return false
-  if (
-    !Array.isArray(o.lineItems) ||
-    !Array.isArray(o.people) ||
-    !Array.isArray(o.claims)
-  ) {
+  if (!Array.isArray(o.lineItems) || !Array.isArray(o.people)) {
     return false
   }
   return (

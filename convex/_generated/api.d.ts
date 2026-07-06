@@ -8,6 +8,7 @@
  * @module
  */
 
+import type * as bills_claimRows from "../bills/claimRows.js";
 import type * as bills_extraction from "../bills/extraction.js";
 import type * as bills_mutations from "../bills/mutations.js";
 import type * as bills_queries from "../bills/queries.js";
@@ -29,6 +30,7 @@ import type {
 } from "convex/server";
 
 declare const fullApi: ApiFromModules<{
+  "bills/claimRows": typeof bills_claimRows;
   "bills/extraction": typeof bills_extraction;
   "bills/mutations": typeof bills_mutations;
   "bills/queries": typeof bills_queries;

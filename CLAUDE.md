@@ -15,7 +15,8 @@ Root docs, in reading order:
 - `receipt-splitter-build-spec.md` — product spec (concept, currency logic, split rules).
   Its §7 tech-stack table is outdated: it says Supabase + React/Vite; the real stack is
   **Convex + TanStack Start + Tailwind v4 + shadcn/ui**, deployed to Cloudflare.
-- `architecture-decision.md` — why a bill is one document (embedded arrays, no child tables).
+- `architecture-decision.md` — bill storage model: stable parts embedded in one document,
+  high-churn `claims` in their own table (see §Revisited 2026-07-06 for the cost math).
 
 ## Commands
 
@@ -39,13 +40,22 @@ npx convex env set NAME value   # backend secrets — never in client code
 
 ## Architecture
 
-### Data model: one document per bill
+### Data model: bill document + claim rows
 
-Single `bills` table (`convex/schema.ts`); `lineItems`, `people`, and `claims` are **embedded
-arrays**, not child tables (rationale in `architecture-decision.md`). Embedded entities use
-client-generated string ids (`src/lib/bill/ids.ts`), not Convex ids. Only index:
-`by_share_token`. Reusable validators/types are derived from the table validators in
-`convex/schema.ts` and shared via `convex/bills/validators.ts`.
+`bills` table (`convex/schema.ts`) holds the **stable, bounded** parts as embedded arrays —
+`lineItems`, `people`, meta — while **`claims` is its own table** (one row per (item, person)
+pair, `by_bill` index): claims are high-churn, and embedding them meant every tap rewrote the
+whole document and contended on it (rationale + cost math in `architecture-decision.md`
+§Revisited 2026-07-06). All claim-row access goes through the `convex/bills/claimRows.ts`
+seam (read, wire mapping, keyed row-diff sync); claim mutations do **not** touch the bill doc
+(no version bump). Queries assemble `{ ...bill, claims }`, so the frontend still sees one
+bill object. Embedded entities and claim `itemId`/`personId` use client-generated string ids
+(`src/lib/bill/ids.ts`), not Convex ids. Reusable validators/types are derived from the table
+validators in `convex/schema.ts` and shared via `convex/bills/validators.ts`.
+
+**Rule for new data:** stable + bounded + bill-scoped → embed in the bill; high-churn,
+unbounded, or shared across bills (venues, table sessions, menu priors, reports) → own table
+with an index.
 
 Status lifecycle: `PENDING → NEEDS_REVIEW → READY → PUBLISHED → FINALIZED`. Successful
 extraction lands on `PENDING` (or `NEEDS_REVIEW` on checksum/confidence failure); `READY` is
@@ -73,11 +83,13 @@ live guest-claim feature is essentially free.
 ### Local-first editing — no optimistic updates
 
 Bill editing does **not** use per-field mutations or `.withOptimisticUpdate`.
-`src/hooks/useBillEditor.ts` owns a working copy in React state, mirrors dirty state to
-localStorage, and flushes the **whole document** via a debounced `saveWorking` mutation
-(flush on page-hide/unmount). Pure immutable transforms live in `src/lib/bill/edits.ts`;
-`src/lib/bill/working.ts` maps Convex docs ↔ the editor's `WorkingBill` shape. Copy this
-pattern for editor-like features.
+`src/hooks/useBillEditor.ts` owns a working copy (items/people/meta — **not claims**) in
+React state, mirrors dirty state to localStorage, and flushes it via a debounced
+`saveWorking` mutation (flush on page-hide/unmount). Pure immutable transforms live in
+`src/lib/bill/edits.ts`; `src/lib/bill/working.ts` maps Convex docs ↔ the editor's
+`WorkingBill` shape. Copy this pattern for editor-like features. Claims are edited only
+through the scoped claim mutations (`saveHostClaims`/`saveGuestClaims`/…) as row diffs;
+`saveWorking` reconciles the claim rows server-side when items/people change.
 
 ### Extraction pipeline
 

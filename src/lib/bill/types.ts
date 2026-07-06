@@ -1,6 +1,5 @@
 import type {
   BillStatus,
-  Claim,
   LineItem,
   Person,
   RateSource,
@@ -22,10 +21,13 @@ export interface WorkingMeta {
   printedTotalUsd?: number
 }
 
+// Claims are NOT part of the working copy: they live in their own `claims`
+// table, written only by the scoped claim mutations (split/join screens). The
+// review editor never edits them; saveWorking reconciles the rows server-side
+// when items/people change.
 export interface WorkingBill {
   lineItems: LineItem[]
   people: Person[]
-  claims: Claim[]
   meta: WorkingMeta
   version: number
   status: BillStatus
@@ -45,8 +47,5 @@ export interface BillEditor {
   addPerson: (name: string) => void
   updatePerson: (id: string, patch: Partial<Person>) => void
   removePerson: (id: string) => void
-  setClaim: (itemId: string, personId: string, units: number) => void
-  stepClaim: (itemId: string, personId: string, delta: number) => void
-  shareEvenly: (itemId: string, personIds: string[]) => void
   flushNow: () => Promise<boolean>
 }

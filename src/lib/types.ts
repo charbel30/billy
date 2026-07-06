@@ -12,9 +12,10 @@ export type BillStatus =
   | 'FINALIZED'
 
 // ---------------------------------------------------------------------------
-// In-document shapes — these mirror the JSON arrays stored inside the single
-// `bills` row (convex/schema.ts). IDs are client-generated strings, unique
-// within a bill; there are no Convex Ids inside the document.
+// Bill entity shapes (convex/schema.ts). LineItem/Person mirror the JSON
+// arrays embedded in the `bills` row; Claim is the wire shape of a `claims`
+// table row (storage adds billId — queries strip it when assembling the bill).
+// IDs are client-generated strings, unique within a bill.
 // ---------------------------------------------------------------------------
 
 export interface LineItem {

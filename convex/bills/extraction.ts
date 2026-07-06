@@ -4,6 +4,7 @@ import { internalMutation, type MutationCtx } from '../_generated/server'
 import type { Doc } from '../_generated/dataModel'
 import * as imageStore from '../lib/imageStore'
 import type { LineItem } from '../schema'
+import { deleteClaimRowsForBill } from './claimRows'
 import { DEFAULT_RATE, deriveRate } from '../../src/lib/currency'
 import { newClientId } from '../../src/lib/bill/ids'
 import { reconcile } from '../../src/lib/reconcile'
@@ -96,7 +97,6 @@ export const applyExtraction = internalMutation({
         ? { rate: derived.rate, rateSource: derived.source }
         : { rate: DEFAULT_RATE, rateSource: 'manual' as const }),
       lineItems: items,
-      claims: [], // fresh extraction means nothing has been claimed yet
       imageRef: undefined, // delete-after-extract: clear the ref (spec §10)
       extractionError: undefined, // this extraction succeeded
       extractionRunId: undefined, // run resolved; onComplete becomes a no-op
@@ -110,6 +110,9 @@ export const applyExtraction = internalMutation({
       version: bill.version + 1,
       updatedAt: Date.now(),
     })
+    // Fresh extraction means nothing has been claimed yet — clear any rows a
+    // re-scan may have inherited from the bill's previous items.
+    await deleteClaimRowsForBill(ctx, billId)
 
     return null
   },

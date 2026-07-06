@@ -3,6 +3,7 @@ import { mutation, type MutationCtx } from '../_generated/server'
 import { invariant } from '../lib/invariant'
 import { rateLimiter } from '../lib/rateLimits'
 import { claim, lineItem, person, type Bill, type Claim, type LineItem, type Person } from '../schema'
+import { claimRowsForBill, syncClaimRows, toWireClaims } from './claimRows'
 import { metaValidator } from './validators'
 import { DEFAULT_RATE, deriveRate } from '../../src/lib/currency'
 import { DEFAULT_PERSON_NAME } from '../../src/lib/bill/constants'
@@ -154,13 +155,19 @@ function assertEditableSplit(bill: Bill) {
   }
 }
 
+// Claim writes are row diffs against the `claims` table (convex/bills/
+// claimRows.ts) and deliberately do NOT patch the bill document: no version
+// bump, no full-document rewrite, no OCC contention between guests tapping at
+// the same time. Subscribers still update live because getBill/getBillByToken
+// read the rows.
 function saveClaimsForPerson(
-  bill: Bill,
+  lineItems: LineItem[],
+  currentClaims: Claim[],
   personId: string,
   claims: Array<{ itemId: string; units: number }>,
 ) {
-  const itemById = new Map(bill.lineItems.map((item) => [item.id, item]))
-  const otherClaims = bill.claims.filter((c) => c.personId !== personId)
+  const itemById = new Map(lineItems.map((item) => [item.id, item]))
+  const otherClaims = currentClaims.filter((c) => c.personId !== personId)
   const otherClaimedByItem = new Map<string, number>()
   for (const c of otherClaims) {
     otherClaimedByItem.set(
@@ -246,7 +253,6 @@ export const createBill = mutation({
           color: nextPersonColor(0),
         },
       ],
-      claims: [],
     })
   },
 })
@@ -310,7 +316,6 @@ export const createDemoBill = mutation({
           color: nextPersonColor(0),
         },
       ],
-      claims: [],
     })
   },
 })
@@ -320,11 +325,10 @@ export const saveWorking = mutation({
     id: v.id('bills'),
     lineItems: v.optional(v.array(lineItem)),
     people: v.optional(v.array(person)),
-    claims: v.optional(v.array(claim)),
     meta: v.optional(metaValidator),
   },
   returns: v.null(),
-  handler: async (ctx, { id, lineItems, people, claims, meta }) => {
+  handler: async (ctx, { id, lineItems, people, meta }) => {
     const bill = await ctx.db.get(id)
     invariant(bill, `missing bill ${id}`)
     // A finalized bill is a frozen receipt. Don't let a late flush mutate it.
@@ -333,11 +337,12 @@ export const saveWorking = mutation({
     const splitIsLive = bill.status === 'PUBLISHED'
     const nextItems = lineItems ?? bill.lineItems
     const nextPeople = splitIsLive ? bill.people : (people ?? bill.people)
-    const nextClaims = reconcileClaims(
-      nextItems,
-      nextPeople,
-      splitIsLive ? bill.claims : (claims ?? bill.claims),
-    )
+    // Claims are never submitted by the editor (they live in their own table,
+    // written only by the scoped claim mutations below). The editor's job here
+    // is to keep them CONSISTENT: reconcile the current rows against the next
+    // items/people (drop orphans, scale over-claims) and sync the diff.
+    const currentClaims = toWireClaims(await claimRowsForBill(ctx, id))
+    const nextClaims = reconcileClaims(nextItems, nextPeople, currentClaims)
     validateLineItems(nextItems)
     validatePeople(nextPeople)
     validateClaims(nextItems, nextPeople, nextClaims)
@@ -345,7 +350,6 @@ export const saveWorking = mutation({
     const patch: Record<string, unknown> = {
       lineItems: nextItems,
       people: nextPeople,
-      claims: nextClaims,
       version: bill.version + 1,
       updatedAt: now(),
       status: bill.status === 'PUBLISHED' ? 'PUBLISHED' : 'READY',
@@ -368,6 +372,7 @@ export const saveWorking = mutation({
     }
 
     await ctx.db.patch(id, patch)
+    await syncClaimRows(ctx, id, nextClaims) // no-op unless items/people changed
     return null
   },
 })
@@ -463,10 +468,12 @@ export const removeHostPerson = mutation({
     }
     await ctx.db.patch(id, {
       people: bill.people.filter((p) => p.id !== personId),
-      claims: bill.claims.filter((c) => c.personId !== personId),
       version: bill.version + 1,
       updatedAt: now(),
     })
+    for (const row of await claimRowsForBill(ctx, id)) {
+      if (row.personId === personId) await ctx.db.delete(row._id)
+    }
     return null
   },
 })
@@ -488,12 +495,14 @@ export const saveHostClaims = mutation({
     const person = bill.people.find((p) => p.id === personId)
     invariant(person, 'person not found')
 
-    const result = saveClaimsForPerson(bill, personId, claims)
-    await ctx.db.patch(id, {
-      claims: result.nextClaims,
-      version: bill.version + 1,
-      updatedAt: now(),
-    })
+    const currentClaims = toWireClaims(await claimRowsForBill(ctx, id))
+    const result = saveClaimsForPerson(
+      bill.lineItems,
+      currentClaims,
+      personId,
+      claims,
+    )
+    await syncClaimRows(ctx, id, result.nextClaims)
     return {
       acceptedClaims: result.acceptedClaims,
       rejectedCount: result.rejectedCount,
@@ -521,14 +530,11 @@ export const shareHostItemEvenly = mutation({
     }
 
     const units = item.qty / personIds.length
-    await ctx.db.patch(id, {
-      claims: [
-        ...bill.claims.filter((c) => c.itemId !== itemId),
-        ...personIds.map((personId) => ({ itemId, personId, units })),
-      ],
-      version: bill.version + 1,
-      updatedAt: now(),
-    })
+    const currentClaims = toWireClaims(await claimRowsForBill(ctx, id))
+    await syncClaimRows(ctx, id, [
+      ...currentClaims.filter((c) => c.itemId !== itemId),
+      ...personIds.map((personId) => ({ itemId, personId, units })),
+    ])
     return null
   },
 })
@@ -615,12 +621,14 @@ export const saveGuestClaims = mutation({
       throw new Error('You can only edit your own claims')
     }
 
-    const result = saveClaimsForPerson(bill, personId, claims)
-    await ctx.db.patch(bill._id, {
-      claims: result.nextClaims,
-      version: bill.version + 1,
-      updatedAt: now(),
-    })
+    const currentClaims = toWireClaims(await claimRowsForBill(ctx, bill._id))
+    const result = saveClaimsForPerson(
+      bill.lineItems,
+      currentClaims,
+      personId,
+      claims,
+    )
+    await syncClaimRows(ctx, bill._id, result.nextClaims)
 
     return {
       acceptedClaims: result.acceptedClaims,

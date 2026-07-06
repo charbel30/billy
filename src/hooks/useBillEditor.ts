@@ -7,9 +7,6 @@ import {
   addPersonToBill,
   removeLineItemFromBill,
   removePersonFromBill,
-  setClaimOnBill,
-  shareItemEvenly,
-  stepClaimOnBill,
   updateLineItemInBill,
   updateMeta,
   updatePersonInBill,
@@ -31,13 +28,14 @@ import {
   workingBillFromDoc,
 } from '~/lib/bill/working'
 
-// Local-first editor (architecture-decision.md). The whole bill loads once from
-// Convex, then React state OWNS it while dirty. Edits are plain in-memory array
-// manipulation; we persist with a debounced (~5s) `saveWorking` that replaces the
-// whole working document. We also flush on tab-hide / pagehide / unmount, mirror
-// the working state to localStorage, and replay it on reload. Concurrent editors
-// are last-write-wins with an "edited elsewhere" hint (single JSON doc; live
-// multi-writer claim is a Phase-2 concern).
+// Local-first editor (architecture-decision.md). The bill's items/people/meta
+// load once from Convex, then React state OWNS them while dirty. Edits are plain
+// in-memory array manipulation; we persist with a debounced (~5s) `saveWorking`
+// that replaces the working document. We also flush on tab-hide / pagehide /
+// unmount, mirror the working state to localStorage, and replay it on reload.
+// Concurrent editors are last-write-wins with an "edited elsewhere" hint.
+// Claims are NOT edited here — they live in their own table, written by the
+// scoped claim mutations; saveWorking reconciles the rows server-side.
 
 export function useBillEditor(id: Id<'bills'>): BillEditor {
   const { data: serverDoc } = useSuspenseQuery(billQueries.detail(id))
@@ -78,7 +76,6 @@ export function useBillEditor(id: Id<'bills'>): BillEditor {
         id,
         lineItems: clean.lineItems,
         people: clean.people,
-        claims: clean.claims,
         meta: clean.meta,
       })
       // Our own write bumps the server version; track it so the returning push
@@ -206,27 +203,6 @@ export function useBillEditor(id: Id<'bills'>): BillEditor {
     [mutate],
   )
 
-  /** Set the absolute claimed units for (item, person); 0 removes the claim.
-   *  Clamps so one person can't claim more than the item's qty. */
-  const setClaim = useCallback(
-    (itemId: string, personId: string, units: number) =>
-      mutate((w) => setClaimOnBill(w, itemId, personId, units)),
-    [mutate],
-  )
-
-  const stepClaim = useCallback(
-    (itemId: string, personId: string, delta: number) =>
-      mutate((w) => stepClaimOnBill(w, itemId, personId, delta)),
-    [mutate],
-  )
-
-  /** Split an item's units evenly among the given people (fractional units). */
-  const shareEvenly = useCallback(
-    (itemId: string, personIds: string[]) =>
-      mutate((w) => shareItemEvenly(w, itemId, personIds)),
-    [mutate],
-  )
-
   return {
     bill: working,
     status: working.status,
@@ -240,9 +216,6 @@ export function useBillEditor(id: Id<'bills'>): BillEditor {
     addPerson,
     updatePerson,
     removePerson,
-    setClaim,
-    stepClaim,
-    shareEvenly,
     flushNow: flush,
   }
 }

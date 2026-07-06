@@ -36,10 +36,14 @@ Do not use `npx convex deploy` for local development.
 
 ## Mental Model
 
-Each bill is stored as one `bills` document in Convex. The document contains the
-bill metadata, line items, people, and claims as bounded arrays. Editing is
-local-first: the browser owns a working copy while it is dirty, then flushes the
-whole working document with a debounced `saveWorking` mutation.
+Each bill is one `bills` document in Convex containing the bill metadata, line
+items, and people as bounded arrays; **claims live in their own `claims` table**
+(one row per (item, person) pair, `by_bill` index) because they are the
+high-churn part of a live split (see `architecture-decision.md` §Revisited).
+Queries assemble `{ ...bill, claims }`, so the frontend still sees one bill
+object. Editing items/people/meta is local-first: the browser owns a working
+copy while it is dirty, then flushes it with a debounced `saveWorking` mutation.
+Claims are written only through the scoped claim mutations as row diffs.
 
 ```mermaid
 flowchart TD
@@ -112,9 +116,8 @@ Start with the shape, then the client flow, then the backend flow:
 - `src/lib/bill/storage.ts`: localStorage read/write/clear helpers for dirty
   working bills.
 - `src/lib/bill/edits.ts`: pure immutable transforms for editing metadata,
-  adding/updating/removing line items and people, setting/stepping claims,
-  splitting an item evenly, and reconciling claims after deletes or quantity
-  changes.
+  adding/updating/removing line items and people, plus `reconcileClaims` (used
+  server-side by `saveWorking` to drop/scale claim rows after item edits).
 
 ### Shared Math And Formatting
 
@@ -143,9 +146,9 @@ Start with the shape, then the client flow, then the backend flow:
 
 ### Schema And Generated API
 
-- `convex/schema.ts`: the database schema. The important table is `bills`, which
-  stores metadata, image ref, share token, status, version, line items, people,
-  and claims.
+- `convex/schema.ts`: the database schema. `bills` stores metadata, image ref,
+  share token, status, version, line items, and people; `claims` is a separate
+  high-churn table keyed by `billId` (all access via `convex/bills/claimRows.ts`).
 - `convex/_generated/api.d.ts`: generated Convex API type map. Do not edit it by
   hand. Regenerate it with `npx convex dev --once` after moving Convex functions.
 

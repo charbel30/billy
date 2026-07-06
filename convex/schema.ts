@@ -1,16 +1,26 @@
 import { defineSchema, defineTable } from 'convex/server'
 import { type Infer, v } from 'convex/values'
 
-// Receipt Splitter data model — single-document design (architecture-decision.md).
-// One `bills` row holds the WHOLE bill as typed JSON arrays (lineItems / people /
-// claims); there are no child tables. IDs inside those arrays are client-generated
-// strings (crypto.randomUUID()), not Convex Ids — so editing is plain local-state
-// manipulation and persisting is one full-document replace via `saveWorking`.
+// Receipt Splitter data model — aggregate document + claim rows
+// (architecture-decision.md, revisited 2026-07). One `bills` row holds the
+// STABLE, BOUNDED parts of a bill as typed JSON arrays (lineItems / people);
+// the HIGH-CHURN part — claims — lives in its own `claims` table keyed by
+// billId. Rationale: every ctx.db.patch rewrites the whole document, so a doc
+// that embeds claims pays a full-document write (and a full re-read by the
+// subscribed query) on every claim tap. Rows make a claim tap a few
+// hundred bytes of I/O and let 30 guests write concurrently without OCC
+// conflicts on one shared document.
 //
-// Receipts are tiny and bounded (a handful of lines/people), so the usual
-// "don't store unbounded arrays in a document" guidance doesn't apply here — this
-// is the deliberate trade made in architecture-decision.md (§"Why" / §"What we
-// give up": one row per bill, last-write-wins, replace-on-flush).
+// IDs inside the arrays (and itemId/personId on claim rows) are client-
+// generated strings (crypto.randomUUID()), not Convex Ids — editing stays
+// plain local-state manipulation persisted via `saveWorking`.
+//
+// The wire shape is unchanged: `getBill` / `getBillByToken` assemble
+// { ...bill, claims } so the frontend still sees one bill object.
+//
+// Rule for future tables (venues, table sessions, menu priors, reports):
+// stable + bounded + bill-scoped → embed; high-churn, unbounded, or shared
+// across bills → own table with an index.
 
 export const rateSource = v.union(
   v.literal('receipt'),
@@ -60,6 +70,9 @@ export const person = v.object({
 // use integer steppers (+1/-1); shared/indivisible lines use fractional units
 // (e.g. 0.333 each for a 3-way split). Person's share for a line =
 // units × (lineTotal / qty).
+//
+// This is the WIRE shape (what queries return inside the assembled bill and
+// what mutations accept). Storage adds `billId` — see the `claims` table below.
 export const claim = v.object({
   itemId: v.string(),
   personId: v.string(),
@@ -116,13 +129,24 @@ const schema = defineSchema({
 
     lineItems: v.array(lineItem),
     people: v.array(person), // seeded with a "self" person on create
-    claims: v.array(claim),
   })
     .index('by_share_token', ['shareToken'])
     // Powers the TTL purge cron (oldest-inactive first).
     .index('by_updatedAt', ['updatedAt'])
     // Powers the extraction onComplete callback (run id → bill).
     .index('by_extractionRunId', ['extractionRunId']),
+
+  // High-churn child rows of a bill (see header comment). One row per
+  // (item, person) pair; itemId/personId are the client-generated string ids
+  // living inside the bill's embedded arrays. All access goes through
+  // convex/bills/claimRows.ts — mutations write row diffs, queries assemble
+  // the wire shape. Claim writes deliberately do NOT touch the bill document.
+  claims: defineTable({
+    billId: v.id('bills'),
+    itemId: v.string(),
+    personId: v.string(),
+    units: v.number(),
+  }).index('by_bill', ['billId']),
 })
 export default schema
 

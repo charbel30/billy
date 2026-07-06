@@ -47,10 +47,11 @@ export function removeLineItemFromBill(
   bill: WorkingBill,
   itemId: string,
 ): WorkingBill {
+  // Claims referencing the removed item are dropped server-side: saveWorking
+  // reconciles the claim rows against the flushed items (reconcileClaims below).
   return {
     ...bill,
     lineItems: bill.lineItems.filter((li) => li.id !== itemId),
-    claims: bill.claims.filter((c) => c.itemId !== itemId),
   }
 }
 
@@ -85,73 +86,16 @@ export function removePersonFromBill(
   bill: WorkingBill,
   personId: string,
 ): WorkingBill {
+  // The removed person's claims are dropped server-side (see reconcileClaims).
   return {
     ...bill,
     people: bill.people.filter((p) => p.id !== personId),
-    claims: bill.claims.filter((c) => c.personId !== personId),
   }
 }
 
-export function setClaimOnBill(
-  bill: WorkingBill,
-  itemId: string,
-  personId: string,
-  units: number,
-): WorkingBill {
-  const item = bill.lineItems.find((li) => li.id === itemId)
-  const max = item ? item.qty : units
-  const clampedUnits = Math.max(0, Math.min(units, max))
-  const rest = bill.claims.filter(
-    (c) => !(c.itemId === itemId && c.personId === personId),
-  )
-
-  return {
-    ...bill,
-    claims:
-      clampedUnits > 0
-        ? [...rest, { itemId, personId, units: clampedUnits }]
-        : rest,
-  }
-}
-
-export function stepClaimOnBill(
-  bill: WorkingBill,
-  itemId: string,
-  personId: string,
-  delta: number,
-): WorkingBill {
-  const current = bill.claims.find(
-    (c) => c.itemId === itemId && c.personId === personId,
-  )
-  return setClaimOnBill(
-    bill,
-    itemId,
-    personId,
-    (current?.units ?? 0) + delta,
-  )
-}
-
-export function shareItemEvenly(
-  bill: WorkingBill,
-  itemId: string,
-  personIds: string[],
-): WorkingBill {
-  const item = bill.lineItems.find((li) => li.id === itemId)
-  if (!item || personIds.length === 0) return bill
-
-  const units = item.qty / personIds.length
-  const rest = bill.claims.filter((c) => c.itemId !== itemId)
-
-  return {
-    ...bill,
-    claims: [
-      ...rest,
-      ...personIds.map((personId) => ({ itemId, personId, units })),
-    ],
-  }
-}
-
-/** Drop/scale claims so the bill remains internally consistent after edits. */
+/** Drop/scale claims so the bill remains internally consistent after edits.
+ *  Runs server-side in saveWorking against the current claim ROWS — claim
+ *  editing itself happens only through the scoped claim mutations. */
 export function reconcileClaims(
   items: LineItem[],
   people: Person[],

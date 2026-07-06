@@ -3,18 +3,20 @@ import { convexQuery, useConvexMutation } from '@convex-dev/react-query'
 import { api } from 'convex/_generated/api'
 import type { Id } from 'convex/_generated/dataModel'
 
-// Read option factories (live over WebSocket via the Convex adapter). The whole
-// bill is one document, so a read is a single getBill / getBillByToken.
+// Read option factories (live over WebSocket via the Convex adapter). A read is
+// a single getBill / getBillByToken — the backend assembles { ...bill, claims }
+// from the bill document plus its claim rows (convex/schema.ts header).
 export const billQueries = {
   detail: (id: Id<'bills'>) => convexQuery(api.bills.queries.getBill, { id }),
   byToken: (shareToken: string) =>
     convexQuery(api.bills.queries.getBillByToken, { shareToken }),
 }
 
-// Editing is local-first (see src/lib/billEditor.ts): React state owns the bill
-// while dirty and flushes the whole working document with a debounced
-// `saveWorking`. There is no per-interaction CRUD and no optimistic-update layer —
-// Convex pushes the flushed doc back to every subscriber.
+// Editing is local-first (src/hooks/useBillEditor.ts): React state owns
+// items/people/meta while dirty and flushes them with a debounced `saveWorking`.
+// Claims are the exception — they're row-level and only written through the
+// scoped claim mutations below. No optimistic-update layer anywhere: Convex
+// pushes fresh results to every subscriber.
 
 export function useCreateBill() {
   return useMutation({
