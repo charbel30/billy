@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import type { ReactNode } from 'react'
 import { AnimatePresence, motion } from 'motion/react'
 import {
   RiAddLine,
@@ -39,6 +40,8 @@ export function PersonRail({
   variant = 'panel',
   addLabel = 'Add person',
   addPlaceholder = 'Add person',
+  ownIds,
+  trailing,
 }: {
   people: Person[]
   activeId: string | null
@@ -54,24 +57,30 @@ export function PersonRail({
   variant?: 'panel' | 'bar'
   addLabel?: string
   addPlaceholder?: string
+  /** Ids the viewer controls (e.g. a guest's own people). When set, only
+   * these render as individual pills/rows; everyone else is left to the
+   * caller (in the bar variant, via `trailing`). */
+  ownIds?: ReadonlySet<string>
+  /** Bar variant only: rendered after the Add pill, inside the same
+   * scrollable row — e.g. an "others" summary pill for people not in `ownIds`. */
+  trailing?: ReactNode
 }) {
   if (variant === 'bar') {
+    const ownPeople = ownIds ? people.filter((p) => ownIds.has(p.id)) : people
     return (
       <div className="flex items-center gap-2 overflow-x-auto py-0.5 [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
         <AnimatePresence initial={false}>
-          {people.map((p) => {
+          {ownPeople.map((p) => {
             const active = p.id === activeId
-            const total = portfolioByPerson?.get(p.id)?.totalUsd ?? 0
+            const portfolio = portfolioByPerson?.get(p.id)
+            const total = portfolio?.totalUsd ?? 0
             return (
-              <motion.button
+              <motion.div
                 key={p.id}
                 layout
                 initial={{ opacity: 0, scale: 0.8 }}
                 animate={{ opacity: 1, scale: 1 }}
                 exit={{ opacity: 0, scale: 0.8 }}
-                whileTap={{ scale: 0.96 }}
-                type="button"
-                onClick={() => onSelect(p.id)}
                 style={active ? { backgroundColor: p.color } : undefined}
                 className={cn(
                   'flex shrink-0 items-center gap-2 rounded-full border py-1 pl-1 pr-3 text-sm font-semibold transition-[background-color,border-color,color]',
@@ -80,8 +89,33 @@ export function PersonRail({
                     : 'border-transparent bg-background hover:bg-muted',
                 )}
               >
-                <PersonAvatar name={p.name} color={p.color} size="md" />
-                <span className="whitespace-nowrap leading-none">
+                {/* Avatar opens the person's item breakdown */}
+                <Popover>
+                  <PopoverTrigger
+                    aria-label={`${p.name}'s items`}
+                    className="shrink-0 rounded-full transition-transform active:scale-[0.96]"
+                  >
+                    <PersonAvatar name={p.name} color={p.color} size="md" />
+                  </PopoverTrigger>
+                  <PopoverContent side="top" align="center" sideOffset={10}>
+                    {portfolio ? (
+                      <PortfolioReceipt
+                        portfolio={portfolio}
+                        lines={personClaimedLines(p.id, lineItems, claims)}
+                        rate={rate}
+                        serviceChargeOn={serviceChargeOn}
+                        tipPercent={tipPercent}
+                        bare
+                      />
+                    ) : null}
+                  </PopoverContent>
+                </Popover>
+                <motion.button
+                  whileTap={{ scale: 0.96 }}
+                  type="button"
+                  onClick={() => onSelect(p.id)}
+                  className="whitespace-nowrap text-left leading-none"
+                >
                   {p.name}
                   <span
                     className={cn(
@@ -91,106 +125,121 @@ export function PersonRail({
                   >
                     {formatUsd(total)}
                   </span>
-                </span>
-              </motion.button>
+                </motion.button>
+              </motion.div>
             )
           })}
         </AnimatePresence>
         {onAdd ? (
           <AddPerson onAdd={onAdd} variant="bar" placeholder={addPlaceholder} />
         ) : null}
+        {trailing}
       </div>
     )
   }
 
+  const panelOwnPeople = ownIds ? people.filter((p) => ownIds.has(p.id)) : []
+  const panelOtherPeople = ownIds
+    ? people.filter((p) => !ownIds.has(p.id))
+    : people
+  const panelHasOwn = panelOwnPeople.length > 0
+
+  const renderRow = (p: Person) => {
+    const active = p.id === activeId
+    const portfolio = portfolioByPerson?.get(p.id)
+    const total = portfolio?.totalUsd ?? 0
+    return (
+      <motion.div
+        key={p.id}
+        layout
+        initial={{ opacity: 0, y: 6 }}
+        animate={{ opacity: 1, y: 0 }}
+        exit={{ opacity: 0, y: -6 }}
+        style={
+          active
+            ? { borderColor: p.color, backgroundColor: `${p.color}14` }
+            : undefined
+        }
+        className={cn(
+          'flex w-full items-center gap-2 rounded-3xl border-2 p-2 transition-colors',
+          active ? '' : 'border-transparent bg-background hover:bg-muted/60',
+        )}
+      >
+        {/* Avatar opens the person's item breakdown */}
+        <Popover>
+          <PopoverTrigger
+            aria-label={`${p.name}'s items`}
+            className="shrink-0 rounded-full transition-transform active:scale-[0.96]"
+          >
+            <PersonAvatar name={p.name} color={p.color} size="lg" />
+          </PopoverTrigger>
+          <PopoverContent side="left" align="start" sideOffset={8}>
+            {portfolio ? (
+              <PortfolioReceipt
+                portfolio={portfolio}
+                lines={personClaimedLines(p.id, lineItems, claims)}
+                rate={rate}
+                serviceChargeOn={serviceChargeOn}
+                tipPercent={tipPercent}
+                bare
+              />
+            ) : null}
+          </PopoverContent>
+        </Popover>
+
+        {/* Tapping the body makes this person active */}
+        <button
+          type="button"
+          onClick={() => onSelect(p.id)}
+          className="min-w-0 flex-1 text-left"
+        >
+          <p className="truncate font-bold">{p.name}</p>
+          <p className="text-xs font-semibold text-muted-foreground tabular-nums">
+            {formatUsd(total)} assigned
+          </p>
+        </button>
+
+        {onRemove && people.length > 1 ? (
+          <button
+            type="button"
+            aria-label={`Remove ${p.name}`}
+            onClick={() => onRemove(p.id)}
+            className="grid size-7 shrink-0 place-items-center rounded-full text-muted-foreground opacity-60 transition-[opacity,transform] hover:opacity-100 active:scale-[0.96]"
+          >
+            <RiCloseLine className="size-4" />
+          </button>
+        ) : null}
+
+        <RiRadioButtonLine
+          className={cn(
+            'size-5 shrink-0',
+            !active && 'text-muted-foreground opacity-40',
+          )}
+          style={active ? { color: p.color } : undefined}
+        />
+      </motion.div>
+    )
+  }
+
+  const addRow = onAdd ? (
+    <AddPerson
+      onAdd={onAdd}
+      variant="panel"
+      label={addLabel}
+      placeholder={addPlaceholder}
+    />
+  ) : null
+
   return (
     <div className="space-y-2">
       <AnimatePresence initial={false}>
-        {people.map((p) => {
-          const active = p.id === activeId
-          const portfolio = portfolioByPerson?.get(p.id)
-          const total = portfolio?.totalUsd ?? 0
-          return (
-            <motion.div
-              key={p.id}
-              layout
-              initial={{ opacity: 0, y: 6 }}
-              animate={{ opacity: 1, y: 0 }}
-              exit={{ opacity: 0, y: -6 }}
-              style={
-                active
-                  ? { borderColor: p.color, backgroundColor: `${p.color}14` }
-                  : undefined
-              }
-              className={cn(
-                'flex w-full items-center gap-2 rounded-3xl border-2 p-2 transition-colors',
-                active ? '' : 'border-transparent bg-background hover:bg-muted/60',
-              )}
-            >
-              {/* Avatar opens the person's item breakdown */}
-              <Popover>
-                <PopoverTrigger
-                  aria-label={`${p.name}'s items`}
-                  className="shrink-0 rounded-full transition-transform active:scale-[0.96]"
-                >
-                  <PersonAvatar name={p.name} color={p.color} size="lg" />
-                </PopoverTrigger>
-                <PopoverContent side="left" align="start" sideOffset={8}>
-                  {portfolio ? (
-                    <PortfolioReceipt
-                      portfolio={portfolio}
-                      lines={personClaimedLines(p.id, lineItems, claims)}
-                      rate={rate}
-                      serviceChargeOn={serviceChargeOn}
-                      tipPercent={tipPercent}
-                      bare
-                    />
-                  ) : null}
-                </PopoverContent>
-              </Popover>
-
-              {/* Tapping the body makes this person active */}
-              <button
-                type="button"
-                onClick={() => onSelect(p.id)}
-                className="min-w-0 flex-1 text-left"
-              >
-                <p className="truncate font-bold">{p.name}</p>
-                <p className="text-xs font-semibold text-muted-foreground tabular-nums">
-                  {formatUsd(total)} assigned
-                </p>
-              </button>
-
-              {onRemove && people.length > 1 ? (
-                <button
-                  type="button"
-                  aria-label={`Remove ${p.name}`}
-                  onClick={() => onRemove(p.id)}
-                  className="grid size-7 shrink-0 place-items-center rounded-full text-muted-foreground opacity-60 transition-[opacity,transform] hover:opacity-100 active:scale-[0.96]"
-                >
-                  <RiCloseLine className="size-4" />
-                </button>
-              ) : null}
-
-              <RiRadioButtonLine
-                className={cn(
-                  'size-5 shrink-0',
-                  !active && 'text-muted-foreground opacity-40',
-                )}
-                style={active ? { color: p.color } : undefined}
-              />
-            </motion.div>
-          )
-        })}
+        {panelOwnPeople.map(renderRow)}
       </AnimatePresence>
-      {onAdd ? (
-        <AddPerson
-          onAdd={onAdd}
-          variant="panel"
-          label={addLabel}
-          placeholder={addPlaceholder}
-        />
-      ) : null}
+      {panelHasOwn ? addRow : null}
+      <AnimatePresence initial={false}>
+        {panelOtherPeople.map(renderRow)}
+      </AnimatePresence>
+      {panelHasOwn ? null : addRow}
     </div>
   )
 }

@@ -95,6 +95,10 @@ function GuestView() {
         : [],
     [bill.people, guestSessionId],
   )
+  const ownIds = useMemo(
+    () => new Set(controlledPeople.map((p) => p.id)),
+    [controlledPeople],
+  )
 
   const isMine = (personId: string) =>
     controlledPeople.some((p) => p.id === personId)
@@ -265,6 +269,7 @@ function GuestView() {
       conflictMessage={conflictMessage}
       savingMessage={saveGuestClaims.isPending ? 'Saving claim...' : null}
       pendingItemId={stepPendingItemId}
+      ownIds={ownIds}
     />
   )
 }

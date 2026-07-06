@@ -57,6 +57,7 @@ export function BillSplitWorkspace({
   onTipChange,
   tipPending = false,
   pendingItemId,
+  ownIds,
 }: {
   bill: WorkspaceBill
   description: string
@@ -84,6 +85,9 @@ export function BillSplitWorkspace({
   tipPending?: boolean
   /** Item currently round-tripping a claim write — gets a pending pulse. */
   pendingItemId?: string | null
+  /** Ids the viewer controls (e.g. a guest's own people) — sorts those pills
+   * first in the person rail/panel. Omit for the host, who controls everyone. */
+  ownIds?: ReadonlySet<string>
 }) {
   // Per-person portfolios power the panel totals + the tap-to-reveal breakdowns;
   // computed once over the whole bill.
@@ -113,7 +117,6 @@ export function BillSplitWorkspace({
   const itemsClaimed = bill.lineItems.filter(
     (item) => remainingUnits(item, bill.claims) <= 0.0001,
   ).length
-  const shared = bill.status === 'PUBLISHED' || bill.status === 'FINALIZED'
 
   // Bottom padding tracks the dock's measured collapsed height so the last
   // item cards never hide under it (the old fixed pb-60 was too short).
@@ -212,6 +215,7 @@ export function BillSplitWorkspace({
           tipPercent={bill.tipPercent}
           addLabel={addLabel}
           addPlaceholder={addPlaceholder}
+          ownIds={ownIds}
         />
         <p className="mt-2 px-1 text-[11px] text-muted-foreground">
           Tap a person's avatar to see their items.
@@ -283,7 +287,6 @@ export function BillSplitWorkspace({
         serviceChargeOn={bill.serviceChargeOn}
         tipPercent={bill.tipPercent}
         grandLbp={grandLbp}
-        shared={shared}
         remainingLbp={remainingLbp}
         billTotalLbp={billTotalLbp}
         itemsClaimed={itemsClaimed}
@@ -293,6 +296,7 @@ export function BillSplitWorkspace({
         actionSlot={actionSlot}
         addPlaceholder={addPlaceholder}
         onCollapsedHeightChange={setDockHeight}
+        ownIds={ownIds}
       />
     </div>
   )

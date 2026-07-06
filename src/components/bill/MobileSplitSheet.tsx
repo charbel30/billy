@@ -7,14 +7,13 @@ import type { Portfolio } from '~/lib/split'
 import { personClaimedLines } from '~/lib/split'
 import { formatLbp, formatUsd, toUsd } from '~/lib/currency'
 import { AnimatedAmount } from './AnimatedAmount'
-import { PersonAvatar } from './PersonAvatar'
 import { PersonRail } from './PersonRail'
 import { PortfolioReceipt } from './PortfolioReceipt'
 
-// The mobile bottom dock. Collapsed: live claim progress + the participant bar
-// (or, on a shared bill, just the active person + a "+N others" pill — guests
-// claim their own items, so the full row is noise) + actions. Drag the handle
-// up (or tap it) to expand into a sheet with every person's claimed-item
+// The mobile bottom dock. Collapsed: live claim progress (drag handle) + the
+// participant bar — your own pills first, then Add, then a "+N others" pill
+// for everyone else, which opens the same expanded sheet. Drag the handle up
+// (or tap it) to expand into a sheet with every person's claimed-item
 // breakdown, the grand total, and the tip control.
 export function MobileSplitSheet({
   people,
@@ -29,7 +28,6 @@ export function MobileSplitSheet({
   serviceChargeOn,
   tipPercent,
   grandLbp,
-  shared = false,
   remainingLbp = 0,
   billTotalLbp = 0,
   itemsClaimed = 0,
@@ -39,6 +37,7 @@ export function MobileSplitSheet({
   actionSlot,
   addPlaceholder,
   onCollapsedHeightChange,
+  ownIds,
 }: {
   people: Person[]
   breakdownPeople: Person[]
@@ -52,7 +51,6 @@ export function MobileSplitSheet({
   serviceChargeOn: boolean
   tipPercent?: number | null
   grandLbp: number
-  shared?: boolean
   remainingLbp?: number
   billTotalLbp?: number
   itemsClaimed?: number
@@ -63,6 +61,9 @@ export function MobileSplitSheet({
   addPlaceholder?: string
   /** Reports the dock's COLLAPSED height so the page can pad the list past it. */
   onCollapsedHeightChange?: (px: number) => void
+  /** Ids the viewer controls — these sort first in the rail; everyone else
+   * collapses behind the trailing "+N others" pill. */
+  ownIds?: ReadonlySet<string>
 }) {
   const [expanded, setExpanded] = useState(false)
   // Motion fires a synthetic click after a drag; this guard keeps a drag-release
@@ -95,8 +96,14 @@ export function MobileSplitSheet({
     return () => observer.disconnect()
   }, [onCollapsedHeightChange])
 
-  const activePerson = people.find((p) => p.id === activeId) ?? null
-  const othersCount = Math.max(0, people.length - 1)
+  const otherPeople = ownIds ? people.filter((p) => !ownIds.has(p.id)) : []
+  // Expanded sheet: your own people's breakdown cards first, everyone else after.
+  const orderedBreakdownPeople = ownIds
+    ? [
+        ...breakdownPeople.filter((p) => ownIds.has(p.id)),
+        ...breakdownPeople.filter((p) => !ownIds.has(p.id)),
+      ]
+    : breakdownPeople
 
   return (
     <div
@@ -183,7 +190,7 @@ export function MobileSplitSheet({
               className="overflow-hidden"
             >
               <div className="max-h-[52vh] space-y-3 overflow-y-auto px-4 pb-2 [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
-                {breakdownPeople.map((p) => {
+                {orderedBreakdownPeople.map((p) => {
                   const portfolio = portfolioByPerson.get(p.id)
                   if (!portfolio) return null
                   return (
@@ -231,49 +238,29 @@ export function MobileSplitSheet({
 
         <div className="space-y-2.5 p-3 pt-2">
           {panelExtra ? <div>{panelExtra}</div> : null}
-          <AnimatePresence initial={false} mode="popLayout">
-            {shared && !expanded ? (
-              // Shared bill, collapsed: guests claim their own items, so keep
-              // just the active person + a summary pill that opens the sheet.
-              <motion.div
-                key="self-row"
-                initial={{ opacity: 0, scale: 0.96, filter: 'blur(4px)' }}
-                animate={{ opacity: 1, scale: 1, filter: 'blur(0px)' }}
-                exit={{ opacity: 0, scale: 0.96, filter: 'blur(4px)' }}
-                transition={{ type: 'spring', duration: 0.3, bounce: 0 }}
-                className="flex items-center gap-2 py-0.5"
-              >
-                {activePerson ? (
-                  <button
-                    type="button"
-                    onClick={() => setExpanded(true)}
-                    style={{ backgroundColor: activePerson.color }}
-                    className="flex min-w-0 shrink items-center gap-2 rounded-full border border-transparent py-1 pl-1 pr-3 text-sm font-semibold text-white transition-transform active:scale-[0.98]"
-                  >
-                    <PersonAvatar
-                      name={activePerson.name}
-                      color={activePerson.color}
-                      size="md"
-                    />
-                    <span className="truncate whitespace-nowrap leading-none">
-                      {activePerson.name}
-                      <span className="ml-1.5 tabular-nums text-white/80">
-                        {formatUsd(
-                          portfolioByPerson.get(activePerson.id)?.totalUsd ?? 0,
-                        )}
-                      </span>
-                    </span>
-                  </button>
-                ) : null}
+          <PersonRail
+            variant="bar"
+            people={people}
+            activeId={activeId}
+            onSelect={onSelect}
+            onAdd={onAdd}
+            portfolioByPerson={portfolioByPerson}
+            lineItems={lineItems}
+            claims={claims}
+            rate={rate}
+            serviceChargeOn={serviceChargeOn}
+            tipPercent={tipPercent}
+            addPlaceholder={addPlaceholder}
+            ownIds={ownIds}
+            trailing={
+              otherPeople.length > 0 ? (
                 <motion.button
                   type="button"
                   whileTap={{ scale: 0.96 }}
                   onClick={() => setExpanded(true)}
                   className="flex shrink-0 items-center gap-1.5 rounded-full bg-background px-3 py-2 text-xs font-semibold text-muted-foreground ring-1 ring-border/40 transition-colors hover:text-foreground"
                 >
-                  {othersCount > 0
-                    ? `+${othersCount} other${othersCount === 1 ? '' : 's'} · `
-                    : ''}
+                  {`+${otherPeople.length} other${otherPeople.length === 1 ? '' : 's'} · `}
                   {done ? (
                     'all covered'
                   ) : (
@@ -282,27 +269,9 @@ export function MobileSplitSheet({
                     </span>
                   )}
                 </motion.button>
-              </motion.div>
-            ) : (
-              <motion.div
-                key="full-rail"
-                initial={{ opacity: 0, scale: 0.96, filter: 'blur(4px)' }}
-                animate={{ opacity: 1, scale: 1, filter: 'blur(0px)' }}
-                exit={{ opacity: 0, scale: 0.96, filter: 'blur(4px)' }}
-                transition={{ type: 'spring', duration: 0.3, bounce: 0 }}
-              >
-                <PersonRail
-                  variant="bar"
-                  people={people}
-                  activeId={activeId}
-                  onSelect={onSelect}
-                  onAdd={onAdd}
-                  portfolioByPerson={portfolioByPerson}
-                  addPlaceholder={addPlaceholder}
-                />
-              </motion.div>
-            )}
-          </AnimatePresence>
+              ) : undefined
+            }
+          />
           {actionSlot ? <div className="space-y-2">{actionSlot}</div> : null}
         </div>
       </div>
