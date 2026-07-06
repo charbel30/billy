@@ -9,9 +9,17 @@ import type { RateSource } from './types'
 // rate or the user overrides it. Temporary: replace with the Phase-2 market feed.
 export const DEFAULT_RATE = 90000
 
+// Plausibility band for a derived LBP/USD rate. The real 2026 rate is ~90,000;
+// the band is wide so lira drift doesn't break it, but tight enough to catch
+// order-of-magnitude extraction errors (a "$77.00" total misread as 7700 makes
+// the ratio ~900 — off by 100x, never a real rate).
+export const MIN_PLAUSIBLE_RATE = 20_000
+export const MAX_PLAUSIBLE_RATE = 500_000
+
 /** Derive the rate from the receipt's printed totals when both are present.
- *  Returns null when only one (or neither) total is printed — the caller then
- *  falls back to a market rate (Phase 2) or manual entry. */
+ *  Returns null when only one (or neither) total is printed, or when the
+ *  implied ratio is outside the plausible band (a misread total) — the caller
+ *  then falls back to a market rate (Phase 2) or manual entry. */
 export function deriveRate(args: {
   printedTotalLbp?: number | null
   printedTotalUsd?: number | null
@@ -22,7 +30,9 @@ export function deriveRate(args: {
     printedTotalUsd != null &&
     printedTotalUsd > 0
   ) {
-    return { rate: printedTotalLbp / printedTotalUsd, source: 'receipt' }
+    const rate = printedTotalLbp / printedTotalUsd
+    if (rate < MIN_PLAUSIBLE_RATE || rate > MAX_PLAUSIBLE_RATE) return null
+    return { rate, source: 'receipt' }
   }
   return null
 }

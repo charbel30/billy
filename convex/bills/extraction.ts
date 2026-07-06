@@ -71,6 +71,13 @@ export const applyExtraction = internalMutation({
     const hasImplausibleLbp = items.some(
       (item) => item.lineTotal > 0 && item.lineTotal < MIN_PLAUSIBLE_LBP,
     )
+    // Both totals printed but deriveRate refused the ratio: one of them was
+    // misread (e.g. "$77.00" as 7700). The review screen is where that gets
+    // fixed, so never let such a bill ship as PENDING with the fallback rate.
+    const hasImplausibleRate =
+      receipt.printed_total_lbp != null &&
+      receipt.printed_total_usd != null &&
+      derived === null
 
     await ctx.db.patch(billId, {
       merchantName: receipt.merchant ?? bill.merchantName,
@@ -94,7 +101,10 @@ export const applyExtraction = internalMutation({
       extractionError: undefined, // this extraction succeeded
       extractionRunId: undefined, // run resolved; onComplete becomes a no-op
       status:
-        checksum.ok && !hasLowConfidence && !hasImplausibleLbp
+        checksum.ok &&
+        !hasLowConfidence &&
+        !hasImplausibleLbp &&
+        !hasImplausibleRate
           ? 'PENDING'
           : 'NEEDS_REVIEW',
       version: bill.version + 1,

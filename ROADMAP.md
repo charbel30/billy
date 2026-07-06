@@ -223,6 +223,13 @@ The one-document-per-bill design makes this cheap:
 - **Stay a calculator.** No money movement → no BDL/AML fintech licensing. Settlement /
   payments is a Phase-D question with real legal homework, not a feature toggle.
 - Gemini cost per scan is fractions of a cent — COGS is not the constraint; abuse is (§2.1).
+  - Verified 2026-07-06: the `gemini-3.5-flash` default was ~1¢/scan ($1.50/$9.00 per M
+    tokens); switched to **`gemini-2.5-flash-lite`** ($0.10/$0.40) — ~18x cheaper, ~$0.0005
+    per scan. Step up to `gemini-3.1-flash-lite` ($0.25/$1.50) if checksum pass-rate drops.
+    AI Gateway itself is free (its dashboard "cost" is a pass-through estimate of Google's
+    bill, undercounted because it can't see image tokens). For the Phase-C second-provider
+    fallback, Workers AI's free 10k neurons/day (~200 scans/day via
+    `llama-3.2-11b-vision` / `llama-4-scout`) routes through the same gateway.
 
 ---
 

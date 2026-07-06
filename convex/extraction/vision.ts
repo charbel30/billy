@@ -1,6 +1,6 @@
 import type { ExtractedReceipt } from '../../src/lib/types'
 import { invariant } from '../lib/invariant'
-import { RECEIPT_EXTRACTION_PROMPT } from './prompt'
+import { RECEIPT_EXTRACTION_PROMPT, RECEIPT_RESPONSE_SCHEMA } from './prompt'
 
 /** Base64-encode bytes without Node Buffer (Convex default runtime). */
 function toBase64(buf: ArrayBuffer): string {
@@ -13,6 +13,39 @@ function toBase64(buf: ArrayBuffer): string {
   return btoa(binary)
 }
 
+/**
+ * Models differ on absent-field encoding (3.5-flash emits "", flash-lite emits
+ * null) and applyExtraction's validators accept undefined-not-null. Normalize
+ * here so provider quirks never reach the mutation as a non-retryable
+ * ArgumentValidationError.
+ */
+function normalizeExtracted(raw: ExtractedReceipt): ExtractedReceipt {
+  const str = (val: unknown): string | undefined =>
+    typeof val === 'string' && val !== '' ? val : undefined
+  const num = (val: unknown, fallback: number): number =>
+    typeof val === 'number' && Number.isFinite(val) ? val : fallback
+  return {
+    merchant: str(raw.merchant),
+    branch: str(raw.branch),
+    datetime: str(raw.datetime),
+    currency_primary: str(raw.currency_primary) ?? 'LBP',
+    line_items: (raw.line_items ?? []).map((item) => ({
+      name: str(item.name) ?? 'Unknown item',
+      qty: num(item.qty, 1),
+      unit_price: num(item.unit_price, 0),
+      line_total: num(item.line_total, 0),
+      confidence:
+        typeof item.confidence === 'number' ? item.confidence : undefined,
+    })),
+    service_charge: num(raw.service_charge, 0),
+    tax: num(raw.tax, 0),
+    printed_total_lbp:
+      typeof raw.printed_total_lbp === 'number' ? raw.printed_total_lbp : null,
+    printed_total_usd:
+      typeof raw.printed_total_usd === 'number' ? raw.printed_total_usd : null,
+  }
+}
+
 /** The single swappable provider call: image -> structured receipt JSON. */
 export async function callVisionModel(
   bytes: ArrayBuffer,
@@ -20,7 +53,9 @@ export async function callVisionModel(
 ): Promise<ExtractedReceipt> {
   const accountId = process.env.CF_AIG_ACCOUNT_ID
   const gateway = process.env.CF_AIG_GATEWAY
-  const model = process.env.GEMINI_MODEL ?? 'gemini-3.5-flash'
+  // Default to the Lite tier: receipt extraction passes the reconcile checksum
+  // just as well there, and 3.5-flash is ~18x the price per scan.
+  const model = process.env.GEMINI_MODEL ?? 'gemini-2.5-flash-lite'
   const apiKey = process.env.GEMINI_API_KEY
   const gatewayToken = process.env.CF_AIG_TOKEN
   invariant(
@@ -32,7 +67,9 @@ export async function callVisionModel(
     'Set GEMINI_API_KEY (key in Convex) or CF_AIG_TOKEN (key stored in the AI Gateway)',
   )
 
-  const endpoint = `https://gateway.ai.cloudflare.com/v1/${accountId}/${gateway}/google-ai-studio/v1/models/${model}:generateContent`
+  // v1beta, not v1: structured output (responseMimeType/responseSchema) only
+  // exists in Google's v1beta GenerationConfig.
+  const endpoint = `https://gateway.ai.cloudflare.com/v1/${accountId}/${gateway}/google-ai-studio/v1beta/models/${model}:generateContent`
 
   const res = await fetch(endpoint, {
     method: 'POST',
@@ -54,6 +91,11 @@ export async function callVisionModel(
           ],
         },
       ],
+      generationConfig: {
+        responseMimeType: 'application/json',
+        responseSchema: RECEIPT_RESPONSE_SCHEMA,
+        temperature: 0,
+      },
     }),
   })
 
@@ -68,5 +110,5 @@ export async function callVisionModel(
     .trim()
     .replace(/^```(?:json)?\s*/i, '')
     .replace(/\s*```$/, '')
-  return JSON.parse(cleaned) as ExtractedReceipt
+  return normalizeExtracted(JSON.parse(cleaned) as ExtractedReceipt)
 }
