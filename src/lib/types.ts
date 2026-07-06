@@ -34,6 +34,9 @@ export interface Person {
   name: string
   color: string
   guestSessionId?: string
+  /** Settle-up: ms timestamp of when this person was marked paid.
+   *  Self-reported social signal — render as a checkmark, not accounting. */
+  paidAt?: number
 }
 
 /** A (person, item) claim of a fractional number of units. */

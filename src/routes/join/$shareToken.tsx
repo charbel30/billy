@@ -11,6 +11,7 @@ import {
   useAddGuestPerson,
   useJoinSplit,
   useSaveGuestClaims,
+  useSetGuestPersonPaid,
 } from '~/queries'
 import { seo } from '~/utils/seo'
 import { formatLbp, formatUsd, toUsd } from '~/lib/currency'
@@ -79,6 +80,7 @@ function GuestView() {
   const joinSplit = useJoinSplit()
   const addGuestPerson = useAddGuestPerson()
   const saveGuestClaims = useSaveGuestClaims()
+  const setGuestPersonPaid = useSetGuestPersonPaid()
 
   useEffect(() => {
     setGuestSessionId(getOrCreateGuestSessionId(shareToken))
@@ -91,6 +93,9 @@ function GuestView() {
         : [],
     [bill.people, guestSessionId],
   )
+
+  const isMine = (personId: string) =>
+    controlledPeople.some((p) => p.id === personId)
 
   useEffect(() => {
     if (!controlledPeople.some((p) => p.id === activeId)) {
@@ -125,7 +130,7 @@ function GuestView() {
     personId: string,
     nextClaims: Array<{ itemId: string; units: number }>,
   ) {
-    if (!guestSessionId) return
+    if (!guestSessionId || !isMine(personId)) return
     const result = await saveGuestClaims.mutateAsync({
       shareToken,
       guestSessionId,
@@ -161,6 +166,11 @@ function GuestView() {
     }
   }
 
+  function togglePaid(personId: string, paid: boolean) {
+    if (!guestSessionId || !isMine(personId)) return
+    setGuestPersonPaid.mutate({ shareToken, guestSessionId, personId, paid })
+  }
+
   if (bill.status !== 'PUBLISHED' && bill.status !== 'FINALIZED') {
     return (
       <div className="mx-auto w-full max-w-md p-4 sm:p-6 space-y-4">
@@ -183,6 +193,13 @@ function GuestView() {
           bill={bill}
           title={bill.merchantName || 'Final receipt'}
           description="This split is finalized, so the receipt is read-only."
+          onTogglePaid={togglePaid}
+          canTogglePaid={isMine}
+          paidPendingId={
+            setGuestPersonPaid.isPending
+              ? (setGuestPersonPaid.variables?.personId ?? null)
+              : null
+          }
         />
         <LegalFooter />
       </div>
@@ -194,8 +211,8 @@ function GuestView() {
   return (
     <BillSplitWorkspace
       bill={bill}
-      description="Join the bill, claim your items, and watch everyone's totals update."
-      panelTitle="Claiming as"
+      description="Join the bill, claim your items, and watch the whole table update live."
+      panelTitle="Everyone on the bill"
       addLabel="Add someone with you"
       addPlaceholder="Add someone"
       panelExtra={
@@ -225,9 +242,15 @@ function GuestView() {
           </div>
         )
       }
-      people={controlledPeople}
+      // The whole table is visible (same view as the host's split screen) but
+      // read-only for everyone except your own people: selection, claim
+      // steppers, and paid toggles are all gated on `isMine`. No onRemove —
+      // guests never remove anyone.
+      people={bill.people}
       activeId={activeId}
-      onSelect={setActiveId}
+      onSelect={(id) => {
+        if (isMine(id)) setActiveId(id)
+      }}
       onAdd={joined ? addPerson : undefined}
       onStep={stepClaim}
       onShareEvenly={shareEvenly}

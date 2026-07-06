@@ -155,6 +155,27 @@ function assertEditableSplit(bill: Bill) {
   }
 }
 
+// Settling happens after sharing and — unlike claims — keeps working after
+// FINALIZE. Gating to PUBLISHED|FINALIZED also closes a data-loss race:
+// saveWorking ignores submitted people while PUBLISHED and no-ops while
+// FINALIZED, so a stale review-editor flush can never wipe paidAt.
+function assertSettleOpen(bill: Bill) {
+  if (bill.status !== 'PUBLISHED' && bill.status !== 'FINALIZED') {
+    throw new Error('This split has not been shared yet')
+  }
+}
+
+// On mark, keep an existing timestamp (idempotent under double-taps); on
+// unmark, drop the key entirely — never store `undefined` in the array.
+function withPersonPaid(people: Person[], personId: string, paid: boolean) {
+  return people.map((p) => {
+    if (p.id !== personId) return p
+    if (paid) return { ...p, paidAt: p.paidAt ?? now() }
+    const { paidAt: _paidAt, ...rest } = p
+    return rest
+  })
+}
+
 // Claim writes are row diffs against the `claims` table (convex/bills/
 // claimRows.ts) and deliberately do NOT patch the bill document: no version
 // bump, no full-document rewrite, no OCC contention between guests tapping at
@@ -634,5 +655,59 @@ export const saveGuestClaims = mutation({
       acceptedClaims: result.acceptedClaims,
       rejectedCount: result.rejectedCount,
     }
+  },
+})
+
+// ---------------------------------------------------------------------------
+// Mark-as-paid: who has actually paid. paidAt lives on the embedded people
+// array (at most one write per person per bill).
+// ---------------------------------------------------------------------------
+
+export const setHostPersonPaid = mutation({
+  args: {
+    id: v.id('bills'),
+    personId: v.string(),
+    paid: v.boolean(),
+  },
+  returns: v.null(),
+  handler: async (ctx, { id, personId, paid }) => {
+    const bill = await ctx.db.get(id)
+    invariant(bill, `missing bill ${id}`)
+    assertSettleOpen(bill)
+    if (!bill.people.some((p) => p.id === personId)) {
+      throw new Error('person not found')
+    }
+    await ctx.db.patch(id, {
+      people: withPersonPaid(bill.people, personId, paid),
+      version: bill.version + 1,
+      updatedAt: now(),
+    })
+    return null
+  },
+})
+
+export const setGuestPersonPaid = mutation({
+  args: {
+    shareToken: v.string(),
+    guestSessionId: v.string(),
+    personId: v.string(),
+    paid: v.boolean(),
+  },
+  returns: v.null(),
+  handler: async (ctx, { shareToken, guestSessionId, personId, paid }) => {
+    assertGuestSessionId(guestSessionId)
+    const bill = await getBillByShareToken(ctx, shareToken)
+    assertSettleOpen(bill)
+    const person = bill.people.find((p) => p.id === personId)
+    invariant(person, 'person not found')
+    if (person.guestSessionId !== guestSessionId) {
+      throw new Error('You can only edit your own claims')
+    }
+    await ctx.db.patch(bill._id, {
+      people: withPersonPaid(bill.people, personId, paid),
+      version: bill.version + 1,
+      updatedAt: now(),
+    })
+    return null
   },
 })

@@ -18,16 +18,26 @@ export interface BillSummaryBill {
 
 // Per-person "little receipts" plus the grand total. USD is the headline figure
 // with LBP underneath (matches the redesigned review screen) — no currency toggle.
+// Mark-as-paid (opt-in via onTogglePaid): each receipt gets a "Mark paid" ↔
+// "Paid ✓" chip, gated per person by canTogglePaid.
 export function BillSummary({
   bill,
   title = 'Totals',
   description,
   className,
+  onTogglePaid,
+  canTogglePaid,
+  paidPendingId,
 }: {
   bill: BillSummaryBill
   title?: string
   description?: string
   className?: string
+  onTogglePaid?: (personId: string, paid: boolean) => void
+  /** Gates which receipts get an interactive toggle (e.g. a guest's own people).
+   *  Without it every receipt is toggleable when onTogglePaid is set. */
+  canTogglePaid?: (personId: string) => boolean
+  paidPendingId?: string | null
 }) {
   const portfolios = computePortfolios({
     lineItems: bill.lineItems,
@@ -40,6 +50,7 @@ export function BillSummary({
     rate: bill.rate,
   })
   const grandLbp = portfolios.reduce((s, p) => s + p.totalLbp, 0)
+  const paidAtById = new Map(bill.people.map((p) => [p.id, p.paidAt]))
 
   return (
     <section className={cn('space-y-3', className)}>
@@ -58,15 +69,24 @@ export function BillSummary({
       )}
 
       <div className="space-y-3">
-        {portfolios.map((p) => (
-          <PortfolioReceipt
-            key={p.personId}
-            portfolio={p}
-            lines={personClaimedLines(p.personId, bill.lineItems, bill.claims)}
-            rate={bill.rate}
-            serviceChargeOn={bill.serviceChargeOn}
-          />
-        ))}
+        {portfolios.map((p) => {
+          const toggleable =
+            onTogglePaid && (canTogglePaid ? canTogglePaid(p.personId) : true)
+          return (
+            <PortfolioReceipt
+              key={p.personId}
+              portfolio={p}
+              lines={personClaimedLines(p.personId, bill.lineItems, bill.claims)}
+              rate={bill.rate}
+              serviceChargeOn={bill.serviceChargeOn}
+              paidAt={paidAtById.get(p.personId)}
+              onTogglePaid={
+                toggleable ? (paid) => onTogglePaid(p.personId, paid) : undefined
+              }
+              togglePending={paidPendingId === p.personId}
+            />
+          )
+        })}
       </div>
 
       <div className="flex items-center justify-between rounded-3xl bg-muted/70 px-4 py-3 ring-1 ring-border/40">

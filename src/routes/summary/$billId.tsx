@@ -8,7 +8,7 @@ import { Loader } from '~/components/Loader'
 import { Button } from '~/components/ui/button'
 import { BillSummary } from '~/components/bill/BillSummary'
 import { ShareSplitCard } from '~/components/bill/ShareSplitCard'
-import { billQueries, useRevokeShare } from '~/queries'
+import { billQueries, useRevokeShare, useSetHostPersonPaid } from '~/queries'
 import { recordBill } from '~/lib/billHistory'
 import { buildTotalsMessage, joinUrl } from '~/lib/shareText'
 
@@ -27,6 +27,7 @@ function Summary() {
   const navigate = useNavigate()
   const { data: bill } = useSuspenseQuery(billQueries.detail(billId))
   const revokeShare = useRevokeShare()
+  const setHostPersonPaid = useSetHostPersonPaid()
   const finalized = bill.status === 'FINALIZED'
   const shared = bill.status === 'PUBLISHED' || finalized
 
@@ -71,6 +72,17 @@ function Summary() {
           finalized
             ? 'This split is finalized and read-only.'
             : 'Preview only. The split can still change.'
+        }
+        onTogglePaid={
+          shared
+            ? (personId, paid) =>
+                setHostPersonPaid.mutate({ id: billId, personId, paid })
+            : undefined
+        }
+        paidPendingId={
+          setHostPersonPaid.isPending
+            ? setHostPersonPaid.variables?.personId
+            : null
         }
       />
 

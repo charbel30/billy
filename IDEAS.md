@@ -16,6 +16,12 @@ nothing. Finalize makes the bill read-only ("This split is finalized, so the rec
 read-only") — a dead end at the peak-intent moment: **people are holding their phones,
 knowing what they owe, about to hand over money.**
 
+> **Status: mark-as-paid shipped 2026-07-06 — the rest was cut.** `paidAt` on the person
+> validator; `setHostPersonPaid` + session-scoped `setGuestPersonPaid`; "Paid ✓" toggles on
+> the final receipt (`BillSummary` on the host summary and the guest FINALIZED view) and ✅
+> per paid person in the WhatsApp text. Payment note, settle progress, and the cash view
+> were built and then deliberately dropped as unnecessary. Venue seat-view remains future.
+
 Still a calculator (no money movement, no licensing) — but close the loop:
 
 - **"Mark as paid" per person.** A `paidAt: v.optional(v.number())` on the `person`
@@ -167,7 +173,7 @@ From `src/lib/split.ts` + the claim UX:
 | WhatsApp text summary + summary-screen share/QR | **A — ✅ shipped 2026-07** | the viral loop, near-zero effort |
 | Demo bill (sample receipt) | **A — ✅ shipped 2026-07** | landing page + every pitch depends on it |
 | OG preview on `/join` | **A — ✅ shipped 2026-07** | part of landing/OG work already planned |
-| Settle-up layer (mark paid, payment note, progress) | **B** | completes the loop; the venue demo needs it |
+| Settle-up layer | **B — ✂️ trimmed: mark-as-paid shipped 2026-07-06** | payment note / progress / cash view cut as unnecessary |
 | Tip line + venue presets | **B** | the qlub-style venue pitch number |
 | Multi-photo long receipts | **B** | club tabs won't fit one frame |
 | Static table QRs + table names | **B** | venue ergonomics, prints once |
@@ -176,4 +182,4 @@ From `src/lib/split.ts` + the claim UX:
 | Venue menu priors in extraction prompt | **C** | accuracy moat, retention story |
 | Night recap shareable card | **C** | viral flywheel once volume exists |
 | Second-provider extraction fallback, offline queue | **C** | reliability hardening |
-| Emoji categorization, avatars, haptics, cash view | polish | sprinkle into any phase |
+| Emoji categorization, avatars, haptics | polish | sprinkle into any phase (cash view was tried and cut) |

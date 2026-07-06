@@ -44,9 +44,13 @@ export function buildTotalsMessage(
     `🧾 ${bill.merchantName.trim() || 'Bill split'} — split with Billy`,
     '',
   ]
+  const paidById = new Map(bill.people.map((p) => [p.id, p.paidAt != null]))
   for (const p of portfolios) {
     if (p.totalLbp <= 0) continue
-    lines.push(`• ${p.name}: ${formatUsd(p.totalUsd)} / ${formatLbp(p.totalLbp)}`)
+    const paidMark = paidById.get(p.personId) ? ' ✅' : ''
+    lines.push(
+      `• ${p.name}: ${formatUsd(p.totalUsd)} / ${formatLbp(p.totalLbp)}${paidMark}`,
+    )
   }
   lines.push('', `Total: ${formatUsd(grandUsd)} / ${formatLbp(grandLbp)}`)
   if (joinUrl) lines.push('', `Claim your items: ${joinUrl}`)

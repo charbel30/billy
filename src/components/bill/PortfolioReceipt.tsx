@@ -1,4 +1,5 @@
 import { motion } from 'motion/react'
+import { RiCheckLine } from '@remixicon/react'
 import type { Portfolio, ClaimedLine } from '~/lib/split'
 import { formatLbp, formatUsd, toUsd } from '~/lib/currency'
 import { formatUnits } from '~/lib/format'
@@ -14,6 +15,9 @@ export function PortfolioReceipt({
   rate,
   serviceChargeOn,
   bare = false,
+  paidAt,
+  onTogglePaid,
+  togglePending = false,
 }: {
   portfolio: Portfolio
   lines: ClaimedLine[]
@@ -22,7 +26,14 @@ export function PortfolioReceipt({
   // `bare` drops the card chrome for embedding inside a popover / sheet that
   // already provides its own surface.
   bare?: boolean
+  // Mark-as-paid: when set, shows a "Paid ✓" chip. With `onTogglePaid` the
+  // chip becomes an interactive "Mark paid" ↔ "Paid ✓" toggle.
+  paidAt?: number
+  onTogglePaid?: (paid: boolean) => void
+  togglePending?: boolean
 }) {
+  const paid = paidAt != null
+
   return (
     <motion.div
       layout
@@ -32,7 +43,32 @@ export function PortfolioReceipt({
     >
       <div className="flex items-center gap-2">
         <PersonAvatar name={portfolio.name} color={portfolio.color} size="sm" />
-        <span className="font-bold">{portfolio.name}</span>
+        <span className="truncate font-bold">{portfolio.name}</span>
+        {onTogglePaid ? (
+          <button
+            type="button"
+            disabled={togglePending}
+            onClick={() => onTogglePaid(!paid)}
+            className={cn(
+              'ml-auto flex shrink-0 items-center gap-1 rounded-full px-2.5 py-1 text-xs font-bold transition-[background-color,color,transform] active:scale-[0.96] disabled:opacity-50',
+              paid
+                ? 'bg-emerald-100 text-emerald-700'
+                : 'bg-muted text-muted-foreground hover:bg-emerald-50 hover:text-emerald-700',
+            )}
+          >
+            {paid ? (
+              <>
+                Paid <RiCheckLine className="size-3.5" />
+              </>
+            ) : (
+              'Mark paid'
+            )}
+          </button>
+        ) : paid ? (
+          <span className="ml-auto flex shrink-0 items-center gap-1 rounded-full bg-emerald-100 px-2.5 py-1 text-xs font-bold text-emerald-700">
+            Paid <RiCheckLine className="size-3.5" />
+          </span>
+        ) : null}
       </div>
 
       <div className="my-3 border-t border-dashed border-border" />

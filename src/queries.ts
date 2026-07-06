@@ -96,6 +96,18 @@ export function useSaveGuestClaims() {
   })
 }
 
+export function useSetHostPersonPaid() {
+  return useMutation({
+    mutationFn: useConvexMutation(api.bills.mutations.setHostPersonPaid),
+  })
+}
+
+export function useSetGuestPersonPaid() {
+  return useMutation({
+    mutationFn: useConvexMutation(api.bills.mutations.setGuestPersonPaid),
+  })
+}
+
 // ---------------------------------------------------------------------------
 // Image upload + extraction (imperative; no optimistic update)
 // ---------------------------------------------------------------------------

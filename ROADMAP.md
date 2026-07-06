@@ -10,7 +10,9 @@ engine and the pitch centerpiece.
 > preview, WhatsApp totals export, demo bill, and `/join` OG previews are live (deployed
 > to the dev Convex; `pnpm build` + `tsc` clean). Remaining before public launch:
 > analytics/Sentry (needs account keys) and the marketing landing page. See the phase
-> checklists in §7 and the per-item notes in §2.
+> checklists in §7 and the per-item notes in §2. Phase B has started: mark-as-paid
+> (IDEAS §1, trimmed scope) shipped 2026-07-06, and the guest `/join` page now shows
+> the whole table read-only (guests act only on their own people).
 
 This document is the single source of truth for: what to polish, what to build for venues,
 how to price it, and how to market it in Lebanon. Implementation happens against the
@@ -305,7 +307,7 @@ venue sessions/night, claim completion rate, venue retention month-over-month.
 - [ ] Venue dashboard route + "new table session" flow + table naming
 - [ ] Re-scan merge (`src/lib/bill/merge.ts` + mutation + staff confirm UI)
 - [ ] Venue branding on guest page; "powered by Billy" CTA on consumer bills
-- [ ] Settle-up layer: mark-as-paid, host payment note, settle progress — IDEAS §1
+- [x] Mark-as-paid per person: `paidAt` on the person validator, host + session-scoped guest mutations, "Paid ✓" toggles on the final receipt (host summary + guest join) and ✅ in the WhatsApp text — IDEAS §1, deliberately trimmed 2026-07-06: payment note / settle progress / cash view were cut as unnecessary
 - [ ] Tip line (separate from service charge) + venue presets — IDEAS §4
 - [ ] Multi-photo scan for long club tabs — IDEAS §2
 - [ ] Static per-table QRs (`/t/{venue}/{table}` → current open session) — IDEAS §5

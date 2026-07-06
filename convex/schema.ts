@@ -64,6 +64,10 @@ export const person = v.object({
   // person with the same session id. Everyone can READ the whole bill; you only
   // WRITE your own people. Concurrent writes are last-write-wins.
   guestSessionId: v.optional(v.string()),
+  // Mark-as-paid: when this person marked (or was marked) as having paid, ms
+  // timestamp. Self-reported social signal, not accounting — at most one write
+  // per person per bill, so it stays embedded per the embed-vs-row rule.
+  paidAt: v.optional(v.number()),
 })
 
 // A claim is a (person, item) pair with a fractional unit count. countable lines

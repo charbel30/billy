@@ -42,6 +42,7 @@ export function sanitizeWorkingBill(w: WorkingBill): WorkingBill {
       name: p.name,
       color: p.color,
       ...(p.guestSessionId != null ? { guestSessionId: p.guestSessionId } : {}),
+      ...(p.paidAt != null ? { paidAt: p.paidAt } : {}),
     })),
   }
 }
