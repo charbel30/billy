@@ -8,6 +8,7 @@ import {
 } from "@tanstack/react-router";
 import { TanStackRouterDevtools } from "@tanstack/react-router-devtools";
 import * as React from "react";
+import { MotionConfig } from "motion/react";
 import { Toaster } from "react-hot-toast";
 import type { QueryClient } from "@tanstack/react-query";
 import { DefaultCatchBoundary } from "~/components/shared/DefaultCatchBoundary";
@@ -113,9 +114,11 @@ function RootDocument({ children }: { children: React.ReactNode }) {
 
 function AppLayout({ children }: { children: React.ReactNode }) {
   return (
-    <div className="min-h-screen flex flex-col bg-background text-foreground antialiased">
-      <AppHeader />
-      <main className="grow flex flex-col">{children}</main>
-    </div>
+    <MotionConfig reducedMotion="user">
+      <div className="min-h-screen flex flex-col bg-background text-foreground antialiased">
+        <AppHeader />
+        <main className="grow flex flex-col">{children}</main>
+      </div>
+    </MotionConfig>
   );
 }

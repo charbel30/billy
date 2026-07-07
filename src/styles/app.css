@@ -37,6 +37,16 @@
   }
 }
 
+/* Motion components honor this via <MotionConfig reducedMotion="user">;
+   CSS-driven loops (pulses, shimmers) are silenced here. Plain loading
+   spinners stay — they're the accepted convention. */
+@media (prefers-reduced-motion: reduce) {
+  .animate-pulse,
+  [data-shimmer] {
+    animation: none !important;
+  }
+}
+
 /* Amounts and receipt line items keep the mono "printed receipt" character. */
 @utility font-receipt {
   font-family: var(--font-mono);
