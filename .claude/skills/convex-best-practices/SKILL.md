@@ -8,7 +8,7 @@ description: Convex best practices for schema design, indexes, queries/mutations
 Convex is the reactive backend for this project: a real-time document database + serverless
 TypeScript functions + file storage. Functions live in `convex/`. The client consumes them
 through `@convex-dev/react-query`, which adapts Convex into TanStack Query option factories
-(`convexQuery`) and mutation hooks (`useConvexMutation`). See `src/queries.ts` for the live
+(`convexQuery`) and mutation hooks (`useConvexMutation`). See `src/api/` for the live
 pattern and `src/router.tsx` for the wiring.
 
 ## When to Apply
@@ -36,6 +36,23 @@ Rules of thumb:
   then persist the result via one mutation at the end.
 - Use the `internal*` variants for anything that should not be callable from the browser
   (e.g. the LLM call, cron handlers). Reference them via `internal.*`, public ones via `api.*`.
+
+## File organization in this project (post 2026-07-07 refactor)
+
+Convex uses file-based routing (`convex/bills/guest.ts` → `api.bills.guest.*`), so the file
+layout IS the public API. This project's convention:
+
+- Public functions are grouped **by domain**, one file per api namespace under `convex/bills/`:
+  `lifecycle.ts`, `people.ts`, `hostClaims.ts`, `guest.ts`, `queries.ts`, `uploads.ts`,
+  `extraction.ts`. Add a new mutation to the file matching its domain; only create a new file
+  for a genuinely new domain (that changes the api path — update `src/api/` in the same change).
+- Shared logic (validation, status gates, claim math) lives in **`convex/model/bills.ts`** as
+  plain TS — public handlers stay thin wrappers (official Convex best practice). Never
+  register functions in `convex/model/`.
+- Shared validators live in `convex/bills/validators.ts`; claim-row access only through the
+  `convex/bills/claimRows.ts` seam.
+- The frontend consumes everything through `src/api/` only — no `api.*` references elsewhere
+  in `src/`. Renaming a convex file therefore touches exactly two places: the file and `src/api/`.
 
 ## Always validate args (and prefer return validators)
 

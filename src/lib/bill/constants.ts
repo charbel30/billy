@@ -22,3 +22,16 @@ export const DEFAULT_PERSON_COLOR = '#999'
 export const LOW_CONFIDENCE_THRESHOLD = 0.6
 export const SAVE_DELAY_MS = 5000
 export const DEFAULT_PERSON_NAME = 'self'
+
+// --- Bill domain rules (shared with convex/, like currency.ts) ---
+
+export const MAX_NAME_LENGTH = 48
+// Hard ceiling on participants — a leaked share link must not let strangers
+// spam a bill with unlimited "people" (the rate limiter slows it, this stops it).
+export const MAX_PEOPLE = 30
+// New bills start with a 10% tip (the Lebanese norm); older bills have no
+// tipPercent and stay tip-free.
+export const DEFAULT_TIP_PERCENT = 10
+export const MAX_TIP_PERCENT = 30
+// Chips offered by the host's tip picker (subset of 0..MAX_TIP_PERCENT).
+export const TIP_PRESETS = [0, 5, 10, 15, 20]

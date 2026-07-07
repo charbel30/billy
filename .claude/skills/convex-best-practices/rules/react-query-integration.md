@@ -3,12 +3,12 @@
 This project does NOT use the bare `useQuery` from `convex/react`. It uses
 `@convex-dev/react-query`, which turns Convex functions into TanStack Query option factories.
 Wiring is in `src/router.tsx` (a `ConvexQueryClient` sets the query client's default
-`queryFn`/`queryKeyHashFn`, and `ConvexProvider` wraps the app). Mirror `src/queries.ts`.
+`queryFn`/`queryKeyHashFn`, and `ConvexProvider` wraps the app). Mirror `src/api/` (billQueries.ts for reads, billMutations.ts/uploads.ts for writes).
 
 ## Reads — `convexQuery` + a query factory
 
 ```ts
-// src/queries.ts — colocate all option factories here
+// src/api/billQueries.ts — colocate all read option factories here
 import { convexQuery } from '@convex-dev/react-query'
 import { api } from 'convex/_generated/api'
 
@@ -29,7 +29,7 @@ mutation changes the underlying data. Do not add manual polling or `refetchInter
 
 Wrap `useConvexMutation` in `useMutation`. For instant UI, attach `.withOptimisticUpdate`,
 reading and rewriting the cached query with `localStore.getQuery` / `setQuery` (exactly the
-pattern in `src/queries.ts`):
+pattern in `src/api/billMutations.ts`):
 
 ```ts
 const mutationFn = useConvexMutation(api.bills.setRate).withOptimisticUpdate(

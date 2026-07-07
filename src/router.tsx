@@ -9,8 +9,8 @@ import toast from 'react-hot-toast'
 import { ConvexQueryClient } from '@convex-dev/react-query'
 import { ConvexProvider } from 'convex/react'
 import { routeTree } from './routeTree.gen'
-import { DefaultCatchBoundary } from './components/DefaultCatchBoundary'
-import { NotFound } from './components/NotFound'
+import { DefaultCatchBoundary } from './components/shared/DefaultCatchBoundary'
+import { NotFound } from './components/shared/NotFound'
 
 export function getRouter() {
   if (typeof document !== 'undefined') {

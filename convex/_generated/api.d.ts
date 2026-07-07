@@ -10,7 +10,10 @@
 
 import type * as bills_claimRows from "../bills/claimRows.js";
 import type * as bills_extraction from "../bills/extraction.js";
-import type * as bills_mutations from "../bills/mutations.js";
+import type * as bills_guest from "../bills/guest.js";
+import type * as bills_hostClaims from "../bills/hostClaims.js";
+import type * as bills_lifecycle from "../bills/lifecycle.js";
+import type * as bills_people from "../bills/people.js";
 import type * as bills_queries from "../bills/queries.js";
 import type * as bills_uploads from "../bills/uploads.js";
 import type * as bills_validators from "../bills/validators.js";
@@ -22,6 +25,7 @@ import type * as lib_imageStore from "../lib/imageStore.js";
 import type * as lib_invariant from "../lib/invariant.js";
 import type * as lib_rateLimits from "../lib/rateLimits.js";
 import type * as lib_retrier from "../lib/retrier.js";
+import type * as model_bills from "../model/bills.js";
 
 import type {
   ApiFromModules,
@@ -32,7 +36,10 @@ import type {
 declare const fullApi: ApiFromModules<{
   "bills/claimRows": typeof bills_claimRows;
   "bills/extraction": typeof bills_extraction;
-  "bills/mutations": typeof bills_mutations;
+  "bills/guest": typeof bills_guest;
+  "bills/hostClaims": typeof bills_hostClaims;
+  "bills/lifecycle": typeof bills_lifecycle;
+  "bills/people": typeof bills_people;
   "bills/queries": typeof bills_queries;
   "bills/uploads": typeof bills_uploads;
   "bills/validators": typeof bills_validators;
@@ -44,6 +51,7 @@ declare const fullApi: ApiFromModules<{
   "lib/invariant": typeof lib_invariant;
   "lib/rateLimits": typeof lib_rateLimits;
   "lib/retrier": typeof lib_retrier;
+  "model/bills": typeof model_bills;
 }>;
 
 /**

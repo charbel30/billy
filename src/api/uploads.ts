@@ -1,0 +1,17 @@
+import { useMutation } from '@tanstack/react-query'
+import { useConvexMutation } from '@convex-dev/react-query'
+import { api } from 'convex/_generated/api'
+
+// Image upload + extraction (imperative; no optimistic update)
+
+export function useGenerateUploadUrl() {
+  return useMutation({
+    mutationFn: useConvexMutation(api.bills.uploads.generateUploadUrl),
+  })
+}
+
+export function useAttachImageAndExtract() {
+  return useMutation({
+    mutationFn: useConvexMutation(api.bills.uploads.attachImageAndExtract),
+  })
+}

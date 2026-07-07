@@ -36,7 +36,7 @@ Three lines make the whole thing work — see the real file:
    `setupRouterSsrQueryIntegration({ router, queryClient })` dehydrates/rehydrates the cache
    across the SSR boundary. `ConvexProvider` in `Wrap` gives the client to Convex hooks.
 
-You rarely touch this again — feature code only uses the factories from `src/queries.ts`.
+You rarely touch this again — feature code only uses the factories and hooks from `src/api/` (import via `~/api`).
 
 ## Reads — same hook, two behaviors
 

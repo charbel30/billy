@@ -54,6 +54,13 @@ export const metaValidator = v.object({
   printedTotalUsd: v.optional(v.number()),
 })
 
+// Claim input as submitted by hosts/guests — a (itemId, units) pair; personId
+// comes from the mutation's own args.
+export const claimInputValidator = v.object({
+  itemId: v.string(),
+  units: v.number(),
+})
+
 export const extractedLineItemValidator = v.object({
   name: v.string(),
   qty: v.number(),

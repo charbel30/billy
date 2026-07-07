@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { useSuspenseQuery } from '@tanstack/react-query'
 import type { Id } from 'convex/_generated/dataModel'
-import { billQueries, useSaveWorking } from '~/queries'
+import { billQueries, useSaveWorking } from '~/api'
 import {
   addLineItemToBill,
   addPersonToBill,
