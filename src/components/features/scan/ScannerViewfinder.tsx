@@ -16,7 +16,7 @@ export function ScannerViewfinder({
         <img
           src={previewUrl}
           alt="Receipt photo preview"
-          className="absolute inset-0 size-full object-contain"
+          className="absolute inset-0 size-full object-contain outline -outline-offset-1 outline-black/10 dark:outline-white/10"
         />
         <ScannerCorners />
         <div className="absolute inset-x-0 bottom-8 flex justify-center">
@@ -35,7 +35,7 @@ export function ScannerViewfinder({
       <ScannerCorners />
 
       <motion.div
-        className="absolute left-0 z-10 h-0.5 w-full bg-primary shadow-[0_0_16px_rgba(0,0,0,0.35)]"
+        className="absolute left-0 z-10 h-0.5 w-full bg-primary shadow-[0_0_16px_var(--primary)]"
         initial={{ top: '0%', opacity: 0 }}
         animate={{ top: ['0%', '100%'], opacity: [0, 1, 1, 0] }}
         transition={{
@@ -83,7 +83,7 @@ export function ScannerViewfinder({
 }
 
 function ScannerCorners() {
-  const cornerClass = 'absolute size-8 border-primary'
+  const cornerClass = 'absolute size-8 border-primary-strong/70'
   return (
     <>
       <div className={cn(cornerClass, 'left-6 top-6 rounded-tl-xl border-l-4 border-t-4')} />

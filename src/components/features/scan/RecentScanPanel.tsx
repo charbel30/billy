@@ -1,8 +1,9 @@
 import { useState } from 'react'
 import { AnimatePresence, motion } from 'motion/react'
-import { RiArrowRightLine, RiFileList3Line } from '@remixicon/react'
+import { RiArrowRightLine, RiFileList3Line, RiReceiptLine } from '@remixicon/react'
 import type { BillHistoryEntry } from '~/lib/billHistory'
 import { timeAgo } from '~/lib/format'
+import { EmptyState } from '~/components/shared/EmptyState'
 import { COLLAPSED_COUNT, STEP_LABEL, scanHubCopy } from './content'
 
 export function RecentScanPanel({
@@ -39,9 +40,11 @@ export function RecentScanPanel({
       </div>
 
       {entries.length === 0 ? (
-        <p className="text-pretty text-sm text-muted-foreground">
-          {scanHubCopy.emptyRecent}
-        </p>
+        <EmptyState
+          icon={RiReceiptLine}
+          title={scanHubCopy.emptyRecent}
+          hint={scanHubCopy.emptyRecentHint}
+        />
       ) : (
         <>
           <div className="space-y-2">

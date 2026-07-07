@@ -5,7 +5,8 @@ export const scanHubCopy = {
   scanningStatus: 'Reading receipt',
   primaryAction: 'Start Scan',
   recentTitle: 'Recent bill scans',
-  emptyRecent: 'Your scanned bills will show up here.',
+  emptyRecent: 'No scans yet',
+  emptyRecentHint: 'Your scanned receipts will appear here.',
   uploadError: 'Upload failed',
   fallbackError: 'Something went wrong',
 }

@@ -9,13 +9,16 @@ import {
   getBillHistory,
   type BillHistoryEntry,
 } from '~/lib/billHistory'
+import { motion } from 'motion/react'
+import { RiErrorWarningLine } from '@remixicon/react'
 import { LegalFooter } from '~/components/shared/LegalFooter'
+import { Alert, AlertTitle, AlertDescription } from '~/components/ui/alert'
+import { staggerChild, staggerContainer } from '~/lib/animations'
 import { ScannerViewfinder } from './ScannerViewfinder'
 import { ScanActions } from './ScanActions'
 import { ResumeBillCard } from './ResumeBillCard'
 import { RecentScanPanel } from './RecentScanPanel'
 import { scanHubCopy } from './content'
-import '@fontsource-variable/figtree/wght.css'
 
 export function ScannerHub() {
   const navigate = useNavigate()
@@ -116,11 +119,20 @@ export function ScannerHub() {
         onChange={handleFile}
       />
 
-      <div className="mx-auto flex w-full max-w-md flex-col gap-6 md:max-w-5xl">
-        {lastBill ? <ResumeBillCard entry={lastBill} onOpen={openBill} /> : null}
+      <motion.div
+        variants={staggerContainer}
+        initial="hidden"
+        animate="show"
+        className="mx-auto flex w-full max-w-md flex-col gap-6 md:max-w-5xl"
+      >
+        {lastBill ? (
+          <motion.div variants={staggerChild}>
+            <ResumeBillCard entry={lastBill} onOpen={openBill} />
+          </motion.div>
+        ) : null}
 
         <main className="grid gap-6 md:grid-cols-[minmax(20rem,28rem)_minmax(0,1fr)] md:items-start md:justify-center">
-          <section className="space-y-5">
+          <motion.section variants={staggerChild} className="space-y-5">
             <ScannerViewfinder busy={busy} previewUrl={pending?.url ?? null} />
 
             <ScanActions
@@ -132,18 +144,26 @@ export function ScannerHub() {
               onTrySample={() => void trySampleBill()}
             />
 
-            {error ? <p className="text-center text-sm text-destructive">{error}</p> : null}
-          </section>
+            {error ? (
+              <Alert variant="destructive">
+                <RiErrorWarningLine />
+                <AlertTitle>{scanHubCopy.uploadError}</AlertTitle>
+                <AlertDescription>{error}</AlertDescription>
+              </Alert>
+            ) : null}
+          </motion.section>
 
-          <RecentScanPanel
-            entries={history}
-            onOpen={openBill}
-            onClear={clearHistory}
-          />
+          <motion.div variants={staggerChild}>
+            <RecentScanPanel
+              entries={history}
+              onOpen={openBill}
+              onClear={clearHistory}
+            />
+          </motion.div>
         </main>
 
         <LegalFooter />
-      </div>
+      </motion.div>
     </div>
   )
 }

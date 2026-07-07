@@ -6,6 +6,7 @@ import {
   RiRestartLine,
 } from '@remixicon/react'
 import { swap } from '~/lib/animations'
+import { tapHaptic } from '~/lib/haptics'
 import { scanHubCopy } from './content'
 
 // The buttons under the viewfinder. With a pending photo: confirm ("Use this
@@ -31,7 +32,10 @@ export function ScanActions({
       <div className="grid grid-cols-[minmax(0,1fr)_auto] gap-2">
         <button
           type="button"
-          onClick={onConfirm}
+          onClick={() => {
+            tapHaptic()
+            onConfirm()
+          }}
           disabled={busy}
           className="flex items-center justify-center gap-2 rounded-full bg-primary px-6 py-4 text-base font-bold text-primary-foreground shadow-raised transition-[transform,opacity] duration-200 active:scale-[0.96] disabled:pointer-events-none disabled:opacity-70"
         >
@@ -59,7 +63,10 @@ export function ScanActions({
     <>
       <button
         type="button"
-        onClick={onStartScan}
+        onClick={() => {
+          tapHaptic()
+          onStartScan()
+        }}
         disabled={busy}
         className="flex w-full items-center justify-center gap-2 rounded-full bg-primary px-6 py-4 text-base font-bold text-primary-foreground shadow-raised transition-[transform,opacity] duration-200 active:scale-[0.96] disabled:pointer-events-none disabled:opacity-70"
       >

@@ -11,7 +11,7 @@ Execution order: phases run in order, committing at each phase boundary (Phase 1
 - [x] Phase 1a — tokens, typography, theme toggle
 - [x] Phase 1b — hardcode sweep (colors/shadows/radii, ~25 files)
 - [x] Phase 2 — motion presets + shared state components (EmptyState, Alert variants, Loader)
-- [ ] Phase 3 — scan screen pass
+- [x] Phase 3 — scan screen pass
 - [ ] Phase 4 — review screen pass
 - [ ] Phase 5 — split screen pass
 - [ ] Phase 6 — summary + join pass
