@@ -1,7 +1,8 @@
 import { useRef, useState } from 'react'
-import { RiCameraLine, RiLoader4Line } from '@remixicon/react'
+import { RiCameraLine, RiErrorWarningLine, RiLoader4Line } from '@remixicon/react'
 import type { Id } from 'convex/_generated/dataModel'
 import { Button } from '~/components/ui/button'
+import { Alert, AlertDescription, AlertTitle } from '~/components/ui/alert'
 import {
   scanErrorMessage,
   useScanUpload,
@@ -33,7 +34,8 @@ export function ExtractionFailedBanner({
   }
 
   return (
-    <div className="mb-5 rounded-control bg-destructive-subtle p-4 text-destructive-subtle-foreground text-sm ring-1 ring-destructive/20">
+    <Alert variant="destructive" className="mb-5">
+      <RiErrorWarningLine />
       <input
         ref={inputRef}
         type="file"
@@ -43,14 +45,12 @@ export function ExtractionFailedBanner({
         disabled={scan.busy}
         onChange={(e) => void handleFile(e)}
       />
-      <p className="font-bold text-destructive">
-        We couldn&apos;t read this receipt.
-      </p>
-      <p className="mt-1 text-muted-foreground">
+      <AlertTitle>We couldn&apos;t read this receipt.</AlertTitle>
+      <AlertDescription>
         Try a clearer photo — flatten the receipt and get the whole bill in
         frame — or add the items by hand below.
-      </p>
-      <div className="mt-3 flex flex-wrap gap-2">
+      </AlertDescription>
+      <div className="col-start-2 mt-3 flex flex-wrap gap-2">
         <Button
           size="sm"
           onClick={() => inputRef.current?.click()}
@@ -67,15 +67,15 @@ export function ExtractionFailedBanner({
           Enter items manually
         </Button>
       </div>
-      {error ? <p className="mt-2 text-destructive">{error}</p> : null}
-    </div>
+      {error ? <p className="col-start-2 mt-2 font-semibold">{error}</p> : null}
+    </Alert>
   )
 }
 
 export function ExtractingBanner() {
   return (
-    <div className="mb-5 flex items-center justify-center gap-2 rounded-control border border-border bg-card/80 p-3 text-sm text-muted-foreground shadow-sm">
+    <Alert variant="info" className="mb-5 flex items-center justify-center gap-2">
       <RiLoader4Line className="animate-spin" /> Reading your receipt...
-    </div>
+    </Alert>
   )
 }

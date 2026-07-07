@@ -99,7 +99,7 @@ function AuditLineItem({
               className="w-full min-w-0 text-lg font-black leading-tight tracking-tight"
             />
             {low ? (
-              <span className="mt-1 inline-flex items-center gap-1 text-xs font-semibold text-warning-subtle-foreground">
+              <span className="mt-1 inline-flex items-center gap-1 rounded-full bg-warning-subtle px-2 py-0.5 text-xs font-semibold text-warning-subtle-foreground">
                 <RiAlertLine className="size-3.5" />
                 Check this
               </span>
@@ -116,7 +116,7 @@ function AuditLineItem({
                 numeric
                 onCommit={commitLineTotal}
                 align="right"
-                className="w-24 text-right tabular-nums text-muted-foreground focus:bg-muted"
+                className="w-24 text-right text-muted-foreground"
               />
               <span>LBP</span>
             </div>
@@ -124,7 +124,7 @@ function AuditLineItem({
         </div>
 
         <div className="mt-4 grid grid-cols-[5.5rem_minmax(0,1fr)_2.5rem] gap-2">
-          <label className="rounded-xl bg-muted/65 px-3 py-2">
+          <label className="rounded-control bg-muted/65 px-3 py-2">
             <span className="block text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">
               Qty
             </span>
@@ -133,11 +133,11 @@ function AuditLineItem({
               numeric
               onCommit={commitQty}
               align="center"
-              className="mt-0.5 w-full text-center text-base font-black tabular-nums text-foreground focus:bg-muted"
+              className="mt-0.5 w-full text-center text-base font-bold text-foreground"
             />
           </label>
 
-          <div className="min-w-0 rounded-xl bg-muted/65 px-3 py-2">
+          <div className="min-w-0 rounded-control bg-muted/65 px-3 py-2">
             <span className="block text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">
               Unit price
             </span>
@@ -149,7 +149,7 @@ function AuditLineItem({
           <button
             type="button"
             onClick={() => onRemove(item.id)}
-            className="grid place-items-center rounded-xl bg-muted/65 text-muted-foreground transition-[transform,background-color,color] hover:bg-destructive/10 hover:text-destructive active:scale-[0.96]"
+            className="grid place-items-center rounded-control bg-muted/65 text-muted-foreground transition-[transform,background-color,color] hover:bg-destructive/10 hover:text-destructive active:scale-[0.96]"
             aria-label="Remove item"
           >
             <RiDeleteBin6Line className="size-5" />
@@ -173,7 +173,7 @@ function AuditLineItem({
               className="w-full min-w-0 text-base font-black leading-tight tracking-tight"
             />
             {low ? (
-              <span className="mt-0.5 inline-flex shrink-0 items-center gap-1 text-xs font-semibold text-warning-subtle-foreground">
+              <span className="mt-0.5 inline-flex shrink-0 items-center gap-1 rounded-full bg-warning-subtle px-2 py-0.5 text-xs font-semibold text-warning-subtle-foreground">
                 <RiAlertLine className="size-3.5" />
                 Check this
               </span>
@@ -187,7 +187,7 @@ function AuditLineItem({
               numeric
               onCommit={commitQty}
               align="center"
-              className="w-7 rounded-full bg-muted/70 px-1.5 py-0 text-center font-black tabular-nums text-foreground focus:bg-muted"
+              className="w-8 rounded-full bg-muted/70 px-1.5 py-0 text-center font-bold text-foreground"
             />
             <span className="min-w-0 truncate tabular-nums">
               {formatLbpCompact(item.unitPrice)} LBP each
@@ -213,7 +213,7 @@ function AuditLineItem({
               numeric
               onCommit={commitLineTotal}
               align="right"
-              className="w-24 text-right tabular-nums text-muted-foreground focus:bg-muted"
+              className="w-24 text-right text-muted-foreground"
             />
             <span>LBP</span>
           </div>

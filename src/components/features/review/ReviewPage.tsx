@@ -1,9 +1,10 @@
 import { useEffect, useState } from 'react'
 import { useNavigate } from '@tanstack/react-router'
 import { useSuspenseQuery } from '@tanstack/react-query'
-import { RiLoader4Line, RiReceiptLine } from '@remixicon/react'
+import { RiErrorWarningLine, RiReceiptLine } from '@remixicon/react'
 import type { Id } from 'convex/_generated/dataModel'
 import { BlurCommitInput } from '~/components/ui/blur-commit-input'
+import { Alert, AlertDescription, AlertTitle } from '~/components/ui/alert'
 import { useBillEditor } from '~/hooks/useBillEditor'
 import { billQueries } from '~/api'
 import { reconcile } from '~/lib/reconcile'
@@ -16,6 +17,7 @@ import { AuditLineItems } from './AuditLineItems'
 import { SettlementSummary } from './SettlementSummary'
 import { MobileReviewAction } from './MobileReviewAction'
 import { ExtractingBanner, ExtractionFailedBanner } from './ExtractionBanners'
+import { SaveStatus } from './SaveStatus'
 
 export function ReviewPage({ billId }: { billId: Id<'bills'> }) {
   const navigate = useNavigate()
@@ -86,12 +88,7 @@ export function ReviewPage({ billId }: { billId: Id<'bills'> }) {
                 setMeta({ rate: parseNumericInput(raw), rateSource: 'manual' })
               }
             />
-            {editor.saving ? (
-              <span className="inline-flex items-center gap-2 rounded-full bg-muted px-3 py-1 text-xs font-semibold text-muted-foreground">
-                <RiLoader4Line className="size-3.5 animate-spin" />
-                Saving
-              </span>
-            ) : null}
+            <SaveStatus saving={editor.saving} />
           </div>
 
           <AuditLineItems
@@ -103,10 +100,17 @@ export function ReviewPage({ billId }: { billId: Id<'bills'> }) {
           />
 
           {recon.diff != null && !recon.ok && meta.printedTotalLbp != null ? (
-            <p className="mt-4 rounded-control bg-destructive-subtle px-4 py-3 text-sm text-destructive-subtle-foreground">
-              Items differ from the printed receipt total by{' '}
-              {formatLbp(Math.abs(recon.diff))}. Check the lines above.
-            </p>
+            <Alert variant="warning" className="mt-4">
+              <RiErrorWarningLine />
+              <AlertTitle>Totals don&apos;t add up</AlertTitle>
+              <AlertDescription>
+                Items differ from the printed receipt total by{' '}
+                <span className="font-receipt font-semibold">
+                  {formatLbp(Math.abs(recon.diff))}
+                </span>
+                . Check the lines above.
+              </AlertDescription>
+            </Alert>
           ) : null}
         </section>
 
