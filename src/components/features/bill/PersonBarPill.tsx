@@ -11,6 +11,7 @@ import {
 import { PersonAvatar } from './PersonAvatar'
 import { PortfolioReceipt } from './PortfolioReceipt'
 import { cn } from '~/lib/utils'
+import { popIn } from '~/lib/animations'
 import { personColorValue } from '~/lib/bill/constants'
 
 // One person in the horizontal mobile bar: avatar (opens their item breakdown)
@@ -40,9 +41,8 @@ export function PersonBarPill({
   return (
     <motion.div
       layout
-      initial={{ opacity: 0, scale: 0.8 }}
-      animate={{ opacity: 1, scale: 1 }}
-      exit={{ opacity: 0, scale: 0.8 }}
+      {...popIn}
+      exit={{ opacity: 0, scale: 0.9 }}
       style={active ? { backgroundColor: personColorValue(person.color) } : undefined}
       className={cn(
         'flex shrink-0 items-center gap-2 rounded-full border py-1 pl-1 pr-3 text-sm font-semibold transition-[background-color,border-color,color]',

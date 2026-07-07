@@ -61,7 +61,7 @@ export function PortfolioReceipt({
               onTogglePaid(!paid)
             }}
             className={cn(
-              'ml-auto flex shrink-0 items-center gap-1 rounded-full px-2.5 py-1 text-xs font-bold transition-[background-color,color,transform] active:scale-[0.96] disabled:opacity-50',
+              'ml-auto flex shrink-0 items-center gap-1 rounded-full px-2.5 py-1 text-xs font-bold transition-[background-color,color,scale] active:scale-[0.96] disabled:opacity-50',
               paid
                 ? 'bg-success-subtle text-success-subtle-foreground'
                 : 'bg-muted text-muted-foreground hover:bg-success-subtle hover:text-success-subtle-foreground',

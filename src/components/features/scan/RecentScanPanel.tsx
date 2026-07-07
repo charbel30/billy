@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { AnimatePresence, motion } from 'motion/react'
 import { RiArrowRightLine, RiFileList3Line, RiReceiptLine } from '@remixicon/react'
+import { softExit } from '~/lib/animations'
 import type { BillHistoryEntry } from '~/lib/billHistory'
 import { timeAgo } from '~/lib/format'
 import { EmptyState } from '~/components/shared/EmptyState'
@@ -57,9 +58,9 @@ export function RecentScanPanel({
                   onClick={() => onOpen(entry)}
                   initial={{ opacity: 0, y: 6 }}
                   animate={{ opacity: 1, y: 0 }}
-                  exit={{ opacity: 0, y: -6 }}
+                  exit={softExit}
                   transition={{ type: 'spring', duration: 0.3, bounce: 0 }}
-                  whileTap={{ scale: 0.98 }}
+                  whileTap={{ scale: 0.96 }}
                   className="group flex w-full items-center gap-3 rounded-control bg-muted/60 px-4 py-3 text-left transition-colors hover:bg-muted"
                 >
                   <span className="grid size-10 shrink-0 place-items-center rounded-full bg-primary/10 text-primary-strong">

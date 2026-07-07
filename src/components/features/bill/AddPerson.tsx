@@ -34,7 +34,7 @@ export function AddPerson({
           type="button"
           aria-label={label}
           onClick={() => setOpen(true)}
-          className="grid size-10 shrink-0 place-items-center rounded-full border-2 border-dashed border-primary/30 text-primary-strong transition-[transform,background-color] hover:bg-primary/10 active:scale-[0.96]"
+          className="grid size-10 shrink-0 place-items-center rounded-full border-2 border-dashed border-primary/30 text-primary-strong transition-[scale,background-color] hover:bg-primary/10 active:scale-[0.96]"
         >
           <RiUserAddLine className="size-5" />
         </button>
@@ -44,7 +44,7 @@ export function AddPerson({
       <button
         type="button"
         onClick={() => setOpen(true)}
-        className="flex w-full items-center justify-center gap-2 rounded-control border-2 border-dashed border-primary/30 px-4 py-3 text-sm font-bold text-primary-strong transition-[transform,background-color] hover:bg-primary/10 active:scale-[0.96]"
+        className="flex w-full items-center justify-center gap-2 rounded-control border-2 border-dashed border-primary/30 px-4 py-3 text-sm font-bold text-primary-strong transition-[scale,background-color] hover:bg-primary/10 active:scale-[0.96]"
       >
         <RiUserAddLine className="size-5" /> {label}
       </button>
@@ -74,7 +74,7 @@ export function AddPerson({
         type="button"
         onClick={submit}
         aria-label={label}
-        className="grid size-9 shrink-0 place-items-center rounded-full text-primary-strong transition-[transform,color] hover:text-foreground active:scale-[0.96]"
+        className="grid size-9 shrink-0 place-items-center rounded-full text-primary-strong transition-[scale,color] hover:text-foreground active:scale-[0.96]"
       >
         {variant === 'bar' ? (
           <RiAddLine className="size-4" />

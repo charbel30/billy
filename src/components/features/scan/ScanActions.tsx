@@ -37,7 +37,7 @@ export function ScanActions({
             onConfirm()
           }}
           disabled={busy}
-          className="flex items-center justify-center gap-2 rounded-full bg-primary px-6 py-4 text-base font-bold text-primary-foreground shadow-raised transition-[transform,opacity] duration-200 active:scale-[0.96] disabled:pointer-events-none disabled:opacity-70"
+          className="flex items-center justify-center gap-2 rounded-full bg-primary px-6 py-4 text-base font-bold text-primary-foreground shadow-raised transition-[scale,opacity] duration-200 active:scale-[0.96] disabled:pointer-events-none disabled:opacity-70"
         >
           {busy ? (
             <RiLoader4Line className="size-5 animate-spin" />
@@ -50,7 +50,7 @@ export function ScanActions({
           type="button"
           onClick={onRetake}
           disabled={busy}
-          className="flex items-center justify-center gap-2 rounded-full bg-muted px-5 py-4 text-base font-bold text-foreground transition-[transform,opacity] duration-200 active:scale-[0.96] disabled:pointer-events-none disabled:opacity-70"
+          className="flex items-center justify-center gap-2 rounded-full bg-muted px-5 py-4 text-base font-bold text-foreground transition-[scale,opacity] duration-200 active:scale-[0.96] disabled:pointer-events-none disabled:opacity-70"
         >
           <RiRestartLine className="size-5" />
           Retake
@@ -68,9 +68,9 @@ export function ScanActions({
           onStartScan()
         }}
         disabled={busy}
-        className="flex w-full items-center justify-center gap-2 rounded-full bg-primary px-6 py-4 text-base font-bold text-primary-foreground shadow-raised transition-[transform,opacity] duration-200 active:scale-[0.96] disabled:pointer-events-none disabled:opacity-70"
+        className="flex w-full items-center justify-center gap-2 rounded-full bg-primary px-6 py-4 text-base font-bold text-primary-foreground shadow-raised transition-[scale,opacity] duration-200 active:scale-[0.96] disabled:pointer-events-none disabled:opacity-70"
       >
-        <AnimatePresence mode="wait" initial={false}>
+        <AnimatePresence mode="popLayout" initial={false}>
           <motion.span
             key={busy ? 'busy' : 'idle'}
             className="grid place-items-center"

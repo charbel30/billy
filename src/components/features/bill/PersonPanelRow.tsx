@@ -12,6 +12,7 @@ import {
 import { PersonAvatar } from './PersonAvatar'
 import { PortfolioReceipt } from './PortfolioReceipt'
 import { cn } from '~/lib/utils'
+import { softExit } from '~/lib/animations'
 import { personColorValue } from '~/lib/bill/constants'
 
 // One person in the desktop panel: avatar (opens their item breakdown), body
@@ -46,7 +47,7 @@ export function PersonPanelRow({
       layout
       initial={{ opacity: 0, y: 6 }}
       animate={{ opacity: 1, y: 0 }}
-      exit={{ opacity: 0, y: -6 }}
+      exit={softExit}
       style={
         active
           ? {
@@ -104,7 +105,7 @@ export function PersonPanelRow({
           type="button"
           aria-label={`Remove ${person.name}`}
           onClick={() => onRemove(person.id)}
-          className="grid size-9 shrink-0 place-items-center rounded-full text-muted-foreground opacity-60 transition-[opacity,transform] hover:opacity-100 active:scale-[0.96]"
+          className="grid size-9 shrink-0 place-items-center rounded-full text-muted-foreground opacity-60 transition-[opacity,scale] hover:opacity-100 active:scale-[0.96]"
         >
           <RiCloseLine className="size-4" />
         </button>

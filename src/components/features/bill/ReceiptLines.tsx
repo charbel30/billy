@@ -84,7 +84,7 @@ export function ReceiptLines({
                   <button
                     type="button"
                     onClick={() => onRemove(li.id)}
-                    className="grid size-9 place-items-center rounded-full text-muted-foreground hover:text-destructive transition-[transform,color] active:scale-[0.96]"
+                    className="grid size-9 place-items-center rounded-full text-muted-foreground hover:text-destructive transition-[scale,color] active:scale-[0.96]"
                     aria-label="Remove item"
                   >
                     <RiDeleteBin6Line className="size-4" />
@@ -99,7 +99,7 @@ export function ReceiptLines({
       <button
         type="button"
         onClick={onAdd}
-        className="flex w-full items-center justify-center gap-1 py-3 text-sm text-muted-foreground hover:text-foreground transition-[transform,color] active:scale-[0.96]"
+        className="flex w-full items-center justify-center gap-1 py-3 text-sm text-muted-foreground hover:text-foreground transition-[scale,color] active:scale-[0.96]"
       >
         <RiAddLine className="size-4" /> Add item
       </button>

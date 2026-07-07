@@ -14,7 +14,7 @@ export function ResumeBillCard({
     <button
       type="button"
       onClick={() => onOpen(entry)}
-      className="group flex items-center justify-between gap-3 rounded-card border border-border bg-card px-4 py-3 text-left shadow-card transition-[transform,border-color,box-shadow] hover:border-foreground/15 hover:shadow-card-hover active:scale-[0.99]"
+      className="group flex items-center justify-between gap-3 rounded-card border border-border bg-card px-4 py-3 text-left shadow-card transition-[scale,border-color,box-shadow] hover:border-foreground/15 hover:shadow-card-hover active:scale-[0.96]"
     >
       <span className="flex min-w-0 items-center gap-3">
         <span className="grid size-10 shrink-0 place-items-center rounded-full bg-primary/10 text-primary-strong">

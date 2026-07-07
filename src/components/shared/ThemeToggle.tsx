@@ -25,7 +25,7 @@ export function ThemeToggle() {
     <DropdownMenu>
       <DropdownMenuTrigger
         aria-label="Change theme"
-        className="grid size-10 shrink-0 place-items-center rounded-full text-muted-foreground transition-colors hover:bg-muted hover:text-foreground active:scale-[0.96]"
+        className="grid size-10 shrink-0 place-items-center rounded-full text-muted-foreground transition-[color,background-color,scale] hover:bg-muted hover:text-foreground active:scale-[0.96]"
       >
         <AnimatePresence mode="popLayout" initial={false}>
           <motion.span key={preference} {...swap} className="grid place-items-center">

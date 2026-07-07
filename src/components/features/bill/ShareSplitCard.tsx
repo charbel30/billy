@@ -130,7 +130,7 @@ export function ShareSplitCard({
                     type="button"
                     aria-label="Close"
                     onClick={() => setPresenting(false)}
-                    className="absolute right-4 top-4 grid size-11 place-items-center rounded-full bg-neutral-100 text-neutral-500 transition-[transform,background-color] hover:bg-neutral-200 active:scale-[0.96]"
+                    className="absolute right-4 top-4 grid size-11 place-items-center rounded-full bg-neutral-100 text-neutral-500 transition-[scale,background-color] hover:bg-neutral-200 active:scale-[0.96]"
                   >
                     <RiCloseLine className="size-6" />
                   </button>

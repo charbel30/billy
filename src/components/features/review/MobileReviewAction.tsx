@@ -36,7 +36,7 @@ export function MobileReviewAction({
         </div>
         <Button
           size="lg"
-          className="h-[3.25rem] w-full text-base shadow-raised active:scale-[0.98]"
+          className="h-[3.25rem] w-full text-base shadow-raised active:scale-[0.96]"
           disabled={!canContinue}
           onClick={() => {
             tapHaptic()

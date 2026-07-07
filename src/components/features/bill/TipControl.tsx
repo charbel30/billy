@@ -42,7 +42,7 @@ export function TipControl({
               onClick={() => !selected && onChange(pct)}
               aria-pressed={selected}
               className={cn(
-                'shrink-0 rounded-full px-2.5 py-1 text-xs font-bold tabular-nums transition-[background-color,color,transform] active:scale-[0.96] disabled:opacity-60',
+                'shrink-0 rounded-full px-2.5 py-1 text-xs font-bold tabular-nums transition-[background-color,color,scale] active:scale-[0.96] disabled:opacity-60',
                 selected
                   ? 'bg-primary text-primary-foreground'
                   : 'bg-background text-muted-foreground ring-1 ring-border/50 hover:bg-muted hover:text-foreground',

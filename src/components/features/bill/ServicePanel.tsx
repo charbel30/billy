@@ -81,7 +81,7 @@ export function ServicePanel({
                   type="button"
                   onClick={() => onChange({ serviceSplitMode: mode })}
                   className={cn(
-                    'flex-1 rounded-md py-1 capitalize transition-[transform,background-color,color] active:scale-[0.96]',
+                    'flex-1 rounded-md py-1 capitalize transition-[scale,background-color,color] active:scale-[0.96]',
                     meta.serviceSplitMode === mode
                       ? 'bg-primary text-primary-foreground'
                       : 'text-muted-foreground hover:text-foreground',
