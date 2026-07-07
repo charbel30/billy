@@ -1,12 +1,12 @@
 import { createFileRoute } from '@tanstack/react-router'
 import type { Id } from 'convex/_generated/dataModel'
-import { Loader } from '~/components/shared/Loader'
+import { ClaimListSkeleton } from '~/components/features/bill/ClaimListSkeleton'
 import { SplitPage } from '~/components/features/split/SplitPage'
 import { billQueries } from '~/api'
 
 export const Route = createFileRoute('/split/$billId')({
   component: Split,
-  pendingComponent: () => <Loader />,
+  pendingComponent: () => <ClaimListSkeleton />,
   loader: async ({ params, context: { queryClient } }) => {
     await queryClient.ensureQueryData(
       billQueries.detail(params.billId as Id<'bills'>),

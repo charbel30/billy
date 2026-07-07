@@ -34,7 +34,7 @@ export function AddPerson({
           type="button"
           aria-label={label}
           onClick={() => setOpen(true)}
-          className="grid size-10 shrink-0 place-items-center rounded-full border border-dashed border-border text-primary-strong transition-[transform,background-color] hover:bg-muted active:scale-[0.96]"
+          className="grid size-10 shrink-0 place-items-center rounded-full border-2 border-dashed border-primary/30 text-primary-strong transition-[transform,background-color] hover:bg-primary/10 active:scale-[0.96]"
         >
           <RiUserAddLine className="size-5" />
         </button>

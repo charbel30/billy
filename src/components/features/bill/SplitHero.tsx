@@ -27,7 +27,13 @@ export function SplitHero({
 
   return (
     <section className="rounded-card border border-primary/15 bg-primary/[0.06] p-5 shadow-card sm:p-6">
-      <p className="text-xs font-semibold uppercase tracking-widest text-primary-strong/70">
+      <p
+        className={
+          done
+            ? 'text-xs font-semibold uppercase tracking-widest text-success-subtle-foreground'
+            : 'text-xs font-semibold uppercase tracking-widest text-primary-strong/70'
+        }
+      >
         {done ? 'All assigned 🎉' : 'Remaining to split'}
       </p>
       <AnimatedAmount
@@ -43,7 +49,7 @@ export function SplitHero({
 
       <div className="mt-4 h-2.5 overflow-hidden rounded-full bg-primary/10">
         <motion.div
-          className="h-full rounded-full bg-primary"
+          className={done ? 'h-full rounded-full bg-success' : 'h-full rounded-full bg-primary'}
           animate={{ width: `${claimedPct}%` }}
           transition={{ type: 'spring', stiffness: 120, damping: 20 }}
         />

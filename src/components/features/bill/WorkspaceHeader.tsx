@@ -38,7 +38,7 @@ export function WorkspaceHeader({
       <div className="flex shrink-0 flex-wrap items-center justify-end gap-2">
         {status === 'PUBLISHED' ? (
           <span className="inline-flex items-center gap-1.5 rounded-full bg-success-subtle px-3 py-1.5 text-xs font-semibold text-success-subtle-foreground ring-1 ring-success/20">
-            <span className="size-2 rounded-full bg-success" />
+            <span className="size-2 animate-pulse rounded-full bg-success" />
             Link live
           </span>
         ) : null}

@@ -59,7 +59,12 @@ export function PersonBarPill({
         >
           <PersonAvatar name={person.name} color={person.color} size="md" />
         </PopoverTrigger>
-        <PopoverContent side="top" align="center" sideOffset={10}>
+        <PopoverContent
+          side="top"
+          align="center"
+          sideOffset={10}
+          className="max-w-[calc(100vw-2rem)]"
+        >
           {portfolio ? (
             <PortfolioReceipt
               portfolio={portfolio}

@@ -68,7 +68,12 @@ export function PersonPanelRow({
         >
           <PersonAvatar name={person.name} color={person.color} size="lg" />
         </PopoverTrigger>
-        <PopoverContent side="left" align="start" sideOffset={8}>
+        <PopoverContent
+          side="left"
+          align="start"
+          sideOffset={8}
+          className="max-w-[calc(100vw-2rem)]"
+        >
           {portfolio ? (
             <PortfolioReceipt
               portfolio={portfolio}

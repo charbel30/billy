@@ -212,7 +212,7 @@ export function ClaimListItem({
                       sharePeople.map((p) => p.id),
                     )
                   }}
-                  className="grid size-9 place-items-center rounded-full text-muted-foreground transition-[transform,color,background-color] hover:bg-muted hover:text-foreground active:scale-[0.96]"
+                  className="grid size-10 place-items-center rounded-full text-muted-foreground transition-[transform,color,background-color] hover:bg-muted hover:text-foreground active:scale-[0.96]"
                 >
                   <RiGroupLine className="size-4" />
                 </button>
@@ -226,7 +226,7 @@ export function ClaimListItem({
                   onClick={() =>
                     activePerson && onStep(item.id, activePerson.id, -1)
                   }
-                  className="grid size-9 place-items-center rounded-full border border-border transition-[transform,background-color] hover:bg-muted active:scale-[0.96] disabled:opacity-30"
+                  className="grid size-10 place-items-center rounded-full border border-border transition-[transform,background-color] hover:bg-muted active:scale-[0.96] disabled:opacity-30"
                 >
                   <RiSubtractLine className="size-4" />
                 </button>
@@ -257,7 +257,7 @@ export function ClaimListItem({
                     activePerson && onStep(item.id, activePerson.id, +1)
                   }
                   className={cn(
-                    'grid size-9 place-items-center rounded-full border border-border transition-[transform,background-color,opacity] hover:bg-muted active:scale-[0.96] disabled:opacity-30',
+                    'grid size-10 place-items-center rounded-full border border-border transition-[transform,background-color,opacity] hover:bg-muted active:scale-[0.96] disabled:opacity-30',
                     pending && 'opacity-60',
                   )}
                   style={

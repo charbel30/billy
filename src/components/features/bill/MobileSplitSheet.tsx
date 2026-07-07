@@ -5,6 +5,7 @@ import type { Claim, LineItem, Person } from '~/lib/types'
 import type { Portfolio } from '~/lib/split'
 import { personClaimedLines } from '~/lib/split'
 import { formatLbp, formatUsd, toUsd } from '~/lib/currency'
+import { sheetSpring } from '~/lib/animations'
 import { PersonRail } from './PersonRail'
 import { PortfolioReceipt } from './PortfolioReceipt'
 import { SplitSheetHandle } from './SplitSheetHandle'
@@ -125,10 +126,11 @@ export function MobileSplitSheet({
               initial={{ height: 0, opacity: 0 }}
               animate={{ height: 'auto', opacity: 1 }}
               exit={{ height: 0, opacity: 0 }}
-              transition={{ type: 'spring', duration: 0.4, bounce: 0 }}
+              transition={sheetSpring}
               className="overflow-hidden"
             >
-              <div className="max-h-[52vh] space-y-3 overflow-y-auto px-4 pb-2 [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+              {/* Fade masks stand in for hidden scrollbars as the scroll affordance. */}
+              <div className="max-h-[52vh] space-y-3 overflow-y-auto overscroll-contain px-4 pb-2 [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden [mask-image:linear-gradient(to_bottom,transparent,black_12px,black_calc(100%-16px),transparent)]">
                 {orderedBreakdownPeople.map((p) => {
                   const portfolio = portfolioByPerson.get(p.id)
                   if (!portfolio) return null
@@ -203,7 +205,7 @@ export function MobileSplitSheet({
                   {done ? (
                     'all covered'
                   ) : (
-                    <span className="tabular-nums">
+                    <span className="font-receipt">
                       {formatUsd(toUsd(remainingLbp, rate))} left
                     </span>
                   )}

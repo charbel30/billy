@@ -1,5 +1,7 @@
 import { useState } from 'react'
 import type { CSSProperties, ReactNode } from 'react'
+import { RiErrorWarningLine } from '@remixicon/react'
+import { Alert, AlertTitle } from '~/components/ui/alert'
 import { ClaimList } from '~/components/features/bill/ClaimList'
 import { SplitHero } from '~/components/features/bill/SplitHero'
 import { PersonRail } from '~/components/features/bill/PersonRail'
@@ -203,9 +205,10 @@ export function BillSplitWorkspace({
           />
 
           {conflictMessage ? (
-            <div className="rounded-control border border-warning/30 bg-warning-subtle px-4 py-3 text-sm text-warning-subtle-foreground">
-              {conflictMessage}
-            </div>
+            <Alert variant="warning">
+              <RiErrorWarningLine />
+              <AlertTitle>{conflictMessage}</AlertTitle>
+            </Alert>
           ) : null}
 
           <ClaimList

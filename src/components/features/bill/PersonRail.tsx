@@ -110,7 +110,9 @@ export function PersonRail({
   ) : null
 
   return (
-    <div className="space-y-2">
+    // Long tables scroll instead of stretching the aside off-screen; the fade
+    // mask is the scroll affordance (scrollbars are visually noisy here).
+    <div className="max-h-[40vh] space-y-2 overflow-y-auto overscroll-contain [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden [mask-image:linear-gradient(to_bottom,black_calc(100%-16px),transparent)]">
       <AnimatePresence initial={false}>
         {panelOwnPeople.map(renderRow)}
       </AnimatePresence>

@@ -1,5 +1,5 @@
 import { createFileRoute } from '@tanstack/react-router'
-import { Loader } from '~/components/shared/Loader'
+import { ClaimListSkeleton } from '~/components/features/bill/ClaimListSkeleton'
 import { JoinPage } from '~/components/features/join/JoinPage'
 import { billQueries } from '~/api'
 import { seo } from '~/utils/seo'
@@ -7,7 +7,7 @@ import { formatLbp, formatUsd, toUsd } from '~/lib/currency'
 
 export const Route = createFileRoute('/join/$shareToken')({
   component: GuestView,
-  pendingComponent: () => <Loader />,
+  pendingComponent: () => <ClaimListSkeleton />,
   loader: async ({ params, context: { queryClient } }) => {
     const bill = await queryClient.ensureQueryData(
       billQueries.byToken(params.shareToken),

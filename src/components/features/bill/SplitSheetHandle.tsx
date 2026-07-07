@@ -76,7 +76,7 @@ export function SplitSheetHandle({
             <RiCheckboxCircleFill className="size-3.5 text-success" />
           </>
         ) : (
-          <span className="tabular-nums">
+          <span className="font-receipt">
             <AnimatedAmount
               value={toUsd(remainingLbp, rate)}
               format={formatUsd}
