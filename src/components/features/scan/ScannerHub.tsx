@@ -105,10 +105,7 @@ export function ScannerHub() {
   }
 
   return (
-    <div
-      className="min-h-full bg-background px-4 pb-8 pt-4 text-foreground sm:px-6 md:px-10 md:pb-12"
-      style={{ fontFamily: '"Figtree Variable", var(--font-sans)' }}
-    >
+    <div className="min-h-full bg-background px-4 pb-8 pt-4 text-foreground sm:px-6 md:px-10 md:pb-12">
       <input
         ref={cameraInputRef}
         type="file"

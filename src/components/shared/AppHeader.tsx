@@ -9,15 +9,37 @@ import {
 import { cn } from "~/lib/utils";
 import { pillSpring } from "~/lib/animations";
 import { appContent } from "~/lib/appContent";
+import { ThemeToggle } from "~/components/shared/ThemeToggle";
 
 export function AppHeader() {
   return (
     <header className="sticky top-0 z-30 border-b border-border/40 bg-background/85 px-4 py-3 backdrop-blur-xl sm:px-6">
-      <div className="mx-auto flex w-full max-w-7xl items-center justify-center">
+      <div className="mx-auto grid w-full max-w-7xl grid-cols-[1fr_auto_1fr] items-center">
+        <div className="justify-self-start">
+          <HeaderLeft />
+        </div>
         <HeaderCenter />
+        <div className="justify-self-end">
+          <ThemeToggle />
+        </div>
       </div>
     </header>
   );
+}
+
+// Brand sits on the left; on bill screens the centre owns the compact brand +
+// step nav, so the left slot stays empty to keep the nav truly centred.
+function HeaderLeft() {
+  const onBill = useRouterState({
+    select: (s) =>
+      s.matches.some(
+        (m) =>
+          m.routeId === "/review/$billId" ||
+          m.routeId === "/split/$billId" ||
+          m.routeId === "/summary/$billId",
+      ),
+  });
+  return onBill ? null : <BrandMark />;
 }
 
 // The Billy logo — a primary monogram tile + wordmark; links home. `compact`
@@ -63,20 +85,20 @@ function HeaderCenter() {
   });
 
   if (!nav) {
-    return <BrandMark />;
+    return null;
   }
 
   const { billId, step } = nav;
   const item = (active: boolean) =>
     cn(
       "relative flex items-center gap-1.5 rounded-full px-3 py-1.5 text-[13px] font-bold transition-colors",
-      active ? "text-primary" : "text-muted-foreground hover:text-foreground",
+      active ? "text-primary-strong" : "text-muted-foreground hover:text-foreground",
     );
   const pill = (
     <motion.span
       layoutId="header-step-pill"
       transition={pillSpring}
-      className="absolute inset-0 rounded-full bg-background shadow-[0_1px_3px_rgba(0,0,0,0.12)] ring-1 ring-primary/25"
+      className="absolute inset-0 rounded-full bg-background shadow-sm ring-1 ring-primary/25"
     />
   );
 

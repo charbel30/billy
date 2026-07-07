@@ -15,6 +15,7 @@ import { DirectionProvider } from "~/components/ui/direction";
 import { NotFound } from "~/components/shared/NotFound";
 import { AppHeader } from "~/components/shared/AppHeader";
 import appCss from "~/styles/app.css?url";
+import { THEME_INIT_SCRIPT } from "~/lib/theme";
 import { seo } from "~/utils/seo";
 
 export const Route = createRootRouteWithContext<{
@@ -81,14 +82,26 @@ function RootComponent() {
 
 function RootDocument({ children }: { children: React.ReactNode }) {
   return (
-    <html lang="en">
+    <html lang="en" suppressHydrationWarning>
       <head>
+        {/* Applies the stored/system theme before first paint — prevents a
+            light flash when the resolved theme is dark. */}
+        <script dangerouslySetInnerHTML={{ __html: THEME_INIT_SCRIPT }} />
         <HeadContent />
       </head>
       <body>
         <DirectionProvider direction="ltr">
           {children}
-          <Toaster />
+          <Toaster
+            toastOptions={{
+              style: {
+                background: "var(--card)",
+                color: "var(--card-foreground)",
+                boxShadow: "var(--shadow-raised)",
+                borderRadius: "var(--radius-control)",
+              },
+            }}
+          />
         </DirectionProvider>
         <ReactQueryDevtools />
         <TanStackRouterDevtools position="bottom-right" />
