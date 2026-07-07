@@ -67,13 +67,15 @@ export function ClaimListItem({
     <motion.div
       layout
       initial={{ opacity: 0, y: 8 }}
-      animate={{ opacity: 1, y: 0 }}
+      // Motion owns opacity (enter/exit + done dimming); keeping it out of the
+      // CSS transition list avoids double-driving every animation frame.
+      animate={{ opacity: done ? 0.75 : 1, y: 0 }}
       exit={{ opacity: 0, y: -8, filter: 'blur(4px)' }}
       transition={{ type: 'spring', duration: 0.4, bounce: 0 }}
       className={cn(
-        'rounded-card border transition-[box-shadow,background-color,border-color,opacity]',
+        'rounded-card border transition-[box-shadow,background-color,border-color]',
         done
-          ? 'border-dashed border-border/70 bg-muted p-2.5 opacity-75'
+          ? 'border-dashed border-border/70 bg-muted p-2.5'
           : cn(ELEVATED_CARD, ELEVATED_CARD_HOVER, 'p-4'),
       )}
     >

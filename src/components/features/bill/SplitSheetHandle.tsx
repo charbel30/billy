@@ -86,11 +86,14 @@ export function SplitSheetHandle({
         )}
       </span>
       <div className="h-1 w-full max-w-48 overflow-hidden rounded-full bg-primary/10">
+        {/* scaleX, not width — width springs re-layout on every frame. */}
         <motion.div
           className={
-            done ? 'h-full rounded-full bg-success' : 'h-full rounded-full bg-primary'
+            done
+              ? 'h-full w-full origin-left rounded-full bg-success rtl:origin-right'
+              : 'h-full w-full origin-left rounded-full bg-primary rtl:origin-right'
           }
-          animate={{ width: `${claimedPct}%` }}
+          animate={{ scaleX: claimedPct / 100 }}
           transition={{ type: 'spring', stiffness: 120, damping: 20 }}
         />
       </div>

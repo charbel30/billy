@@ -48,9 +48,14 @@ export function SplitHero({
       />
 
       <div className="mt-4 h-2.5 overflow-hidden rounded-full bg-primary/10">
+        {/* scaleX, not width — width springs re-layout on every frame. */}
         <motion.div
-          className={done ? 'h-full rounded-full bg-success' : 'h-full rounded-full bg-primary'}
-          animate={{ width: `${claimedPct}%` }}
+          className={
+            done
+              ? 'h-full w-full origin-left rounded-full bg-success rtl:origin-right'
+              : 'h-full w-full origin-left rounded-full bg-primary rtl:origin-right'
+          }
+          animate={{ scaleX: claimedPct / 100 }}
           transition={{ type: 'spring', stiffness: 120, damping: 20 }}
         />
       </div>

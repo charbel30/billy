@@ -34,16 +34,21 @@ export function ScannerViewfinder({
     <section className="relative aspect-[3/4] overflow-hidden rounded-card border border-border/70 bg-muted">
       <ScannerCorners />
 
+      {/* Full-height wrapper animated with a transform (compositable) — the
+          visible line rides its bottom edge; animating `top` would re-layout
+          every frame, forever. */}
       <motion.div
-        className="absolute left-0 z-10 h-0.5 w-full bg-primary shadow-[0_0_16px_var(--primary)]"
-        initial={{ top: '0%', opacity: 0 }}
-        animate={{ top: ['0%', '100%'], opacity: [0, 1, 1, 0] }}
+        className="pointer-events-none absolute inset-0 z-10"
+        initial={{ y: '-100%', opacity: 0 }}
+        animate={{ y: ['-100%', '0%'], opacity: [0, 1, 1, 0] }}
         transition={{
           duration: busy ? 1.4 : 2.5,
           repeat: Infinity,
           ease: [0.4, 0, 0.2, 1],
         }}
-      />
+      >
+        <div className="absolute bottom-0 left-0 h-0.5 w-full bg-primary shadow-[0_0_16px_var(--primary)]" />
+      </motion.div>
 
       <div className="absolute inset-0 flex items-center justify-center">
         <div className="flex h-1/2 w-2/3 flex-col gap-3 opacity-60">
