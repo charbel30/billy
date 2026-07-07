@@ -1,7 +1,10 @@
 import { useEffect, useMemo, useState } from 'react'
 import { useSuspenseQuery } from '@tanstack/react-query'
+import { RiDoorLockLine, RiInformationLine, RiLoader4Line } from '@remixicon/react'
 import { Button } from '~/components/ui/button'
 import { Input } from '~/components/ui/input'
+import { Alert, AlertTitle } from '~/components/ui/alert'
+import { EmptyState } from '~/components/shared/EmptyState'
 import { BillSplitWorkspace } from '~/components/features/bill/BillSplitWorkspace'
 import { BillSummary } from '~/components/features/bill/BillSummary'
 import {
@@ -132,6 +135,10 @@ export function JoinPage({ shareToken }: { shareToken: string }) {
   if (bill.status === 'FINALIZED') {
     return (
       <div className="mx-auto w-full max-w-md p-4 sm:p-6 space-y-4">
+        <Alert variant="info">
+          <RiInformationLine />
+          <AlertTitle>This split is finalized — the receipt is locked.</AlertTitle>
+        </Alert>
         <BillSummary
           bill={bill}
           title={bill.merchantName || 'Final receipt'}
@@ -173,12 +180,16 @@ export function JoinPage({ shareToken }: { shareToken: string }) {
                 onChange={(e) => setJoinName(e.target.value)}
                 onKeyDown={(e) => e.key === 'Enter' && void join()}
                 placeholder="Your name"
+                className="focus-visible:ring-2 focus-visible:ring-ring/50"
               />
               <Button
                 type="button"
                 disabled={!joinName.trim() || joinSplit.isPending}
                 onClick={() => void join()}
               >
+                {joinSplit.isPending ? (
+                  <RiLoader4Line className="animate-spin" />
+                ) : null}
                 Join
               </Button>
             </div>
@@ -211,12 +222,12 @@ export function JoinPage({ shareToken }: { shareToken: string }) {
 function NotOpenNotice() {
   return (
     <div className="mx-auto w-full max-w-md p-4 sm:p-6 space-y-4">
-      <div className="rounded-card border border-border bg-card p-4">
-        <h1 className="text-xl font-black">This split is not open yet</h1>
-        <p className="mt-1 text-sm text-muted-foreground">
-          Ask the host to invite people from the split page. This page
-          updates by itself the moment the split opens — no need to refresh.
-        </p>
+      <div className="rounded-card border border-border bg-card p-4 shadow-card">
+        <EmptyState
+          icon={RiDoorLockLine}
+          title="This split is not open yet"
+          hint="Ask the host to invite people from the split page. This page updates by itself the moment the split opens — no need to refresh."
+        />
       </div>
       <LegalFooter />
     </div>

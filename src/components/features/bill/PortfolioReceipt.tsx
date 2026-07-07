@@ -5,6 +5,7 @@ import { formatLbp, formatUsd, toUsd } from '~/lib/currency'
 import { formatUnits } from '~/lib/format'
 import { ELEVATED_CARD } from '~/lib/bill/constants'
 import { itemEmoji } from '~/lib/bill/itemEmoji'
+import { tapHaptic } from '~/lib/haptics'
 import { cn } from '~/lib/utils'
 import { PersonAvatar } from './PersonAvatar'
 
@@ -43,7 +44,10 @@ export function PortfolioReceipt({
       layout
       initial={{ opacity: 0, y: 8 }}
       animate={{ opacity: 1, y: 0 }}
-      className={cn(!bare && cn('p-4', ELEVATED_CARD))}
+      className={cn(
+        !bare && cn('p-4 transition-colors', ELEVATED_CARD),
+        !bare && paid && 'bg-success-subtle/50',
+      )}
     >
       <div className="flex items-center gap-2">
         <PersonAvatar name={portfolio.name} color={portfolio.color} size="sm" />
@@ -52,7 +56,10 @@ export function PortfolioReceipt({
           <button
             type="button"
             disabled={togglePending}
-            onClick={() => onTogglePaid(!paid)}
+            onClick={() => {
+              tapHaptic()
+              onTogglePaid(!paid)
+            }}
             className={cn(
               'ml-auto flex shrink-0 items-center gap-1 rounded-full px-2.5 py-1 text-xs font-bold transition-[background-color,color,transform] active:scale-[0.96] disabled:opacity-50',
               paid
