@@ -19,7 +19,7 @@ export function RecentScanPanel({
   const visible = expanded ? entries : entries.slice(0, COLLAPSED_COUNT)
 
   return (
-    <section className="rounded-4xl bg-card/80 p-4 shadow-[0_16px_48px_rgba(0,0,0,0.06)] ring-1 ring-border/50 backdrop-blur md:p-6">
+    <section className="rounded-card bg-card/80 p-4 shadow-card ring-1 ring-border/50 backdrop-blur md:p-6">
       <div className="mb-3 flex items-center justify-between gap-2">
         <h2 className="text-lg font-bold">{scanHubCopy.recentTitle}</h2>
         <div className="flex items-center gap-2">
@@ -57,9 +57,9 @@ export function RecentScanPanel({
                   exit={{ opacity: 0, y: -6 }}
                   transition={{ type: 'spring', duration: 0.3, bounce: 0 }}
                   whileTap={{ scale: 0.98 }}
-                  className="group flex w-full items-center gap-3 rounded-2xl bg-muted/60 px-4 py-3 text-left transition-colors hover:bg-muted"
+                  className="group flex w-full items-center gap-3 rounded-control bg-muted/60 px-4 py-3 text-left transition-colors hover:bg-muted"
                 >
-                  <span className="grid size-10 shrink-0 place-items-center rounded-full bg-primary/10 text-primary">
+                  <span className="grid size-10 shrink-0 place-items-center rounded-full bg-primary/10 text-primary-strong">
                     <RiFileList3Line className="size-5" />
                   </span>
                   <span className="min-w-0 flex-1">
@@ -80,7 +80,7 @@ export function RecentScanPanel({
             <button
               type="button"
               onClick={() => setExpanded((v) => !v)}
-              className="mt-3 w-full rounded-full py-2 text-xs font-bold text-primary transition-colors hover:bg-primary/10"
+              className="mt-3 w-full rounded-full py-2 text-xs font-bold text-primary-strong transition-colors hover:bg-primary/10"
             >
               {expanded ? 'Show less' : `Show all ${entries.length}`}
             </button>

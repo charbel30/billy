@@ -154,7 +154,7 @@ export function BillSplitWorkspace({
     <>
       {panelExtra}
       {tipControl ? (
-        <div className="rounded-3xl bg-background/70 px-4 py-3 ring-1 ring-border/40">
+        <div className="rounded-control bg-background/70 px-4 py-3 ring-1 ring-border/40">
           {tipControl}
         </div>
       ) : null}
@@ -203,7 +203,7 @@ export function BillSplitWorkspace({
           />
 
           {conflictMessage ? (
-            <div className="rounded-3xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-800">
+            <div className="rounded-control border border-warning/30 bg-warning-subtle px-4 py-3 text-sm text-warning-subtle-foreground">
               {conflictMessage}
             </div>
           ) : null}
@@ -228,7 +228,7 @@ export function BillSplitWorkspace({
 
         {/* Desktop: sticky person panel + actions */}
         <aside className="hidden lg:sticky lg:top-6 lg:block">
-          <div className="space-y-4 rounded-4xl bg-muted/60 p-4 ring-1 ring-border/40">
+          <div className="space-y-4 rounded-card bg-muted/60 p-4 ring-1 ring-border/40">
             {personPanel}
             {actionSlot ? <div className="space-y-2">{actionSlot}</div> : null}
           </div>

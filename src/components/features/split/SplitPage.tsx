@@ -166,7 +166,7 @@ export function SplitPage({ billId }: { billId: Id<'bills'> }) {
       description="Pick a person, claim their items, and invite everyone from this same screen."
       notice={
         finalized ? (
-          <div className="flex items-center gap-2.5 rounded-2xl bg-muted px-4 py-2.5 text-xs font-medium text-muted-foreground ring-1 ring-border/60">
+          <div className="flex items-center gap-2.5 rounded-control bg-muted px-4 py-2.5 text-xs font-medium text-muted-foreground ring-1 ring-border/60">
             <RiLockLine className="size-4 shrink-0" />
             This split is finalized, so edits are locked for everyone.
           </div>

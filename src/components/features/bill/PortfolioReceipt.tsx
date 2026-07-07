@@ -43,7 +43,7 @@ export function PortfolioReceipt({
       layout
       initial={{ opacity: 0, y: 8 }}
       animate={{ opacity: 1, y: 0 }}
-      className={cn(!bare && cn('rounded-3xl p-4', ELEVATED_CARD))}
+      className={cn(!bare && cn('p-4', ELEVATED_CARD))}
     >
       <div className="flex items-center gap-2">
         <PersonAvatar name={portfolio.name} color={portfolio.color} size="sm" />
@@ -56,8 +56,8 @@ export function PortfolioReceipt({
             className={cn(
               'ml-auto flex shrink-0 items-center gap-1 rounded-full px-2.5 py-1 text-xs font-bold transition-[background-color,color,transform] active:scale-[0.96] disabled:opacity-50',
               paid
-                ? 'bg-emerald-100 text-emerald-700'
-                : 'bg-muted text-muted-foreground hover:bg-emerald-50 hover:text-emerald-700',
+                ? 'bg-success-subtle text-success-subtle-foreground'
+                : 'bg-muted text-muted-foreground hover:bg-success-subtle hover:text-success-subtle-foreground',
             )}
           >
             {paid ? (
@@ -69,7 +69,7 @@ export function PortfolioReceipt({
             )}
           </button>
         ) : paid ? (
-          <span className="ml-auto flex shrink-0 items-center gap-1 rounded-full bg-emerald-100 px-2.5 py-1 text-xs font-bold text-emerald-700">
+          <span className="ml-auto flex shrink-0 items-center gap-1 rounded-full bg-success-subtle px-2.5 py-1 text-xs font-bold text-success-subtle-foreground">
             Paid <RiCheckLine className="size-3.5" />
           </span>
         ) : null}
@@ -81,7 +81,7 @@ export function PortfolioReceipt({
         {lines.map((l) => {
           const emoji = itemEmoji(l.name)
           return (
-            <div key={l.itemId} className="flex justify-between gap-2 tabular-nums">
+            <div key={l.itemId} className="flex justify-between gap-2 font-receipt">
               <span className="truncate text-muted-foreground">
                 {formatUnits(l.units)}× {emoji ? <span aria-hidden>{emoji} </span> : null}
                 {l.name}
@@ -96,14 +96,14 @@ export function PortfolioReceipt({
       </div>
 
       {serviceChargeOn && portfolio.serviceShareLbp !== 0 && (
-        <div className="mt-1 flex justify-between text-xs text-muted-foreground tabular-nums">
+        <div className="mt-1 flex justify-between font-receipt text-xs text-muted-foreground">
           <span>service &amp; tax</span>
           <span>{formatUsd(toUsd(portfolio.serviceShareLbp, rate))}</span>
         </div>
       )}
 
       {portfolio.tipShareLbp !== 0 && (
-        <div className="mt-1 flex justify-between text-xs text-muted-foreground tabular-nums">
+        <div className="mt-1 flex justify-between font-receipt text-xs text-muted-foreground">
           <span>tip{tipPercent ? ` (${tipPercent}%)` : ''}</span>
           <span>{formatUsd(toUsd(portfolio.tipShareLbp, rate))}</span>
         </div>
@@ -116,10 +116,10 @@ export function PortfolioReceipt({
           Total
         </span>
         <div className="text-right">
-          <div className="text-2xl font-black tracking-tight text-primary">
+          <div className="font-receipt text-2xl font-bold tracking-tight text-primary-strong">
             {formatUsd(toUsd(portfolio.totalLbp, rate))}
           </div>
-          <div className="text-xs text-muted-foreground tabular-nums">
+          <div className="font-receipt text-xs text-muted-foreground">
             {formatLbp(portfolio.totalLbp)}
           </div>
         </div>

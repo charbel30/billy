@@ -12,6 +12,7 @@ import {
 import { PersonAvatar } from './PersonAvatar'
 import { PortfolioReceipt } from './PortfolioReceipt'
 import { cn } from '~/lib/utils'
+import { personColorValue } from '~/lib/bill/constants'
 
 // One person in the desktop panel: avatar (opens their item breakdown), body
 // (tap to make active), optional remove button, and the active radio marker.
@@ -48,11 +49,14 @@ export function PersonPanelRow({
       exit={{ opacity: 0, y: -6 }}
       style={
         active
-          ? { borderColor: person.color, backgroundColor: `${person.color}14` }
+          ? {
+              borderColor: personColorValue(person.color),
+              backgroundColor: `color-mix(in oklab, ${personColorValue(person.color)} 8%, transparent)`,
+            }
           : undefined
       }
       className={cn(
-        'flex w-full items-center gap-2 rounded-3xl border-2 p-2 transition-colors',
+        'flex w-full items-center gap-2 rounded-control border-2 p-2 transition-colors',
         active ? '' : 'border-transparent bg-background hover:bg-muted/60',
       )}
     >
@@ -106,7 +110,7 @@ export function PersonPanelRow({
           'size-5 shrink-0',
           !active && 'text-muted-foreground opacity-40',
         )}
-        style={active ? { color: person.color } : undefined}
+        style={active ? { color: personColorValue(person.color) } : undefined}
       />
     </motion.div>
   )

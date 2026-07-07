@@ -20,7 +20,7 @@ export function RateField({
       <button
         type="button"
         onClick={() => setOpen(true)}
-        className="inline-flex items-center gap-2 rounded-full bg-primary/10 px-4 py-2 text-xs font-semibold text-primary transition-colors hover:bg-primary/15"
+        className="inline-flex items-center gap-2 rounded-full bg-primary/10 px-4 py-2 text-xs font-semibold text-primary-strong transition-colors hover:bg-primary/15"
       >
         <RiExchangeDollarLine className="size-4" />
         <span className="tabular-nums">1 USD = {formatLbpCompact(rate ?? 0)}</span>
@@ -29,7 +29,7 @@ export function RateField({
   }
 
   return (
-    <div className="rounded-3xl bg-muted/70 p-3">
+    <div className="rounded-control bg-muted/70 p-3">
       <p className="text-xs font-medium text-muted-foreground">
         Exchange rate (LL per $1)
       </p>
@@ -39,7 +39,7 @@ export function RateField({
         placeholder="90,000"
         onCommit={onCommit}
         align="center"
-        className="mt-1 w-full rounded-2xl border border-border bg-background py-2 text-sm tabular-nums"
+        className="mt-1 w-full rounded-control border border-border bg-background py-2 text-sm tabular-nums"
       />
       <p className="text-xs text-muted-foreground">
         Only change this if the venue used a different rate.

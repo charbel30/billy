@@ -12,7 +12,7 @@ export function CompactServiceTaxControl({
 }) {
   const on = meta.serviceChargeOn
   return (
-    <div className="mt-5 rounded-4xl bg-background/65 p-3 ring-1 ring-border/50">
+    <div className="mt-5 rounded-card bg-background/65 p-3 ring-1 ring-border/50">
       <div className="flex items-center justify-between gap-4">
         <div>
           <p className="text-sm font-bold">Service &amp; tax</p>
@@ -54,7 +54,7 @@ function CompactMoneyField({
   onCommit: (value: number) => void
 }) {
   return (
-    <label className="rounded-3xl bg-muted/60 px-3 py-2">
+    <label className="rounded-control bg-muted/60 px-3 py-2">
       <span className="block text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">
         {label}
       </span>

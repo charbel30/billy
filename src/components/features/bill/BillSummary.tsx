@@ -65,7 +65,7 @@ export function BillSummary({
       </div>
 
       {!bill.rate && (
-        <p className="rounded-3xl bg-amber-50 px-4 py-3 text-sm text-amber-700">
+        <p className="rounded-control bg-warning-subtle px-4 py-3 text-sm text-warning-subtle-foreground">
           No rate set — USD shows as $0.00. Add the venue rate on the review
           screen.
         </p>
@@ -93,7 +93,7 @@ export function BillSummary({
         })}
       </div>
 
-      <div className="flex items-center justify-between rounded-3xl bg-muted/70 px-4 py-3 ring-1 ring-border/40">
+      <div className="flex items-center justify-between rounded-card bg-muted/70 px-4 py-3 ring-1 ring-border/40">
         <div>
           <span className="block font-bold text-muted-foreground">
             Grand total
@@ -108,7 +108,7 @@ export function BillSummary({
           <AnimatedAmount
             value={toUsd(grandLbp, bill.rate)}
             format={formatUsd}
-            className="block text-xl font-black tracking-tight text-primary"
+            className="block text-xl font-bold tracking-tight text-primary-strong"
           />
           <AnimatedAmount
             value={grandLbp}

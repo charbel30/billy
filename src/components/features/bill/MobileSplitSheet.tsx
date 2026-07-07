@@ -106,7 +106,7 @@ export function MobileSplitSheet({
       ref={wrapperRef}
       className="fixed inset-x-0 bottom-0 z-30 bg-gradient-to-t from-background via-background/95 to-background/0 px-4 pb-[max(1rem,env(safe-area-inset-bottom))] pt-8 lg:hidden"
     >
-      <div className="mx-auto max-w-md overflow-hidden rounded-[2rem] bg-muted/95 shadow-[0_-18px_54px_rgba(0,0,0,0.10)] ring-1 ring-border/60 backdrop-blur-xl">
+      <div className="mx-auto max-w-md overflow-hidden rounded-card bg-muted/95 shadow-dock ring-1 ring-border/60 backdrop-blur-xl">
         <SplitSheetHandle
           expanded={expanded}
           onExpandedChange={setExpanded}
@@ -144,7 +144,7 @@ export function MobileSplitSheet({
                   )
                 })}
 
-                <div className="flex items-center justify-between rounded-3xl bg-background/70 px-4 py-3 ring-1 ring-border/40">
+                <div className="flex items-center justify-between rounded-control bg-background/70 px-4 py-3 ring-1 ring-border/40">
                   <div>
                     <span className="block font-bold text-muted-foreground">
                       Grand total
@@ -156,17 +156,17 @@ export function MobileSplitSheet({
                     ) : null}
                   </div>
                   <div className="text-right">
-                    <span className="block text-lg font-black tracking-tight text-primary tabular-nums">
+                    <span className="block font-receipt text-lg font-bold tracking-tight text-primary-strong">
                       {formatUsd(toUsd(grandLbp, rate))}
                     </span>
-                    <span className="block text-xs font-semibold text-muted-foreground tabular-nums">
+                    <span className="block font-receipt text-xs font-semibold text-muted-foreground">
                       {formatLbp(grandLbp)}
                     </span>
                   </div>
                 </div>
 
                 {expandedExtra ? (
-                  <div className="rounded-3xl bg-background/70 px-4 py-3 ring-1 ring-border/40">
+                  <div className="rounded-control bg-background/70 px-4 py-3 ring-1 ring-border/40">
                     {expandedExtra}
                   </div>
                 ) : null}

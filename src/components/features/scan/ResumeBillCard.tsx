@@ -13,10 +13,10 @@ export function ResumeBillCard({
     <button
       type="button"
       onClick={() => onOpen(entry)}
-      className="group flex items-center justify-between gap-3 rounded-3xl border border-border bg-card px-4 py-3 text-left shadow-[0_1px_3px_rgba(0,0,0,0.06),0_10px_30px_rgba(0,0,0,0.05)] transition-[transform,border-color] hover:border-foreground/20 active:scale-[0.99]"
+      className="group flex items-center justify-between gap-3 rounded-card border border-border bg-card px-4 py-3 text-left shadow-card transition-[transform,border-color] hover:border-foreground/20 active:scale-[0.99]"
     >
       <span className="flex min-w-0 items-center gap-3">
-        <span className="grid size-10 shrink-0 place-items-center rounded-full bg-primary/10 text-primary">
+        <span className="grid size-10 shrink-0 place-items-center rounded-full bg-primary/10 text-primary-strong">
           <RiRestartLine className="size-5" />
         </span>
         <span className="min-w-0">

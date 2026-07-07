@@ -46,7 +46,7 @@ export function ReceiptLines({
                   onCommit={(raw) => onUpdate(li.id, { name: raw })}
                   className="flex-1 -mx-1 font-medium"
                 />
-                <span className="font-semibold tabular-nums">
+                <span className="font-receipt font-semibold">
                   {formatLbp(li.lineTotal)}
                 </span>
               </div>
@@ -54,7 +54,7 @@ export function ReceiptLines({
                 {low && (
                   <span
                     title="Low confidence — check this line"
-                    className="inline-flex items-center gap-0.5 text-amber-600"
+                    className="inline-flex items-center gap-0.5 text-warning-subtle-foreground"
                   >
                     <RiAlertLine className="size-3.5" /> check
                   </span>

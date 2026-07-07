@@ -36,7 +36,7 @@ export function ItemPrice({
             key="lbp"
             {...swap}
             className={cn(
-              'block whitespace-nowrap font-black tracking-tight tabular-nums',
+              'block whitespace-nowrap font-receipt font-bold tracking-tight',
               done ? 'text-sm text-muted-foreground' : 'text-base text-foreground',
             )}
           >
@@ -47,8 +47,8 @@ export function ItemPrice({
             key="usd"
             {...swap}
             className={cn(
-              'block font-black tracking-tight tabular-nums',
-              done ? 'text-sm text-muted-foreground' : 'text-lg text-primary',
+              'block font-receipt font-bold tracking-tight',
+              done ? 'text-sm text-muted-foreground' : 'text-lg text-primary-strong',
             )}
           >
             {formatUsd(toUsd(lbp, rate))}

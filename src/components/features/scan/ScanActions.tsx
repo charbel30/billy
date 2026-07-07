@@ -33,7 +33,7 @@ export function ScanActions({
           type="button"
           onClick={onConfirm}
           disabled={busy}
-          className="flex items-center justify-center gap-2 rounded-full bg-primary px-6 py-4 text-base font-bold text-primary-foreground shadow-[0_16px_48px_rgba(0,0,0,0.08)] transition-[transform,opacity] duration-200 active:scale-[0.96] disabled:pointer-events-none disabled:opacity-70"
+          className="flex items-center justify-center gap-2 rounded-full bg-primary px-6 py-4 text-base font-bold text-primary-foreground shadow-raised transition-[transform,opacity] duration-200 active:scale-[0.96] disabled:pointer-events-none disabled:opacity-70"
         >
           {busy ? (
             <RiLoader4Line className="size-5 animate-spin" />
@@ -61,7 +61,7 @@ export function ScanActions({
         type="button"
         onClick={onStartScan}
         disabled={busy}
-        className="flex w-full items-center justify-center gap-2 rounded-full bg-primary px-6 py-4 text-base font-bold text-primary-foreground shadow-[0_16px_48px_rgba(0,0,0,0.08)] transition-[transform,opacity] duration-200 active:scale-[0.96] disabled:pointer-events-none disabled:opacity-70"
+        className="flex w-full items-center justify-center gap-2 rounded-full bg-primary px-6 py-4 text-base font-bold text-primary-foreground shadow-raised transition-[transform,opacity] duration-200 active:scale-[0.96] disabled:pointer-events-none disabled:opacity-70"
       >
         <AnimatePresence mode="wait" initial={false}>
           <motion.span
@@ -82,7 +82,7 @@ export function ScanActions({
         type="button"
         onClick={onTrySample}
         disabled={busy}
-        className="mx-auto block rounded-full px-4 py-1.5 text-sm font-semibold text-primary transition-colors hover:bg-primary/10 disabled:pointer-events-none disabled:opacity-70"
+        className="mx-auto block rounded-full px-4 py-1.5 text-sm font-semibold text-primary-strong transition-colors hover:bg-primary/10 disabled:pointer-events-none disabled:opacity-70"
       >
         Try a sample bill — no camera needed
       </button>

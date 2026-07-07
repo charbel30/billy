@@ -59,7 +59,7 @@ export function SplitSheetHandle({
       <span
         className={
           done
-            ? 'flex items-center gap-1 text-[11px] font-semibold text-emerald-700'
+            ? 'flex items-center gap-1 text-[11px] font-semibold text-success-subtle-foreground'
             : 'flex items-center gap-1 text-[11px] font-semibold text-muted-foreground'
         }
       >
@@ -73,7 +73,7 @@ export function SplitSheetHandle({
         {done ? (
           <>
             Everyone's covered
-            <RiCheckboxCircleFill className="size-3.5 text-emerald-600" />
+            <RiCheckboxCircleFill className="size-3.5 text-success" />
           </>
         ) : (
           <span className="tabular-nums">
@@ -88,7 +88,7 @@ export function SplitSheetHandle({
       <div className="h-1 w-full max-w-48 overflow-hidden rounded-full bg-primary/10">
         <motion.div
           className={
-            done ? 'h-full rounded-full bg-emerald-500' : 'h-full rounded-full bg-primary'
+            done ? 'h-full rounded-full bg-success' : 'h-full rounded-full bg-primary'
           }
           animate={{ width: `${claimedPct}%` }}
           transition={{ type: 'spring', stiffness: 120, damping: 20 }}

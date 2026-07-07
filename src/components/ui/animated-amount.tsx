@@ -19,5 +19,5 @@ export function AnimatedAmount({
     spring.set(value)
   }, [value, spring])
   const text = useTransform(spring, (v) => format(v))
-  return <motion.span className={cn('tabular-nums', className)}>{text}</motion.span>
+  return <motion.span className={cn('font-receipt', className)}>{text}</motion.span>
 }

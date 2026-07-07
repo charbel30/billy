@@ -10,15 +10,31 @@ export const PERSON_COLORS = [
   '#f97316',
 ] as const
 
+// The hexes above are persisted on people in Convex, so they stay the stored
+// identity; rendering maps them to the theme's --person-* tokens (app.css) so
+// person colors adapt to light/dark. Unknown hexes (legacy data) pass through.
+export const PERSON_COLOR_VARS: Record<string, string> = {
+  '#ef4444': 'var(--person-1)',
+  '#f59e0b': 'var(--person-2)',
+  '#10b981': 'var(--person-3)',
+  '#3b82f6': 'var(--person-4)',
+  '#8b5cf6': 'var(--person-5)',
+  '#ec4899': 'var(--person-6)',
+  '#14b8a6': 'var(--person-7)',
+  '#f97316': 'var(--person-8)',
+}
+
+export function personColorValue(hex: string | undefined): string {
+  return (hex && PERSON_COLOR_VARS[hex]) ?? hex ?? 'var(--person-fallback)'
+}
+
 // Shared "elevated item card" surface — a clear border + layered shadow on
 // bg-card. Used across the split / review / summary item & receipt cards so they
 // read as distinct, separated cards consistently.
-export const ELEVATED_CARD =
-  'border border-border bg-card shadow-[0_1px_3px_rgba(0,0,0,0.08),0_12px_30px_rgba(0,0,0,0.10)]'
+export const ELEVATED_CARD = 'rounded-card border border-border bg-card shadow-card'
 export const ELEVATED_CARD_HOVER =
-  'hover:border-foreground/20 hover:shadow-[0_2px_6px_rgba(0,0,0,0.10),0_18px_44px_rgba(0,0,0,0.14)]'
+  'hover:border-foreground/15 hover:shadow-card-hover transition-[box-shadow,border-color]'
 
-export const DEFAULT_PERSON_COLOR = '#999'
 export const LOW_CONFIDENCE_THRESHOLD = 0.6
 export const SAVE_DELAY_MS = 5000
 export const DEFAULT_PERSON_NAME = 'self'

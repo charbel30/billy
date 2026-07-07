@@ -63,7 +63,7 @@ export function ReviewPage({ billId }: { billId: Id<'bills'> }) {
       ) : null}
 
       <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_22rem] lg:items-start">
-        <section className="rounded-4xl bg-card/80 p-4 shadow-[0_18px_56px_rgba(0,0,0,0.06)] ring-1 ring-border/50 backdrop-blur sm:p-6 lg:p-8">
+        <section className="rounded-card bg-card/80 p-4 shadow-card ring-1 ring-border/50 backdrop-blur sm:p-6 lg:p-8">
           <div className="mb-7">
             <div className="min-w-0">
               <BlurCommitInput
@@ -103,7 +103,7 @@ export function ReviewPage({ billId }: { billId: Id<'bills'> }) {
           />
 
           {recon.diff != null && !recon.ok && meta.printedTotalLbp != null ? (
-            <p className="mt-4 rounded-3xl bg-destructive/10 px-4 py-3 text-sm text-destructive">
+            <p className="mt-4 rounded-control bg-destructive-subtle px-4 py-3 text-sm text-destructive-subtle-foreground">
               Items differ from the printed receipt total by{' '}
               {formatLbp(Math.abs(recon.diff))}. Check the lines above.
             </p>

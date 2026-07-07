@@ -12,7 +12,7 @@ export function ScannerViewfinder({
 }) {
   if (previewUrl) {
     return (
-      <section className="relative aspect-[3/4] overflow-hidden rounded-4xl border border-border/70 bg-muted">
+      <section className="relative aspect-[3/4] overflow-hidden rounded-card border border-border/70 bg-muted">
         <img
           src={previewUrl}
           alt="Receipt photo preview"
@@ -31,7 +31,7 @@ export function ScannerViewfinder({
   }
 
   return (
-    <section className="relative aspect-[3/4] overflow-hidden rounded-4xl border border-border/70 bg-muted">
+    <section className="relative aspect-[3/4] overflow-hidden rounded-card border border-border/70 bg-muted">
       <ScannerCorners />
 
       <motion.div
@@ -74,7 +74,7 @@ export function ScannerViewfinder({
 
       <div className="absolute inset-x-0 bottom-8 flex justify-center">
         <div className="flex items-center gap-2 rounded-full bg-background/80 px-4 py-2 text-xs font-semibold text-muted-foreground shadow-sm backdrop-blur">
-          <RiCameraLine className={cn('size-4', busy ? 'animate-pulse text-primary' : '')} />
+          <RiCameraLine className={cn('size-4', busy ? 'animate-pulse text-primary-strong' : '')} />
           {busy ? scanHubCopy.scanningStatus : scanHubCopy.readyStatus}
         </div>
       </div>

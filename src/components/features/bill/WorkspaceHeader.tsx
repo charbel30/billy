@@ -20,7 +20,7 @@ export function WorkspaceHeader({
   return (
     <div className="flex flex-wrap items-start justify-between gap-3">
       <div className="flex min-w-0 items-center gap-3">
-        <div className="grid size-11 shrink-0 place-items-center rounded-2xl bg-primary/10 text-primary">
+        <div className="grid size-11 shrink-0 place-items-center rounded-control bg-primary/10 text-primary-strong">
           <RiGroupLine className="size-5" />
         </div>
         <div className="min-w-0">
@@ -37,13 +37,13 @@ export function WorkspaceHeader({
       </div>
       <div className="flex shrink-0 flex-wrap items-center justify-end gap-2">
         {status === 'PUBLISHED' ? (
-          <span className="inline-flex items-center gap-1.5 rounded-full bg-emerald-500/10 px-3 py-1.5 text-xs font-semibold text-emerald-700 ring-1 ring-emerald-500/20">
-            <span className="size-2 rounded-full bg-emerald-500" />
+          <span className="inline-flex items-center gap-1.5 rounded-full bg-success-subtle px-3 py-1.5 text-xs font-semibold text-success-subtle-foreground ring-1 ring-success/20">
+            <span className="size-2 rounded-full bg-success" />
             Link live
           </span>
         ) : null}
         {rate ? (
-          <span className="inline-flex items-center gap-1.5 rounded-full bg-primary/10 px-3 py-1.5 text-xs font-semibold text-primary">
+          <span className="inline-flex items-center gap-1.5 rounded-full bg-primary/10 px-3 py-1.5 text-xs font-semibold text-primary-strong">
             <RiExchangeDollarLine className="size-4" />
             <span className="tabular-nums">$1 = {formatLbp(rate)}</span>
           </span>

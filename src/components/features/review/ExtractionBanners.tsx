@@ -33,7 +33,7 @@ export function ExtractionFailedBanner({
   }
 
   return (
-    <div className="mb-5 rounded-3xl bg-destructive/10 p-4 text-sm ring-1 ring-destructive/20">
+    <div className="mb-5 rounded-control bg-destructive-subtle p-4 text-destructive-subtle-foreground text-sm ring-1 ring-destructive/20">
       <input
         ref={inputRef}
         type="file"
@@ -74,7 +74,7 @@ export function ExtractionFailedBanner({
 
 export function ExtractingBanner() {
   return (
-    <div className="mb-5 flex items-center justify-center gap-2 rounded-3xl border border-border bg-card/80 p-3 text-sm text-muted-foreground shadow-sm">
+    <div className="mb-5 flex items-center justify-center gap-2 rounded-control border border-border bg-card/80 p-3 text-sm text-muted-foreground shadow-sm">
       <RiLoader4Line className="animate-spin" /> Reading your receipt...
     </div>
   )

@@ -34,7 +34,7 @@ export function AddPerson({
           type="button"
           aria-label={label}
           onClick={() => setOpen(true)}
-          className="grid size-10 shrink-0 place-items-center rounded-full border border-dashed border-border text-primary transition-[transform,background-color] hover:bg-muted active:scale-[0.96]"
+          className="grid size-10 shrink-0 place-items-center rounded-full border border-dashed border-border text-primary-strong transition-[transform,background-color] hover:bg-muted active:scale-[0.96]"
         >
           <RiUserAddLine className="size-5" />
         </button>
@@ -44,7 +44,7 @@ export function AddPerson({
       <button
         type="button"
         onClick={() => setOpen(true)}
-        className="flex w-full items-center justify-center gap-2 rounded-3xl border-2 border-dashed border-primary/30 px-4 py-3 text-sm font-bold text-primary transition-[transform,background-color] hover:bg-primary/10 active:scale-[0.96]"
+        className="flex w-full items-center justify-center gap-2 rounded-control border-2 border-dashed border-primary/30 px-4 py-3 text-sm font-bold text-primary-strong transition-[transform,background-color] hover:bg-primary/10 active:scale-[0.96]"
       >
         <RiUserAddLine className="size-5" /> {label}
       </button>
@@ -55,7 +55,7 @@ export function AddPerson({
     <div
       className={cn(
         'flex items-center gap-1 rounded-full border border-border bg-background px-2 py-1',
-        variant === 'bar' ? 'shrink-0' : 'rounded-3xl px-3 py-2',
+        variant === 'bar' ? 'shrink-0' : 'rounded-control px-3 py-2',
       )}
     >
       <input
@@ -74,7 +74,7 @@ export function AddPerson({
         type="button"
         onClick={submit}
         aria-label={label}
-        className="grid size-7 shrink-0 place-items-center rounded-full text-primary transition-[transform,color] hover:text-foreground active:scale-[0.96]"
+        className="grid size-7 shrink-0 place-items-center rounded-full text-primary-strong transition-[transform,color] hover:text-foreground active:scale-[0.96]"
       >
         {variant === 'bar' ? (
           <RiAddLine className="size-4" />

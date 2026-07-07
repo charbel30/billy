@@ -9,7 +9,11 @@ import type { Claim, LineItem, Person } from '~/lib/types'
 import { effectiveUnitPrice, remainingUnits } from '~/lib/split'
 import { formatUsd, toUsd } from '~/lib/currency'
 import { formatUnits } from '~/lib/format'
-import { ELEVATED_CARD, ELEVATED_CARD_HOVER } from '~/lib/bill/constants'
+import {
+  ELEVATED_CARD,
+  ELEVATED_CARD_HOVER,
+  personColorValue,
+} from '~/lib/bill/constants'
 import { itemEmoji } from '~/lib/bill/itemEmoji'
 import { tapHaptic } from '~/lib/haptics'
 import { swap } from '~/lib/animations'
@@ -67,7 +71,7 @@ export function ClaimListItem({
       exit={{ opacity: 0, y: -8, filter: 'blur(4px)' }}
       transition={{ type: 'spring', duration: 0.4, bounce: 0 }}
       className={cn(
-        'rounded-3xl border transition-[box-shadow,background-color,border-color,opacity]',
+        'rounded-card border transition-[box-shadow,background-color,border-color,opacity]',
         done
           ? 'border-dashed border-border/70 bg-muted p-2.5 opacity-75'
           : cn(ELEVATED_CARD, ELEVATED_CARD_HOVER, 'p-4'),
@@ -152,7 +156,7 @@ export function ClaimListItem({
                     )}
                     style={
                       isActive
-                        ? { boxShadow: `0 0 0 2px ${p?.color ?? '#999'}` }
+                        ? { boxShadow: `0 0 0 2px ${personColorValue(p?.color)}` }
                         : undefined
                     }
                   >
@@ -183,7 +187,7 @@ export function ClaimListItem({
             <motion.div
               key="done"
               {...swap}
-              className="flex shrink-0 items-center gap-1.5 text-primary"
+              className="flex shrink-0 items-center gap-1.5 text-primary-strong"
             >
               <span className="text-[11px] font-medium text-muted-foreground">
                 tap avatar to remove
@@ -259,7 +263,7 @@ export function ClaimListItem({
                   style={
                     activePerson && remaining > 0.0001
                       ? {
-                          backgroundColor: activePerson.color,
+                          backgroundColor: personColorValue(activePerson.color),
                           color: 'white',
                           borderColor: 'transparent',
                         }

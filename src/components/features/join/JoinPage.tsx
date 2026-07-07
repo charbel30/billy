@@ -160,7 +160,7 @@ export function JoinPage({ shareToken }: { shareToken: string }) {
       addPlaceholder="Add someone"
       panelExtra={
         joined ? null : (
-          <div className="space-y-3 rounded-3xl bg-background/85 p-4 shadow-[0_14px_34px_rgba(0,0,0,0.04)] ring-1 ring-border/35">
+          <div className="space-y-3 rounded-card bg-background/85 p-4 shadow-card ring-1 ring-border/35">
             <div>
               <h2 className="font-black">Join the split</h2>
               <p className="text-sm text-muted-foreground">
@@ -211,7 +211,7 @@ export function JoinPage({ shareToken }: { shareToken: string }) {
 function NotOpenNotice() {
   return (
     <div className="mx-auto w-full max-w-md p-4 sm:p-6 space-y-4">
-      <div className="rounded-3xl border border-border bg-card p-4">
+      <div className="rounded-card border border-border bg-card p-4">
         <h1 className="text-xl font-black">This split is not open yet</h1>
         <p className="mt-1 text-sm text-muted-foreground">
           Ask the host to invite people from the split page. This page

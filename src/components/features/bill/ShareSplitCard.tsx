@@ -74,7 +74,9 @@ export function ShareSplitCard({
 
   return (
     <div className="space-y-4">
-      <div className="mx-auto w-fit rounded-3xl bg-white p-4 shadow-[0_1px_3px_rgba(0,0,0,0.06),0_10px_30px_rgba(0,0,0,0.05)] ring-1 ring-border/40">
+      {/* Intentionally literal white (not bg-card): the QR must stay
+          dark-on-light for phone cameras to scan it in dark mode too. */}
+      <div className="mx-auto w-fit rounded-card bg-white p-4 shadow-card outline outline-black/10 dark:outline-white/10">
         <QRCodeSVG value={url} size={184} marginSize={1} />
       </div>
       <p className="text-center text-xs text-muted-foreground">
@@ -146,7 +148,7 @@ export function ShareSplitCard({
                       value={url}
                       size={720}
                       marginSize={2}
-                      className="h-auto w-[min(78vw,58vh)] rounded-2xl"
+                      className="h-auto w-[min(78vw,58vh)] rounded-card"
                     />
                     <p className="text-base font-semibold text-neutral-500">
                       Scan to join the split

@@ -50,7 +50,7 @@ export function AuditLineItems({
       <button
         type="button"
         onClick={onAdd}
-        className="flex w-full items-center justify-center gap-2 rounded-4xl border-2 border-dashed border-primary/30 px-4 py-4 text-sm font-bold text-primary transition-[transform,background-color] hover:bg-primary/10 active:scale-[0.96]"
+        className="flex w-full items-center justify-center gap-2 rounded-control border-2 border-dashed border-primary/30 px-4 py-4 text-sm font-bold text-primary-strong transition-[transform,background-color] hover:bg-primary/10 active:scale-[0.96]"
       >
         <RiAddLine className="size-5" />
         Add item
@@ -89,7 +89,7 @@ function AuditLineItem({
 
   return (
     <>
-      <div className={cn('rounded-3xl p-4 sm:hidden', ELEVATED_CARD)}>
+      <div className={cn('p-4 sm:hidden', ELEVATED_CARD)}>
         <div className="flex items-start justify-between gap-3">
           <div className="min-w-0 flex-1">
             <BlurCommitInput
@@ -99,7 +99,7 @@ function AuditLineItem({
               className="w-full min-w-0 text-lg font-black leading-tight tracking-tight"
             />
             {low ? (
-              <span className="mt-1 inline-flex items-center gap-1 text-xs font-semibold text-amber-600">
+              <span className="mt-1 inline-flex items-center gap-1 text-xs font-semibold text-warning-subtle-foreground">
                 <RiAlertLine className="size-3.5" />
                 Check this
               </span>
@@ -107,7 +107,7 @@ function AuditLineItem({
           </div>
 
           <div className="shrink-0 text-right">
-            <span className="block text-3xl font-black tracking-tight text-primary tabular-nums">
+            <span className="block font-receipt text-3xl font-bold tracking-tight text-primary-strong">
               {formatUsd(toUsd(item.lineTotal, rate))}
             </span>
             <div className="mt-1.5 flex items-center justify-end gap-1 text-xs font-semibold text-muted-foreground">
@@ -141,7 +141,7 @@ function AuditLineItem({
             <span className="block text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">
               Unit price
             </span>
-            <span className="mt-0.5 block truncate text-sm font-black tabular-nums text-foreground">
+            <span className="mt-0.5 block truncate font-receipt text-sm font-bold text-foreground">
               {formatLbpCompact(item.unitPrice)} LBP
             </span>
           </div>
@@ -159,7 +159,7 @@ function AuditLineItem({
 
       <div
         className={cn(
-          'group hidden grid-cols-[minmax(0,1fr)_9rem] gap-3 rounded-3xl p-4 transition-[box-shadow,border-color] sm:grid',
+          'group hidden grid-cols-[minmax(0,1fr)_9rem] gap-3 p-4 transition-[box-shadow,border-color] sm:grid',
           ELEVATED_CARD,
           ELEVATED_CARD_HOVER,
         )}
@@ -173,7 +173,7 @@ function AuditLineItem({
               className="w-full min-w-0 text-base font-black leading-tight tracking-tight"
             />
             {low ? (
-              <span className="mt-0.5 inline-flex shrink-0 items-center gap-1 text-xs font-semibold text-amber-600">
+              <span className="mt-0.5 inline-flex shrink-0 items-center gap-1 text-xs font-semibold text-warning-subtle-foreground">
                 <RiAlertLine className="size-3.5" />
                 Check this
               </span>
@@ -204,7 +204,7 @@ function AuditLineItem({
         </div>
 
         <div className="text-right">
-          <span className="block text-base font-black tracking-tight text-foreground tabular-nums">
+          <span className="block font-receipt text-base font-bold tracking-tight text-foreground">
             {formatUsd(toUsd(item.lineTotal, rate))}
           </span>
           <div className="mt-1.5 flex items-center justify-end gap-1 text-xs font-semibold text-muted-foreground">

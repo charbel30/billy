@@ -1,5 +1,5 @@
 import { cn } from '~/lib/utils'
-import { DEFAULT_PERSON_COLOR } from '~/lib/bill/constants'
+import { personColorValue } from '~/lib/bill/constants'
 
 // A small circular initials avatar filled with the person's color. Used in the
 // item cards (assignee stacks), the person panel, and the summary receipts.
@@ -31,7 +31,7 @@ export function PersonAvatar({
     <span
       title={title ?? name}
       aria-label={name}
-      style={{ backgroundColor: color ?? DEFAULT_PERSON_COLOR }}
+      style={{ backgroundColor: personColorValue(color ?? undefined) }}
       className={cn(
         'inline-grid place-items-center rounded-full font-bold text-white ring-2 ring-background',
         SIZE[size],

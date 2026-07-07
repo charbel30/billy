@@ -23,7 +23,7 @@ export function SettlementSummary({
 }) {
   return (
     <aside className="hidden lg:sticky lg:top-24 lg:block">
-      <section className="rounded-4xl bg-muted/80 p-5 shadow-[0_18px_56px_rgba(0,0,0,0.08)] ring-1 ring-border/40 backdrop-blur sm:p-6">
+      <section className="rounded-card bg-muted/80 p-5 shadow-raised ring-1 ring-border/40 backdrop-blur sm:p-6">
         <h2 className="mb-5 flex items-center gap-2 text-base font-black">
           <RiReceiptLine className="size-5" />
           Settlement summary
@@ -35,12 +35,12 @@ export function SettlementSummary({
             <AnimatedAmount
               value={toUsd(total, rate)}
               format={formatUsd}
-              className="block text-4xl font-black tracking-tight text-primary"
+              className="block text-4xl font-black tracking-tight text-primary-strong"
             />
             <AnimatedAmount
               value={total}
               format={formatLbpCompact}
-              className="block text-sm font-semibold text-primary/80"
+              className="block text-sm font-semibold text-primary-strong/80"
             />
           </div>
         </div>
@@ -49,7 +49,7 @@ export function SettlementSummary({
 
         <Button
           size="lg"
-          className="mt-6 h-14 w-full text-base shadow-[0_14px_30px_rgba(0,0,0,0.12)]"
+          className="mt-6 h-14 w-full text-base shadow-raised"
           disabled={!canContinue}
           onClick={() => void onContinue()}
         >

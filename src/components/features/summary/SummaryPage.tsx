@@ -47,7 +47,7 @@ export function SummaryPage({ billId }: { billId: Id<'bills'> }) {
   return (
     <div className="mx-auto w-full max-w-md p-4 sm:p-6 space-y-4">
       {!finalized ? (
-        <div className="rounded-3xl bg-amber-50 px-4 py-3 text-sm text-amber-700">
+        <div className="rounded-control bg-warning-subtle px-4 py-3 text-sm text-warning-subtle-foreground">
           This is a live preview. Finalize the split when everyone is done to
           lock the receipt.
         </div>
@@ -85,7 +85,7 @@ export function SummaryPage({ billId }: { billId: Id<'bills'> }) {
       </Button>
 
       {shared ? (
-        <section className="rounded-3xl border border-border bg-card p-4">
+        <section className="rounded-card border border-border bg-card p-4">
           <h2 className="mb-3 text-center text-sm font-bold text-muted-foreground">
             Guests can scan to {finalized ? 'see the receipt' : 'claim items'}
           </h2>

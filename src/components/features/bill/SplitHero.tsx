@@ -26,19 +26,19 @@ export function SplitHero({
   const done = remaining <= 0.5
 
   return (
-    <section className="rounded-4xl border border-primary/15 bg-primary/[0.06] p-5 shadow-[0_1px_3px_rgba(0,0,0,0.06),0_16px_44px_rgba(79,55,138,0.10)] sm:p-6">
-      <p className="text-xs font-semibold uppercase tracking-widest text-primary/70">
+    <section className="rounded-card border border-primary/15 bg-primary/[0.06] p-5 shadow-card sm:p-6">
+      <p className="text-xs font-semibold uppercase tracking-widest text-primary-strong/70">
         {done ? 'All assigned 🎉' : 'Remaining to split'}
       </p>
       <AnimatedAmount
         value={toUsd(remaining, rate)}
         format={formatUsd}
-        className="mt-1 block text-5xl font-black tracking-tight text-primary tabular-nums"
+        className="mt-1 block font-receipt text-5xl font-bold tracking-tight text-primary-strong"
       />
       <AnimatedAmount
         value={remaining}
         format={formatLbp}
-        className="mt-0.5 block text-sm font-semibold text-primary/60 tabular-nums"
+        className="mt-0.5 block font-receipt text-sm font-semibold text-primary-strong/60"
       />
 
       <div className="mt-4 h-2.5 overflow-hidden rounded-full bg-primary/10">
@@ -52,11 +52,11 @@ export function SplitHero({
       <div className="mt-3 flex items-center justify-between text-xs font-semibold">
         <span className="text-muted-foreground">
           Total bill{' '}
-          <span className="text-foreground tabular-nums">
+          <span className="font-receipt text-foreground">
             {formatUsd(toUsd(total, rate))}
           </span>
         </span>
-        <span className="text-muted-foreground tabular-nums">
+        <span className="font-receipt text-muted-foreground">
           {Math.round(claimedPct)}% claimed
         </span>
       </div>
