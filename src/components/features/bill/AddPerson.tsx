@@ -74,7 +74,7 @@ export function AddPerson({
         type="button"
         onClick={submit}
         aria-label={label}
-        className="grid size-7 shrink-0 place-items-center rounded-full text-primary-strong transition-[transform,color] hover:text-foreground active:scale-[0.96]"
+        className="grid size-9 shrink-0 place-items-center rounded-full text-primary-strong transition-[transform,color] hover:text-foreground active:scale-[0.96]"
       >
         {variant === 'bar' ? (
           <RiAddLine className="size-4" />

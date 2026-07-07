@@ -15,7 +15,7 @@ Execution order: phases run in order, committing at each phase boundary (Phase 1
 - [x] Phase 4 — review screen pass
 - [x] Phase 5 — split screen pass
 - [x] Phase 6 — summary + join pass
-- [ ] Phase 7 — a11y + final polish sweep
+- [x] Phase 7 — a11y + final polish sweep
 
 ## Context
 

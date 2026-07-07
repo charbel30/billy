@@ -32,9 +32,6 @@
   p {
     text-wrap: pretty;
   }
-  .using-mouse * {
-    outline: none !important;
-  }
 }
 
 /* Motion components honor this via <MotionConfig reducedMotion="user">;

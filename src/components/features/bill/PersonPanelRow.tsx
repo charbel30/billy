@@ -104,7 +104,7 @@ export function PersonPanelRow({
           type="button"
           aria-label={`Remove ${person.name}`}
           onClick={() => onRemove(person.id)}
-          className="grid size-7 shrink-0 place-items-center rounded-full text-muted-foreground opacity-60 transition-[opacity,transform] hover:opacity-100 active:scale-[0.96]"
+          className="grid size-9 shrink-0 place-items-center rounded-full text-muted-foreground opacity-60 transition-[opacity,transform] hover:opacity-100 active:scale-[0.96]"
         >
           <RiCloseLine className="size-4" />
         </button>
