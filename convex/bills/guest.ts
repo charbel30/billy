@@ -1,36 +1,28 @@
-// Guest-side writes, all scoped by (shareToken, guestSessionId). Guests can
-// only join, add companions, and edit their own claims — host writes live in
-// lifecycle.ts / people.ts / hostClaims.ts.
+// Guest-side writes. The guestMutation builder (functions.ts) consumes
+// (shareToken, guestSessionId), gates on PUBLISHED, and injects ctx.bill —
+// guests can only join, add companions, and edit their own claims. Host
+// writes live in lifecycle.ts / people.ts / hostClaims.ts.
 import { v } from 'convex/values'
-import { mutation } from '../_generated/server'
-import { invariant } from '../lib/invariant'
 import { claim } from '../schema'
 import { claimRowsForBill, syncClaimRows, toWireClaims } from './claimRows'
+import { guestMutation } from './functions'
 import { claimInputValidator } from './validators'
 import {
-  assertGuestSessionId,
+  assertOwnPerson,
   assertRoomForPerson,
-  assertSharedForGuestWrites,
   cleanName,
   createGuestPerson,
   findGuestPerson,
-  getBillByShareToken,
   limitGuestJoin,
   now,
   saveClaimsForPerson,
 } from '../model/bills'
 
-export const joinSplit = mutation({
-  args: {
-    shareToken: v.string(),
-    guestSessionId: v.string(),
-    name: v.string(),
-  },
+export const joinSplit = guestMutation({
+  args: { name: v.string() },
   returns: v.object({ personId: v.string() }),
-  handler: async (ctx, { shareToken, guestSessionId, name }) => {
-    assertGuestSessionId(guestSessionId)
-    const bill = await getBillByShareToken(ctx, shareToken)
-    assertSharedForGuestWrites(bill)
+  handler: async (ctx, { name }) => {
+    const { bill, guestSessionId } = ctx
     const clean = cleanName(name)
     const existing = findGuestPerson(bill, guestSessionId)
 
@@ -58,17 +50,11 @@ export const joinSplit = mutation({
   },
 })
 
-export const addGuestPerson = mutation({
-  args: {
-    shareToken: v.string(),
-    guestSessionId: v.string(),
-    name: v.string(),
-  },
+export const addGuestPerson = guestMutation({
+  args: { name: v.string() },
   returns: v.object({ personId: v.string() }),
-  handler: async (ctx, { shareToken, guestSessionId, name }) => {
-    assertGuestSessionId(guestSessionId)
-    const bill = await getBillByShareToken(ctx, shareToken)
-    assertSharedForGuestWrites(bill)
+  handler: async (ctx, { name }) => {
+    const { bill, guestSessionId } = ctx
     assertRoomForPerson(bill)
     await limitGuestJoin(ctx, bill._id)
     const nextPerson = createGuestPerson(bill, cleanName(name), guestSessionId)
@@ -81,10 +67,8 @@ export const addGuestPerson = mutation({
   },
 })
 
-export const saveGuestClaims = mutation({
+export const saveGuestClaims = guestMutation({
   args: {
-    shareToken: v.string(),
-    guestSessionId: v.string(),
     personId: v.string(),
     claims: v.array(claimInputValidator),
   },
@@ -92,15 +76,9 @@ export const saveGuestClaims = mutation({
     acceptedClaims: v.array(claim),
     rejectedCount: v.number(),
   }),
-  handler: async (ctx, { shareToken, guestSessionId, personId, claims }) => {
-    assertGuestSessionId(guestSessionId)
-    const bill = await getBillByShareToken(ctx, shareToken)
-    assertSharedForGuestWrites(bill)
-    const person = bill.people.find((p) => p.id === personId)
-    invariant(person, 'person not found')
-    if (person.guestSessionId !== guestSessionId) {
-      throw new Error('You can only edit your own claims')
-    }
+  handler: async (ctx, { personId, claims }) => {
+    const { bill } = ctx
+    assertOwnPerson(bill, personId, ctx.guestSessionId)
 
     const currentClaims = toWireClaims(await claimRowsForBill(ctx, bill._id))
     const result = saveClaimsForPerson(

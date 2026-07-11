@@ -2,7 +2,7 @@
 // No Convex functions are registered here — public wrappers stay thin and
 // call into this module (see docs.convex.dev best practices).
 import { ConvexError } from 'convex/values'
-import type { MutationCtx } from '../_generated/server'
+ import type { MutationCtx, QueryCtx } from '../_generated/server'
 import { invariant } from '../lib/invariant'
 import { rateLimiter } from '../lib/rateLimits'
 import type { Bill, Claim, LineItem, Person } from '../schema'
@@ -88,7 +88,7 @@ export function validateClaims(
   }
 }
 
-export async function getBillByShareToken(ctx: MutationCtx, shareToken: string) {
+export async function getBillByShareToken(ctx: QueryCtx, shareToken: string) {
   const bill = await ctx.db
     .query('bills')
     .withIndex('by_share_token', (q) => q.eq('shareToken', shareToken))
@@ -127,6 +127,20 @@ export async function limitGuestJoin(ctx: MutationCtx, billId: string) {
   if (!ok) {
     throw new ConvexError('Too many people joining at once — try again in a minute.')
   }
+}
+
+/** A guest may only touch a person row minted by their own session. */
+export function assertOwnPerson(
+  bill: Bill,
+  personId: string,
+  guestSessionId: string,
+) {
+  const person = bill.people.find((p) => p.id === personId)
+  invariant(person, 'person not found')
+  if (person.guestSessionId !== guestSessionId) {
+    throw new Error('You can only edit your own claims')
+  }
+  return person
 }
 
 export function assertSharedForGuestWrites(bill: Bill) {

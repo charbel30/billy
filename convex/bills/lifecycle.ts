@@ -1,12 +1,13 @@
 import { ConvexError, v } from 'convex/values'
-import { mutation } from '../_generated/server'
-import { invariant } from '../lib/invariant'
-import { rateLimiter } from '../lib/rateLimits'
 import { lineItem, person } from '../schema'
 import { claimRowsForBill, syncClaimRows, toWireClaims } from './claimRows'
+import {
+  billMutation,
+  deviceLimitedMutation,
+  editableBillMutation,
+} from './functions'
 import { metaValidator } from './validators'
 import {
-  assertEditableSplit,
   assertFiniteNumber,
   definedOnly,
   now,
@@ -23,23 +24,19 @@ import {
 import { newClientId, newShareToken, nextPersonColor } from '../../src/lib/bill/ids'
 import { reconcileClaims } from '../../src/lib/bill/edits'
 
-export const createBill = mutation({
+// Bill creation is free (a DB row) but gates the scan flow; generous cap.
+const newBillMutation = deviceLimitedMutation(
+  'createBillPerDevice',
+  'Too many new bills from this device — try again in a bit.',
+)
+
+export const createBill = newBillMutation({
   args: {
     merchantName: v.optional(v.string()),
     currencyPrimary: v.optional(v.string()),
-    deviceId: v.string(),
   },
   returns: v.id('bills'),
   handler: async (ctx, args) => {
-    if (args.deviceId.trim().length < 8) {
-      throw new ConvexError('Invalid device id')
-    }
-    const { ok } = await rateLimiter.limit(ctx, 'createBillPerDevice', {
-      key: args.deviceId,
-    })
-    if (!ok) {
-      throw new ConvexError('Too many new bills from this device — try again in a bit.')
-    }
     return await ctx.db.insert('bills', {
       merchantName: args.merchantName ?? '',
       currencyPrimary: args.currencyPrimary ?? 'LBP',
@@ -87,17 +84,10 @@ const DEMO_LINES: Array<[name: string, qty: number, lineTotalLbp: number]> = [
   ['Satyr White Glass', 2, 1_800_000],
 ]
 
-export const createDemoBill = mutation({
-  args: { deviceId: v.string() },
+export const createDemoBill = newBillMutation({
+  args: {},
   returns: v.id('bills'),
-  handler: async (ctx, { deviceId }) => {
-    if (deviceId.trim().length < 8) throw new ConvexError('Invalid device id')
-    const { ok } = await rateLimiter.limit(ctx, 'createBillPerDevice', {
-      key: deviceId,
-    })
-    if (!ok) {
-      throw new ConvexError('Too many new bills from this device — try again in a bit.')
-    }
+  handler: async (ctx) => {
     return await ctx.db.insert('bills', {
       merchantName: 'Maison Zola (sample)',
       branch: 'Gemmayze, Beirut',
@@ -133,17 +123,15 @@ export const createDemoBill = mutation({
   },
 })
 
-export const saveWorking = mutation({
+export const saveWorking = billMutation({
   args: {
-    id: v.id('bills'),
     lineItems: v.optional(v.array(lineItem)),
     people: v.optional(v.array(person)),
     meta: v.optional(metaValidator),
   },
   returns: v.null(),
-  handler: async (ctx, { id, lineItems, people, meta }) => {
-    const bill = await ctx.db.get(id)
-    invariant(bill, `missing bill ${id}`)
+  handler: async (ctx, { lineItems, people, meta }) => {
+    const { bill } = ctx
     // A finalized bill is a frozen receipt. Don't let a late flush mutate it.
     if (bill.status === 'FINALIZED') return null
 
@@ -154,7 +142,7 @@ export const saveWorking = mutation({
     // written only by the scoped claim mutations). The editor's job here
     // is to keep them CONSISTENT: reconcile the current rows against the next
     // items/people (drop orphans, scale over-claims) and sync the diff.
-    const currentClaims = toWireClaims(await claimRowsForBill(ctx, id))
+    const currentClaims = toWireClaims(await claimRowsForBill(ctx, bill._id))
     const nextClaims = reconcileClaims(nextItems, nextPeople, currentClaims)
     validateLineItems(nextItems)
     validatePeople(nextPeople)
@@ -184,33 +172,31 @@ export const saveWorking = mutation({
       }
     }
 
-    await ctx.db.patch(id, patch)
-    await syncClaimRows(ctx, id, nextClaims) // no-op unless items/people changed
+    await ctx.db.patch(bill._id, patch)
+    await syncClaimRows(ctx, bill._id, nextClaims) // no-op unless items/people changed
     return null
   },
 })
 
-export const publish = mutation({
-  args: { id: v.id('bills') },
+export const publish = billMutation({
+  args: {},
   returns: v.string(),
-  handler: async (ctx, { id }) => {
-    const bill = await ctx.db.get(id)
-    invariant(bill, `missing bill ${id}`)
+  handler: async (ctx) => {
+    const { bill } = ctx
     if (bill.status !== 'PUBLISHED' && bill.status !== 'FINALIZED') {
-      await ctx.db.patch(id, { status: 'PUBLISHED', updatedAt: now() })
+      await ctx.db.patch(bill._id, { status: 'PUBLISHED', updatedAt: now() })
     }
     return bill.shareToken
   },
 })
 
-export const finalize = mutation({
-  args: { id: v.id('bills') },
+export const finalize = billMutation({
+  args: {},
   returns: v.null(),
-  handler: async (ctx, { id }) => {
-    const bill = await ctx.db.get(id)
-    invariant(bill, `missing bill ${id}`)
+  handler: async (ctx) => {
+    const { bill } = ctx
     if (bill.status !== 'FINALIZED') {
-      await ctx.db.patch(id, { status: 'FINALIZED', updatedAt: now() })
+      await ctx.db.patch(bill._id, { status: 'FINALIZED', updatedAt: now() })
     }
     return null
   },
@@ -219,21 +205,18 @@ export const finalize = mutation({
 // Tip is bill-meta (host-only knob), so this is a normal bill patch with a
 // version bump — unlike claims. It's excluded from metaValidator on purpose:
 // this mutation is the ONLY writer, so a stale saveWorking flush can't touch it.
-export const setTipPercent = mutation({
+export const setTipPercent = editableBillMutation({
   args: {
-    id: v.id('bills'),
     tipPercent: v.number(),
   },
   returns: v.null(),
-  handler: async (ctx, { id, tipPercent }) => {
-    const bill = await ctx.db.get(id)
-    invariant(bill, `missing bill ${id}`)
-    assertEditableSplit(bill)
+  handler: async (ctx, { tipPercent }) => {
+    const { bill } = ctx
     assertFiniteNumber(tipPercent, 'Tip percent')
     if (tipPercent < 0 || tipPercent > MAX_TIP_PERCENT) {
       throw new Error(`Tip must be between 0 and ${MAX_TIP_PERCENT}%`)
     }
-    await ctx.db.patch(id, {
+    await ctx.db.patch(bill._id, {
       tipPercent,
       version: bill.version + 1,
       updatedAt: now(),
@@ -245,16 +228,17 @@ export const setTipPercent = mutation({
 // Unpublish: rotate the share token so the old link stops resolving, and drop
 // back to READY so guests can no longer write. Publishing again issues the new
 // link. (Spec §10: tokens must be revocable — a leaked link shouldn't live forever.)
-export const revokeShare = mutation({
-  args: { id: v.id('bills') },
+// Not editableBillMutation: the finalized case must stay a ConvexError so the
+// message survives prod error redaction and reaches the share-sheet toast.
+export const revokeShare = billMutation({
+  args: {},
   returns: v.null(),
-  handler: async (ctx, { id }) => {
-    const bill = await ctx.db.get(id)
-    invariant(bill, `missing bill ${id}`)
+  handler: async (ctx) => {
+    const { bill } = ctx
     if (bill.status === 'FINALIZED') {
       throw new ConvexError('This split has been finalized')
     }
-    await ctx.db.patch(id, {
+    await ctx.db.patch(bill._id, {
       shareToken: newShareToken(),
       status: bill.status === 'PUBLISHED' ? 'READY' : bill.status,
       version: bill.version + 1,

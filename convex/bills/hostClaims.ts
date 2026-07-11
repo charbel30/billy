@@ -1,16 +1,16 @@
 // Host-side claim writes. All of these are row diffs against the `claims`
-// table — no bill patch, no version bump (see convex/model/bills.ts).
+// table — no bill patch, no version bump (see convex/model/bills.ts). The
+// editableBillMutation builder resolves ctx.bill and gates on not-FINALIZED.
 import { v } from 'convex/values'
-import { mutation } from '../_generated/server'
 import { invariant } from '../lib/invariant'
 import { claim } from '../schema'
 import { claimRowsForBill, syncClaimRows, toWireClaims } from './claimRows'
+import { editableBillMutation } from './functions'
 import { claimInputValidator } from './validators'
-import { assertEditableSplit, saveClaimsForPerson } from '../model/bills'
+import { saveClaimsForPerson } from '../model/bills'
 
-export const saveHostClaims = mutation({
+export const saveHostClaims = editableBillMutation({
   args: {
-    id: v.id('bills'),
     personId: v.string(),
     claims: v.array(claimInputValidator),
   },
@@ -18,21 +18,19 @@ export const saveHostClaims = mutation({
     acceptedClaims: v.array(claim),
     rejectedCount: v.number(),
   }),
-  handler: async (ctx, { id, personId, claims }) => {
-    const bill = await ctx.db.get(id)
-    invariant(bill, `missing bill ${id}`)
-    assertEditableSplit(bill)
+  handler: async (ctx, { personId, claims }) => {
+    const { bill } = ctx
     const person = bill.people.find((p) => p.id === personId)
     invariant(person, 'person not found')
 
-    const currentClaims = toWireClaims(await claimRowsForBill(ctx, id))
+    const currentClaims = toWireClaims(await claimRowsForBill(ctx, bill._id))
     const result = saveClaimsForPerson(
       bill.lineItems,
       currentClaims,
       personId,
       claims,
     )
-    await syncClaimRows(ctx, id, result.nextClaims)
+    await syncClaimRows(ctx, bill._id, result.nextClaims)
     return {
       acceptedClaims: result.acceptedClaims,
       rejectedCount: result.rejectedCount,
@@ -40,17 +38,14 @@ export const saveHostClaims = mutation({
   },
 })
 
-export const shareHostItemEvenly = mutation({
+export const shareHostItemEvenly = editableBillMutation({
   args: {
-    id: v.id('bills'),
     itemId: v.string(),
     personIds: v.array(v.string()),
   },
   returns: v.null(),
-  handler: async (ctx, { id, itemId, personIds }) => {
-    const bill = await ctx.db.get(id)
-    invariant(bill, `missing bill ${id}`)
-    assertEditableSplit(bill)
+  handler: async (ctx, { itemId, personIds }) => {
+    const { bill } = ctx
     const item = bill.lineItems.find((li) => li.id === itemId)
     invariant(item, 'item not found')
     if (personIds.length === 0) throw new Error('Choose at least one person')
@@ -60,8 +55,8 @@ export const shareHostItemEvenly = mutation({
     }
 
     const units = item.qty / personIds.length
-    const currentClaims = toWireClaims(await claimRowsForBill(ctx, id))
-    await syncClaimRows(ctx, id, [
+    const currentClaims = toWireClaims(await claimRowsForBill(ctx, bill._id))
+    await syncClaimRows(ctx, bill._id, [
       ...currentClaims.filter((c) => c.itemId !== itemId),
       ...personIds.map((personId) => ({ itemId, personId, units })),
     ])
@@ -73,16 +68,14 @@ export const shareHostItemEvenly = mutation({
 // unclaimed units evenly across ALL people, ADDING on top of existing claims
 // (unlike shareHostItemEvenly, which replaces an item's claims). Claims-only
 // write — no bill patch, no version bump, same as the other claim mutations.
-export const splitLeftoversEvenly = mutation({
-  args: { id: v.id('bills') },
+export const splitLeftoversEvenly = editableBillMutation({
+  args: {},
   returns: v.null(),
-  handler: async (ctx, { id }) => {
-    const bill = await ctx.db.get(id)
-    invariant(bill, `missing bill ${id}`)
-    assertEditableSplit(bill)
+  handler: async (ctx) => {
+    const { bill } = ctx
     if (bill.people.length === 0) throw new Error('No people on the bill')
 
-    const currentClaims = toWireClaims(await claimRowsForBill(ctx, id))
+    const currentClaims = toWireClaims(await claimRowsForBill(ctx, bill._id))
     const byKey = new Map(
       currentClaims.map((c) => [`${c.itemId} ${c.personId}`, { ...c }]),
     )
@@ -103,7 +96,7 @@ export const splitLeftoversEvenly = mutation({
       }
     }
 
-    await syncClaimRows(ctx, id, [...byKey.values()])
+    await syncClaimRows(ctx, bill._id, [...byKey.values()])
     return null
   },
 })

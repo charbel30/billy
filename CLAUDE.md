@@ -53,6 +53,9 @@ convex/
 │   │                 #   lifecycle.ts (create/save/publish/finalize/revoke/tip)
 │   │                 #   people.ts (add/remove/mark-paid), hostClaims.ts, guest.ts
 │   │                 #   queries.ts, uploads.ts, extraction.ts, validators.ts, claimRows.ts
+│   │                 #   functions.ts — custom function builders (convex-helpers): every
+│   │                 #   public bills function registers through one; new cross-cutting
+│   │                 #   concerns (auth, limits, transformations) go in the builders
 ├── model/            # plain-TS helpers (no registered functions) — public functions are
 │   │                 # THIN wrappers that call into here (official Convex pattern)
 ├── extraction/ lib/ schema.ts crons.ts
@@ -107,7 +110,15 @@ bill object. Embedded entities and claim `itemId`/`personId` use client-generate
 validators in `convex/schema.ts` and shared via `convex/bills/validators.ts`. Mutation
 handlers stay thin: shared validation/gates/claim math live in `convex/model/bills.ts`
 (`assertEditableSplit`, `assertSettleOpen`, `saveClaimsForPerson`, …) — reuse those, don't
-re-implement checks inline.
+re-implement checks inline. Identity + status gating is applied by the **custom function
+builders** in `convex/bills/functions.ts` (convex-helpers `customMutation`/`customQuery`):
+`billMutation`/`editableBillMutation`/`settleBillMutation` consume `id` and inject `ctx.bill`;
+`guestMutation`/`guestSettleMutation` consume `shareToken`+`guestSessionId`, gate by status,
+and inject `ctx.bill`+`ctx.guestSessionId`; `deviceLimitedMutation(limit, msg)` consumes
+`deviceId` and charges the per-device rate limit; `billQuery`/`sharedBillQuery` do the same
+for reads. Register new public bills functions through the matching builder, never with raw
+`mutation`/`query` — and put new cross-cutting concerns (auth, transformations) in the
+builders, not in handlers.
 
 **Rule for new data:** stable + bounded + bill-scoped → embed in the bill; high-churn,
 unbounded, or shared across bills (venues, table sessions, menu priors, reports) → own table

@@ -1,54 +1,41 @@
 import { ConvexError, v } from 'convex/values'
-import { mutation } from '../_generated/server'
 import { internal } from '../_generated/api'
 import { invariant } from '../lib/invariant'
 import * as imageStore from '../lib/imageStore'
 import { assertExtractionEnabled, rateLimiter } from '../lib/rateLimits'
 import { retrier } from '../lib/retrier'
+import { deviceLimitedMutation } from './functions'
 
 // Scan mutations are public and unauthenticated, and extraction is the only
 // paid path — so both steps are rate limited per device (client-generated id;
 // honest-user guardrail) with a global daily budget as the real backstop.
 
-function assertDeviceId(deviceId: string) {
-  if (deviceId.trim().length < 8) throw new ConvexError('Invalid device id')
-}
+const DEVICE_BUSY = 'Too many scans from this device — try again in a bit.'
 
-export const generateUploadUrl = mutation({
-  args: { deviceId: v.string() },
+const uploadUrlMutation = deviceLimitedMutation('uploadUrlPerDevice', DEVICE_BUSY)
+// The emergency brake runs before the limiter so a paused scanner doesn't
+// burn the device's tokens.
+const extractMutation = deviceLimitedMutation(
+  'extractPerDevice',
+  DEVICE_BUSY,
+  assertExtractionEnabled,
+)
+
+export const generateUploadUrl = uploadUrlMutation({
+  args: {},
   returns: v.string(),
-  handler: async (ctx, { deviceId }) => {
-    assertDeviceId(deviceId)
-    const { ok } = await rateLimiter.limit(ctx, 'uploadUrlPerDevice', {
-      key: deviceId,
-    })
-    if (!ok) {
-      throw new ConvexError(
-        'Too many scans from this device — try again in a bit.',
-      )
-    }
+  handler: async (ctx) => {
     return await imageStore.createUploadTarget(ctx)
   },
 })
 
-export const attachImageAndExtract = mutation({
+export const attachImageAndExtract = extractMutation({
   args: {
     billId: v.id('bills'),
     imageRef: v.string(),
-    deviceId: v.string(),
   },
   returns: v.null(),
-  handler: async (ctx, { billId, imageRef, deviceId }) => {
-    assertDeviceId(deviceId)
-    assertExtractionEnabled()
-    const perDevice = await rateLimiter.limit(ctx, 'extractPerDevice', {
-      key: deviceId,
-    })
-    if (!perDevice.ok) {
-      throw new ConvexError(
-        'Too many scans from this device — try again in a bit.',
-      )
-    }
+  handler: async (ctx, { billId, imageRef }) => {
     const global = await rateLimiter.limit(ctx, 'extractGlobalDaily')
     if (!global.ok) {
       throw new ConvexError(

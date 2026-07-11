@@ -10,6 +10,7 @@
 
 import type * as bills_claimRows from "../bills/claimRows.js";
 import type * as bills_extraction from "../bills/extraction.js";
+import type * as bills_functions from "../bills/functions.js";
 import type * as bills_guest from "../bills/guest.js";
 import type * as bills_hostClaims from "../bills/hostClaims.js";
 import type * as bills_lifecycle from "../bills/lifecycle.js";
@@ -36,6 +37,7 @@ import type {
 declare const fullApi: ApiFromModules<{
   "bills/claimRows": typeof bills_claimRows;
   "bills/extraction": typeof bills_extraction;
+  "bills/functions": typeof bills_functions;
   "bills/guest": typeof bills_guest;
   "bills/hostClaims": typeof bills_hostClaims;
   "bills/lifecycle": typeof bills_lifecycle;
