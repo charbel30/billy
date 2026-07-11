@@ -6,7 +6,7 @@ import {
   RiSubtractLine,
 } from '@remixicon/react'
 import type { Claim, LineItem, Person } from '~/lib/types'
-import { effectiveUnitPrice, remainingUnits, formatUsd, toUsd } from '~/lib/money'
+import { effectiveUnitPrice, remainingUnits, formatLbp, formatUsd, toUsd } from '~/lib/money'
 import { formatUnits } from '~/lib/format'
 import {
   ELEVATED_CARD,
@@ -16,6 +16,7 @@ import {
   unitsFor,
 } from '~/lib/bill'
 import { tapHaptic, swap } from '~/lib/ui'
+import { useCurrencyDisplay } from '~/hooks/useCurrencyDisplay'
 import { PersonAvatar } from '../people'
 import { ItemPrice } from '../receipt'
 import { cn } from '~/lib/utils'
@@ -48,6 +49,7 @@ export function ClaimListItem({
   /** A claim write for this item is in flight — pulse the unit count. */
   pending: boolean
 }) {
+  const { display } = useCurrencyDisplay()
   const remaining = remainingUnits(item, claims)
   const mine = activePerson ? unitsFor(claims, item.id, activePerson.id) : 0
   const claimants = claims.filter((c) => c.itemId === item.id && c.units > 0)
@@ -57,7 +59,10 @@ export function ClaimListItem({
 
   // One light subtitle: per-unit price (when multi-qty) + how many units
   // are still free — kept as a count, not another money figure.
-  const perEa = item.qty !== 1 ? `${formatUsd(toUsd(unit, rate))} ea` : null
+  const perEa =
+    item.qty !== 1
+      ? `${display === 'lbp' ? formatLbp(unit) : formatUsd(toUsd(unit, rate))} ea`
+      : null
   const leftLabel = done ? null : `${formatUnits(remaining)} left`
   const subtitle = [perEa, leftLabel].filter(Boolean).join(' · ') || null
 

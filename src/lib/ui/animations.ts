@@ -9,6 +9,18 @@ export const swap = {
   transition: { type: 'spring' as const, duration: 0.3, bounce: 0 },
 }
 
+// Layout-neutral sibling of `swap`: both variants stay mounted, stacked in one
+// grid cell, and animate between these targets. Use instead of AnimatePresence
+// when the swap must not change the element's size (mount/unmount inside a
+// `layout` card makes every card ripple and fixed overlays repaint).
+export const crossfadeShown = { opacity: 1, scale: 1, filter: 'blur(0px)' }
+export const crossfadeHidden = { opacity: 0, scale: 0.9, filter: 'blur(3px)' }
+export const crossfadeSpring = {
+  type: 'spring' as const,
+  duration: 0.3,
+  bounce: 0,
+}
+
 // Sliding active-pill in segmented controls (header step nav).
 export const pillSpring = {
   type: 'spring' as const,
