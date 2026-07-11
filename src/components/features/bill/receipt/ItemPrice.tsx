@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import { motion } from 'motion/react'
+import { AnimatePresence, motion } from 'motion/react'
 import { formatLbp, formatUsd, toUsd } from '~/lib/money'
 import { crossfadeHidden, crossfadeShown, crossfadeSpring } from '~/lib/ui'
 import { useCurrencyDisplay } from '~/hooks/useCurrencyDisplay'
@@ -25,15 +25,9 @@ export function ItemPrice({
     return () => clearTimeout(t)
   }, [flashed])
 
-  // Flashing shows the currency opposite to the current primary.
-  const showLbp = lbpPrimary !== flashed
-  const showMicro = display === 'both' && !flashed
-
-  const fade = (shown: boolean) => ({
-    initial: false as const,
-    animate: shown ? crossfadeShown : crossfadeHidden,
-    transition: crossfadeSpring,
-  })
+  const primaryText = lbpPrimary ? formatLbp(lbp) : formatUsd(toUsd(lbp, rate))
+  const flashText = lbpPrimary ? formatUsd(toUsd(lbp, rate)) : formatLbp(lbp)
+  const showMicro = display === 'both'
 
   return (
     <button
@@ -42,41 +36,54 @@ export function ItemPrice({
       aria-label={
         lbpPrimary ? 'Show price in US dollars' : 'Show price in Lebanese pounds'
       }
-      className="text-right transition-transform active:scale-[0.96]"
+      className="relative text-right transition-transform active:scale-[0.96]"
     >
-      <span className="grid justify-items-end [&>*]:col-start-1 [&>*]:row-start-1">
+      {/* Primary price at full size, natural width — no reserved space for the
+          hidden currency. Cycling the mode reflows the card once (animated by
+          the card's layout wrappers); that's rarer and cheaper than shrinking
+          every price to fit the widest LBP string. */}
+      <AnimatePresence mode="popLayout" initial={false}>
         <motion.span
-          aria-hidden={!showLbp}
-          {...fade(showLbp)}
+          key={lbpPrimary ? 'lbp' : 'usd'}
+          initial={crossfadeHidden}
+          animate={flashed ? crossfadeHidden : crossfadeShown}
+          exit={crossfadeHidden}
+          transition={crossfadeSpring}
           className={cn(
-            'whitespace-nowrap font-receipt font-bold tracking-tight',
-            done
-              ? 'text-sm leading-5 text-muted-foreground'
-              : cn(
-                  'text-base leading-7',
-                  lbpPrimary ? 'text-primary-strong' : 'text-foreground',
-                ),
-          )}
-        >
-          {formatLbp(lbp)}
-        </motion.span>
-        <motion.span
-          aria-hidden={showLbp}
-          {...fade(!showLbp)}
-          className={cn(
-            'font-receipt font-bold tracking-tight',
+            'block whitespace-nowrap font-receipt font-bold tracking-tight',
             done
               ? 'text-sm leading-5 text-muted-foreground'
               : 'text-lg leading-7 text-primary-strong',
           )}
         >
-          {formatUsd(toUsd(lbp, rate))}
+          {primaryText}
         </motion.span>
-      </span>
+      </AnimatePresence>
+
+      {/* Tap-flash: the other currency floats over the price as a chip. It's
+          the per-tap hot path, so it never enters the layout — a mount/unmount
+          here made every `layout` card ripple and the fixed dock repaint. */}
+      <AnimatePresence initial={false}>
+        {flashed ? (
+          <motion.span
+            key="flash"
+            initial={crossfadeHidden}
+            animate={crossfadeShown}
+            exit={crossfadeHidden}
+            transition={crossfadeSpring}
+            className="pointer-events-none absolute right-0 top-0 z-10 whitespace-nowrap rounded-md bg-popover px-1.5 py-0.5 font-receipt text-sm font-bold tracking-tight text-foreground shadow-md ring-1 ring-border"
+          >
+            {flashText}
+          </motion.span>
+        ) : null}
+      </AnimatePresence>
+
       {done ? null : (
         <motion.span
           aria-hidden={!showMicro}
-          {...fade(showMicro)}
+          initial={false}
+          animate={showMicro ? crossfadeShown : crossfadeHidden}
+          transition={crossfadeSpring}
           className="block whitespace-nowrap font-receipt text-[10px] font-semibold tabular-nums text-muted-foreground"
         >
           {formatLbp(lbp)}

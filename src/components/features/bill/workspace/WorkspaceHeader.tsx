@@ -71,7 +71,7 @@ export function WorkspaceHeader({
             <span className="tabular-nums">$1 = {formatLbp(rate)}</span>
             {/* All three labels stay stacked in one cell so the chip (and the
                 pill) never changes width mid-cycle — same crossfade as prices. */}
-            <span className="grid justify-items-center rounded-full bg-primary/15 px-1.5 text-[10px] font-bold tabular-nums [&>*]:col-start-1 [&>*]:row-start-1">
+            <span className="grid justify-items-center rounded-full bg-primary/15 px-1.5 text-[10px] font-bold tabular-nums *:col-start-1 *:row-start-1">
               {CURRENCY_DISPLAYS.map((d) => (
                 <motion.span
                   key={d}

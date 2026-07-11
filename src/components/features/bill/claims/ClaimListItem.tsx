@@ -19,6 +19,7 @@ import { tapHaptic, swap } from '~/lib/ui'
 import { useCurrencyDisplay } from '~/hooks/useCurrencyDisplay'
 import { PersonAvatar } from '../people'
 import { ItemPrice } from '../receipt'
+import { FitText } from '~/components/ui/fit-text'
 import { cn } from '~/lib/utils'
 
 // One receipt line in the claim list: name + qty badge, tap-to-flip price,
@@ -98,7 +99,11 @@ export function ClaimListItem({
                   {emoji}
                 </span>
               ) : null}
-              <span className="truncate">{item.name}</span>
+              {/* Shrinks long names to fit instead of ellipsizing; refitKey
+                  re-measures when `done` swaps the h4 font size. */}
+              <FitText minFontPx={12} refitKey={done} className="text-ellipsis">
+                {item.name}
+              </FitText>
             </h4>
             {item.qty !== 1 ? (
               <span className="shrink-0 rounded-full bg-muted px-2 py-0.5 text-xs font-semibold text-muted-foreground tabular-nums">
