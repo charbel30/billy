@@ -1,9 +1,9 @@
 import { createFileRoute } from '@tanstack/react-router'
-import { ClaimListSkeleton } from '~/components/features/bill/ClaimListSkeleton'
+import { ClaimListSkeleton } from '~/components/features/bill'
 import { JoinPage } from '~/components/features/join/JoinPage'
 import { billQueries } from '~/api'
-import { seo } from '~/utils/seo'
-import { formatLbp, formatUsd, toUsd } from '~/lib/currency'
+import { seo } from '~/lib/seo'
+import { formatLbp, formatUsd, toUsd } from '~/lib/money'
 
 export const Route = createFileRoute('/join/$shareToken')({
   component: GuestView,

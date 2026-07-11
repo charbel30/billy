@@ -4,11 +4,11 @@ import { internalMutation, type MutationCtx } from '../_generated/server'
 import type { Doc } from '../_generated/dataModel'
 import * as imageStore from '../lib/imageStore'
 import type { LineItem } from '../schema'
-import { deleteClaimRowsForBill } from './claimRows'
-import { DEFAULT_RATE, deriveRate } from '../../src/lib/currency'
+import { deleteClaimRowsForBill } from '../model/claimRows'
+import { DEFAULT_RATE, deriveRate } from '../../src/lib/money/currency'
 import { newClientId } from '../../src/lib/bill/ids'
-import { reconcile } from '../../src/lib/reconcile'
-import { extractedReceiptValidator } from './validators'
+import { reconcile } from '../../src/lib/money/reconcile'
+import { extractedReceiptValidator } from './lib/validators'
 
 const LOW_CONFIDENCE_THRESHOLD = 0.8
 // The app keeps money in LBP internally (split + reconcile math are LBP). Real

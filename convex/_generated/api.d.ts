@@ -8,16 +8,17 @@
  * @module
  */
 
-import type * as bills_claimRows from "../bills/claimRows.js";
 import type * as bills_extraction from "../bills/extraction.js";
-import type * as bills_functions from "../bills/functions.js";
-import type * as bills_guest from "../bills/guest.js";
-import type * as bills_hostClaims from "../bills/hostClaims.js";
-import type * as bills_lifecycle from "../bills/lifecycle.js";
-import type * as bills_people from "../bills/people.js";
-import type * as bills_queries from "../bills/queries.js";
-import type * as bills_uploads from "../bills/uploads.js";
-import type * as bills_validators from "../bills/validators.js";
+import type * as bills_guest_claims from "../bills/guest/claims.js";
+import type * as bills_guest_people from "../bills/guest/people.js";
+import type * as bills_guest_queries from "../bills/guest/queries.js";
+import type * as bills_host_claims from "../bills/host/claims.js";
+import type * as bills_host_lifecycle from "../bills/host/lifecycle.js";
+import type * as bills_host_people from "../bills/host/people.js";
+import type * as bills_host_queries from "../bills/host/queries.js";
+import type * as bills_host_uploads from "../bills/host/uploads.js";
+import type * as bills_lib_functions from "../bills/lib/functions.js";
+import type * as bills_lib_validators from "../bills/lib/validators.js";
 import type * as crons from "../crons.js";
 import type * as extraction_actions from "../extraction/actions.js";
 import type * as extraction_prompt from "../extraction/prompt.js";
@@ -27,6 +28,7 @@ import type * as lib_invariant from "../lib/invariant.js";
 import type * as lib_rateLimits from "../lib/rateLimits.js";
 import type * as lib_retrier from "../lib/retrier.js";
 import type * as model_bills from "../model/bills.js";
+import type * as model_claimRows from "../model/claimRows.js";
 
 import type {
   ApiFromModules,
@@ -35,16 +37,17 @@ import type {
 } from "convex/server";
 
 declare const fullApi: ApiFromModules<{
-  "bills/claimRows": typeof bills_claimRows;
   "bills/extraction": typeof bills_extraction;
-  "bills/functions": typeof bills_functions;
-  "bills/guest": typeof bills_guest;
-  "bills/hostClaims": typeof bills_hostClaims;
-  "bills/lifecycle": typeof bills_lifecycle;
-  "bills/people": typeof bills_people;
-  "bills/queries": typeof bills_queries;
-  "bills/uploads": typeof bills_uploads;
-  "bills/validators": typeof bills_validators;
+  "bills/guest/claims": typeof bills_guest_claims;
+  "bills/guest/people": typeof bills_guest_people;
+  "bills/guest/queries": typeof bills_guest_queries;
+  "bills/host/claims": typeof bills_host_claims;
+  "bills/host/lifecycle": typeof bills_host_lifecycle;
+  "bills/host/people": typeof bills_host_people;
+  "bills/host/queries": typeof bills_host_queries;
+  "bills/host/uploads": typeof bills_host_uploads;
+  "bills/lib/functions": typeof bills_lib_functions;
+  "bills/lib/validators": typeof bills_lib_validators;
   crons: typeof crons;
   "extraction/actions": typeof extraction_actions;
   "extraction/prompt": typeof extraction_prompt;
@@ -54,6 +57,7 @@ declare const fullApi: ApiFromModules<{
   "lib/rateLimits": typeof lib_rateLimits;
   "lib/retrier": typeof lib_retrier;
   "model/bills": typeof model_bills;
+  "model/claimRows": typeof model_claimRows;
 }>;
 
 /**

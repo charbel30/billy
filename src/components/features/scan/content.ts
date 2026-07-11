@@ -1,4 +1,4 @@
-import type { BillHistoryEntry } from '~/lib/billHistory'
+import type { BillHistoryEntry } from '~/lib/session'
 
 export const scanHubCopy = {
   readyStatus: 'Ready to scan',

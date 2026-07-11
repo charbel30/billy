@@ -16,8 +16,8 @@ import { DirectionProvider } from "~/components/ui/direction";
 import { NotFound } from "~/components/shared/NotFound";
 import { AppHeader } from "~/components/shared/AppHeader";
 import appCss from "~/styles/app.css?url";
-import { THEME_INIT_SCRIPT } from "~/lib/theme";
-import { seo } from "~/utils/seo";
+import { THEME_INIT_SCRIPT } from "~/lib/ui";
+import { seo } from "~/lib/seo";
 
 export const Route = createRootRouteWithContext<{
   queryClient: QueryClient;

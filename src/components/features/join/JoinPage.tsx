@@ -5,8 +5,7 @@ import { Button } from '~/components/ui/button'
 import { Input } from '~/components/ui/input'
 import { Alert, AlertTitle } from '~/components/ui/alert'
 import { EmptyState } from '~/components/shared/EmptyState'
-import { BillSplitWorkspace } from '~/components/features/bill/BillSplitWorkspace'
-import { BillSummary } from '~/components/features/bill/BillSummary'
+import { BillSplitWorkspace, BillSummary } from '~/components/features/bill'
 import {
   billQueries,
   useAddGuestPerson,
@@ -14,8 +13,8 @@ import {
   useSaveGuestClaims,
   useSetGuestPersonPaid,
 } from '~/api'
-import { claimsForPerson, unitsFor } from '~/lib/claims'
-import { getOrCreateGuestSessionId } from '~/lib/guestSession'
+import { claimsForPerson, unitsFor } from '~/lib/bill'
+import { getOrCreateGuestSessionId } from '~/lib/session'
 import { LegalFooter } from '~/components/shared/LegalFooter'
 
 export function JoinPage({ shareToken }: { shareToken: string }) {

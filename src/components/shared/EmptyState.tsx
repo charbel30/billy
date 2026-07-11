@@ -1,6 +1,6 @@
 import type { ComponentType, ReactNode } from 'react'
 import { motion } from 'motion/react'
-import { fadeRise } from '~/lib/animations'
+import { fadeRise } from '~/lib/ui'
 import { cn } from '~/lib/utils'
 
 // Standard empty-state block: muted icon disc + title + optional hint/action.

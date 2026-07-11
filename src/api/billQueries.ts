@@ -6,7 +6,8 @@ import type { Id } from 'convex/_generated/dataModel'
 // a single getBill / getBillByToken — the backend assembles { ...bill, claims }
 // from the bill document plus its claim rows (convex/schema.ts header).
 export const billQueries = {
-  detail: (id: Id<'bills'>) => convexQuery(api.bills.queries.getBill, { id }),
+  detail: (id: Id<'bills'>) =>
+    convexQuery(api.bills.host.queries.getBill, { id }),
   byToken: (shareToken: string) =>
-    convexQuery(api.bills.queries.getBillByToken, { shareToken }),
+    convexQuery(api.bills.guest.queries.getBillByToken, { shareToken }),
 }

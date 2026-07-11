@@ -7,8 +7,7 @@ import {
   RiWallet3Line,
 } from "@remixicon/react";
 import { cn } from "~/lib/utils";
-import { pillSpring } from "~/lib/animations";
-import { appContent } from "~/lib/appContent";
+import { pillSpring, appContent } from "~/lib/ui";
 import { ThemeToggle } from "~/components/shared/ThemeToggle";
 
 export function AppHeader() {

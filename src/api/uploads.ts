@@ -6,12 +6,12 @@ import { api } from 'convex/_generated/api'
 
 export function useGenerateUploadUrl() {
   return useMutation({
-    mutationFn: useConvexMutation(api.bills.uploads.generateUploadUrl),
+    mutationFn: useConvexMutation(api.bills.host.uploads.generateUploadUrl),
   })
 }
 
 export function useAttachImageAndExtract() {
   return useMutation({
-    mutationFn: useConvexMutation(api.bills.uploads.attachImageAndExtract),
+    mutationFn: useConvexMutation(api.bills.host.uploads.attachImageAndExtract),
   })
 }

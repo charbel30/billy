@@ -148,7 +148,7 @@ const schema = defineSchema({
   // High-churn child rows of a bill (see header comment). One row per
   // (item, person) pair; itemId/personId are the client-generated string ids
   // living inside the bill's embedded arrays. All access goes through
-  // convex/bills/claimRows.ts — mutations write row diffs, queries assemble
+  // convex/model/claimRows.ts — mutations write row diffs, queries assemble
   // the wire shape. Claim writes deliberately do NOT touch the bill document.
   claims: defineTable({
     billId: v.id('bills'),

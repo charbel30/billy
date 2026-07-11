@@ -179,7 +179,7 @@ export function withPersonPaid(people: Person[], personId: string, paid: boolean
   })
 }
 
-// Claim writes are row diffs against the `claims` table (convex/bills/
+// Claim writes are row diffs against the `claims` table (convex/model/
 // claimRows.ts) and deliberately do NOT patch the bill document: no version
 // bump, no full-document rewrite, no OCC contention between guests tapping at
 // the same time. Subscribers still update live because getBill/getBillByToken

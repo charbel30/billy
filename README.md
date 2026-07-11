@@ -70,77 +70,111 @@ Start with the shape, then the client flow, then the backend flow:
 
 1. `convex/schema.ts`: the stored bill document shape.
 2. `src/lib/types.ts`: shared line item, person, claim, status, and extraction types.
-3. `src/queries.ts`: the frontend's Convex query and mutation entry points.
+3. `src/api/`: the frontend's Convex query and mutation entry points.
 4. `src/hooks/useBillEditor.ts`: the local-first editor coordinator.
 5. `src/lib/bill/*`: pure editor helpers used by the hook and backend.
-6. `src/routes/review/$billId.tsx`, `src/routes/split/$billId.tsx`, and
-   `src/routes/summary/$billId.tsx`: the user-facing workflow.
-7. `convex/bills/*`: bill queries, mutations, uploads, and extraction persistence.
+6. `src/components/features/review/ReviewPage.tsx`,
+   `src/components/features/split/SplitPage.tsx`, and
+   `src/components/features/summary/SummaryPage.tsx`: the user-facing workflow.
+7. `convex/bills/host/*` and `convex/bills/guest/*`: bill queries, mutations,
+   uploads, and extraction persistence.
 8. `convex/extraction/*`: the image-to-JSON vision model pipeline.
 
 ## Frontend File Guide
 
 ### Routes
 
+Routes are thin: each one wires `createFileRoute` (+ loader) to a feature page
+under `src/components/features/`.
+
 - `src/routes/scan.tsx`: creates a bill, compresses/uploads the receipt image,
-  and starts extraction.
+  and starts extraction (renders `ScannerHub`).
 - `src/routes/review/$billId.tsx`: review screen for editing merchant metadata,
-  printed totals, service/tax, and receipt lines.
-- `src/routes/split/$billId.tsx`: split screen where people claim item units.
-- `src/routes/summary/$billId.tsx`: owner summary screen that computes totals and
-  publishes/copies the share link.
-- `src/routes/join/$shareToken.tsx`: read-only guest view for a published share link.
+  printed totals, service/tax, and receipt lines (renders `ReviewPage`).
+- `src/routes/split/$billId.tsx`: split screen where people claim item units
+  (renders `SplitPage`).
+- `src/routes/summary/$billId.tsx`: owner summary screen that computes totals
+  and publishes/copies the share link (renders `SummaryPage`).
+- `src/routes/join/$shareToken.tsx`: read-only/participating guest view for a
+  published share link (renders `JoinPage`).
 
 ### Query And Editor Wiring
 
-- `src/queries.ts`: one place for frontend Convex references. Reads use
-  `convexQuery(api.bills.queries.*)`. Writes use `useConvexMutation` wrapped in
-  TanStack Query `useMutation`.
+- `src/api/`: the only place that touches `convex/_generated/api`.
+  `billQueries.ts` has option factories for reads (`billQueries.detail(id)`,
+  `billQueries.byToken(shareToken)`), used with `convexQuery(...)`.
+  `billMutations.ts` and `uploads.ts` wrap `useConvexMutation` in TanStack
+  Query `useMutation` hooks. Import from `~/api`; a Convex file rename or
+  function rename only ever touches this folder.
 - `src/hooks/useBillEditor.ts`: React-only editor orchestration. It loads the
   server document, keeps the working copy in state/refs, persists to
   localStorage, schedules debounced saves, flushes on page hide/unmount, and
   exposes edit methods to routes.
 
-### Shared Bill Domain Helpers
+### Shared Bill Domain Helpers (`src/lib/bill/`)
 
-- `src/lib/bill/types.ts`: working editor types: `WorkingMeta`, `WorkingBill`,
-  and `BillEditor`.
-- `src/lib/bill/constants.ts`: shared bill constants such as person colors,
-  default person color, low-confidence threshold, save delay, and default person
-  name.
-- `src/lib/bill/ids.ts`: UUID-based IDs for in-document bill entities, share
-  token generation, and round-robin person colors.
-- `src/lib/bill/working.ts`: maps a Convex bill document into the nested
-  `WorkingBill` shape used by the editor, sanitizes local working copies before
-  saving, and validates localStorage payloads.
-- `src/lib/bill/storage.ts`: localStorage read/write/clear helpers for dirty
-  working bills.
-- `src/lib/bill/edits.ts`: pure immutable transforms for editing metadata,
-  adding/updating/removing line items and people, plus `reconcileClaims` (used
+Grouped module with a barrel `index.ts`; import `~/lib/bill` from outside the
+folder.
+
+- `types.ts`: working editor types: `WorkingMeta`, `WorkingBill`, and
+  `BillEditor`.
+- `constants.ts`: shared bill constants such as person colors, default person
+  color, low-confidence threshold, save delay, and default person name.
+- `ids.ts`: UUID-based IDs for in-document bill entities, share token
+  generation, and round-robin person colors.
+- `working.ts`: maps a Convex bill document into the nested `WorkingBill`
+  shape used by the editor, sanitizes local working copies before saving, and
+  validates localStorage payloads.
+- `storage.ts`: localStorage read/write/clear helpers for dirty working bills.
+- `edits.ts`: pure immutable transforms for editing metadata, adding/
+  updating/removing line items and people, plus `reconcileClaims` (used
   server-side by `saveWorking` to drop/scale claim rows after item edits).
+- `claims.ts`, `status.ts`, `itemEmoji.ts`: claim helpers, status-lifecycle
+  helpers, and item emoji lookup.
 
 ### Shared Math And Formatting
 
-- `src/lib/currency.ts`: default LBP/USD rate, venue-rate derivation from printed
-  totals, currency conversion, and LBP/USD formatting.
-- `src/lib/reconcile.ts`: arithmetic checksum used to compare item totals against
-  the printed receipt total.
-- `src/lib/split.ts`: pure split math for effective unit price, remaining units,
-  per-person claimed lines, service/tax distribution, and final portfolios.
-- `src/lib/number.ts`: numeric input parsing for receipt fields.
-- `src/lib/format.ts`: shared unit formatting for fractional claims.
+- `src/lib/money/` (barrel `index.ts`): `currency.ts` (default LBP/USD rate,
+  venue-rate derivation from printed totals, currency conversion, and
+  LBP/USD formatting), `reconcile.ts` (arithmetic checksum used to compare
+  item totals against the printed receipt total), `split.ts` (pure split math
+  for effective unit price, remaining units, per-person claimed lines,
+  service/tax distribution, and final portfolios). Imported by both the
+  browser and Convex — kept pure, no React.
+- `src/lib/format/` (barrel `index.ts`): `number.ts` (numeric input parsing
+  for receipt fields), `format.ts` (shared unit formatting for fractional
+  claims), `shareText.ts` (share-link copy text).
+- `src/lib/session/` (barrel `index.ts`): `deviceId.ts`, `guestSession.ts`,
+  `billHistory.ts` — device/guest-session identity and the localStorage
+  recent-scans list.
+- `src/lib/ui/` (barrel `index.ts`): `animations.ts` (motion presets),
+  `haptics.ts`, `theme.ts`, `appContent.ts`.
+- `src/lib/types.ts`, `src/lib/utils.ts`, `src/lib/invariant.ts`,
+  `src/lib/seo.ts`: root-level canonical domain types, `cn()`, assertion
+  helper, and SEO meta helpers.
 
-### Bill Components
+### Bill Components (`src/components/features/bill/`)
 
-- `src/components/bill/BlurCommitInput.tsx`: reusable input that keeps a local
-  draft and commits only on blur.
-- `src/components/bill/ReceiptLines.tsx`: editable receipt line list.
-- `src/components/bill/ServicePanel.tsx`: service/tax toggle and values.
-- `src/components/bill/PersonRail.tsx`: people selector and add/remove UI.
-- `src/components/bill/ClaimList.tsx`: unit claim steppers and split-evenly action.
-- `src/components/bill/RemainingBar.tsx`: remaining unclaimed amount display.
-- `src/components/bill/PortfolioReceipt.tsx`: per-person summary receipt.
-- `src/components/bill/AnimatedAmount.tsx`: animated numeric amount display.
+Bill-domain components used by two or more features, grouped into five
+clusters, each with its own barrel `index.ts`; the folder's top `index.ts` is
+the surface other features import (clusters never import the top barrel from
+each other — they import a sibling cluster's barrel directly, to avoid
+import cycles).
+
+- `claims/`: `ClaimList.tsx`, `ClaimListItem.tsx`, `ClaimListSkeleton.tsx` —
+  unit claim steppers, split-evenly action, and loading skeleton.
+- `people/`: `PersonRail.tsx`, `PersonPanelRow.tsx`, `PersonBarPill.tsx`,
+  `PersonAvatar.tsx`, `AddPerson.tsx` — people selector and add/remove UI.
+- `receipt/`: `ReceiptLines.tsx` (editable receipt line list),
+  `PortfolioReceipt.tsx` (per-person summary receipt), `ItemPrice.tsx`.
+- `summary/`: `BillSummary.tsx`, `ShareSplitCard.tsx`.
+- `workspace/`: `BillSplitWorkspace.tsx`, `MobileSplitSheet.tsx`,
+  `SplitSheetHandle.tsx`, `SplitHero.tsx`, `WorkspaceHeader.tsx`,
+  `TipControl.tsx`, `ServicePanel.tsx`.
+
+Generic, domain-free primitives live in `src/components/ui/` instead (shadcn
+primitives plus hand-rolled generics like `animated-amount.tsx` and
+`blur-commit-input.tsx`).
 
 ## Convex File Guide
 
@@ -148,23 +182,54 @@ Start with the shape, then the client flow, then the backend flow:
 
 - `convex/schema.ts`: the database schema. `bills` stores metadata, image ref,
   share token, status, version, line items, and people; `claims` is a separate
-  high-churn table keyed by `billId` (all access via `convex/bills/claimRows.ts`).
-- `convex/_generated/api.d.ts`: generated Convex API type map. Do not edit it by
-  hand. Regenerate it with `npx convex dev --once` after moving Convex functions.
+  high-churn table keyed by `billId` (all access via
+  `convex/model/claimRows.ts`).
+- `convex/_generated/api.d.ts`: generated Convex API type map. Do not edit it
+  by hand. Regenerate it with `npx convex dev --once` after moving Convex
+  functions.
 
 ### Bill Functions
 
-- `convex/bills/queries.ts`: public read functions:
-  `api.bills.queries.getBill` and `api.bills.queries.getBillByToken`.
-- `convex/bills/mutations.ts`: public bill mutations:
-  `createBill`, `saveWorking`, and `publish`.
-- `convex/bills/uploads.ts`: public upload orchestration:
-  `generateUploadUrl` and `attachImageAndExtract`. The latter schedules the
-  internal extraction action.
-- `convex/bills/extraction.ts`: internal mutation that persists parsed model
-  output into the bill document.
-- `convex/bills/validators.ts`: Convex validators shared by bill functions,
-  including bill return shape, editable metadata, and extracted receipt payloads.
+Public bill functions are split by **caller** then **domain** — a file's path
+is its api namespace, so `convex/bills/host/lifecycle.ts` is
+`api.bills.host.lifecycle.*`.
+
+- `convex/bills/host/`: host-side functions, gated by bill id.
+  - `lifecycle.ts`: `createBill`, `createDemoBill`, `saveWorking`, `publish`,
+    `finalize`, `revokeShare`, `setTipPercent`.
+  - `people.ts`: `addHostPerson`, `removeHostPerson`, `setHostPersonPaid`.
+  - `claims.ts`: `saveHostClaims`, `shareHostItemEvenly`,
+    `splitLeftoversEvenly`.
+  - `queries.ts`: `getBill`.
+  - `uploads.ts`: `generateUploadUrl` and `attachImageAndExtract` (the latter
+    schedules the internal extraction action).
+- `convex/bills/guest/`: guest-side functions, scoped by `shareToken` +
+  `guestSessionId`.
+  - `people.ts`: `joinSplit`, `addGuestPerson`, `setGuestPersonPaid`.
+  - `claims.ts`: `saveGuestClaims`.
+  - `queries.ts`: `getBillByToken`.
+- `convex/bills/extraction.ts`: internal mutations (`applyExtraction`,
+  `onExtractionComplete`) that persist parsed model output into the bill
+  document.
+- `convex/bills/lib/`: registers **no** public functions, so it creates no api
+  namespace — plumbing only.
+  - `functions.ts`: custom function builders (convex-helpers
+    `customMutation`/`customQuery`) that every public bills function
+    registers through: `billMutation`, `editableBillMutation`,
+    `settleBillMutation`, `guestMutation`, `guestSettleMutation`,
+    `deviceLimitedMutation`, `billQuery`, `sharedBillQuery`.
+  - `validators.ts`: Convex validators shared by bill functions, including
+    bill return shape, editable metadata, and extracted receipt payloads.
+
+### Model (`convex/model/`)
+
+Plain-TS helpers with no registered functions; public functions are thin
+wrappers that call into these.
+
+- `bills.ts`: gates and validation (`assertEditableSplit`, `assertSettleOpen`,
+  `assertSharedForGuestWrites`, …), plus claim math (`saveClaimsForPerson`).
+- `claimRows.ts`: the claims-table seam — read, wire mapping, and keyed
+  row-diff sync. All claim-row access goes through here.
 
 ### Extraction Pipeline
 
@@ -182,6 +247,10 @@ Start with the shape, then the client flow, then the backend flow:
   and image deletion.
 - `convex/lib/invariant.ts`: small assertion helper for missing documents or
   required configuration.
+- `convex/lib/rateLimits.ts`: per-device rate limiter configuration consumed
+  by `deviceLimitedMutation`.
+- `convex/lib/retrier.ts`: `@convex-dev/action-retrier` wiring for the
+  extraction action's retry/backoff behavior.
 - `convex/crons.ts`: placeholder for scheduled backend work such as FX refreshes
   or image TTL cleanup.
 
@@ -191,9 +260,9 @@ Start with the shape, then the client flow, then the backend flow:
 
 1. The scan route calls `useCreateBill()`.
 2. The client asks Convex for an upload URL through
-   `api.bills.uploads.generateUploadUrl`.
+   `api.bills.host.uploads.generateUploadUrl`.
 3. The client uploads image bytes to Convex storage.
-4. The client calls `api.bills.uploads.attachImageAndExtract`.
+4. The client calls `api.bills.host.uploads.attachImageAndExtract`.
 5. Convex schedules `internal.extraction.actions.extractReceipt`.
 6. The action reads the image, calls the vision model, then calls
    `internal.bills.extraction.applyExtraction`.
@@ -201,7 +270,7 @@ Start with the shape, then the client flow, then the backend flow:
 
 ### Review And Autosave
 
-1. The review route loads `api.bills.queries.getBill`.
+1. The review route loads `api.bills.host.queries.getBill`.
 2. `useBillEditor` converts the flat Convex document into `WorkingBill`.
 3. UI edits call pure helpers from `src/lib/bill/edits.ts`.
 4. The hook mirrors dirty state to localStorage and debounces a full-document
@@ -212,7 +281,7 @@ Start with the shape, then the client flow, then the backend flow:
 
 1. The split route uses the same `useBillEditor` working copy.
 2. Claim actions update fractional units in local state.
-3. `src/lib/split.ts` computes remaining units and per-person totals.
+3. `src/lib/money/split.ts` computes remaining units and per-person totals.
 4. The summary route calls `publish`, which freezes the bill as `PUBLISHED` and
    returns the share token.
 5. Guests load the read-only bill through `getBillByToken`.
@@ -221,7 +290,9 @@ Start with the shape, then the client flow, then the backend flow:
 
 - Put React state and lifecycle code in hooks/routes/components.
 - Put pure bill transforms in `src/lib/bill/*`.
-- Put calculations that need to be shared by UI/backend in `src/lib/*`.
-- Put Convex query/mutation/action wrappers in `convex/*`.
+- Put calculations that need to be shared by UI/backend in `src/lib/money/*`
+  or `src/lib/types.ts`.
+- Put Convex query/mutation/action wrappers in `convex/bills/<host|guest>/*`,
+  registered through a builder from `convex/bills/lib/functions.ts`.
 - Keep external API calls in Convex actions, not queries or mutations.
 - Keep `convex/schema.ts` as the source of truth for persisted data shape.

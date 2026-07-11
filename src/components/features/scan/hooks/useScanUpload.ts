@@ -7,7 +7,7 @@ import {
   useCreateBill,
   useGenerateUploadUrl,
 } from '~/api'
-import { getDeviceId } from '~/lib/deviceId'
+import { getDeviceId } from '~/lib/session'
 
 /** Friendly message for scan failures — surfaces ConvexError data (rate
  *  limits, kill switch) which is written to be shown to users as-is. */

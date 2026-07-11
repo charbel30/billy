@@ -2,7 +2,7 @@ import { cronJobs } from 'convex/server'
 import { v } from 'convex/values'
 import { internalMutation } from './_generated/server'
 import { internal } from './_generated/api'
-import { deleteClaimRowsForBill } from './bills/claimRows'
+import { deleteClaimRowsForBill } from './model/claimRows'
 
 // Bills are anonymous and unowned in the MVP, so they must not accumulate
 // forever (spec §10 asks for a TTL). A bill untouched for BILL_TTL_MS is

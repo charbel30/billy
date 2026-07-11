@@ -8,112 +8,112 @@ import { api } from 'convex/_generated/api'
 // scoped claim mutations below. No optimistic-update layer anywhere: Convex
 // pushes fresh results to every subscriber.
 
-// --- Bill lifecycle (convex/bills/lifecycle.ts) ---
+// --- Bill lifecycle (convex/bills/host/lifecycle.ts) ---
 
 export function useCreateBill() {
   return useMutation({
-    mutationFn: useConvexMutation(api.bills.lifecycle.createBill),
+    mutationFn: useConvexMutation(api.bills.host.lifecycle.createBill),
   })
 }
 
 export function useCreateDemoBill() {
   return useMutation({
-    mutationFn: useConvexMutation(api.bills.lifecycle.createDemoBill),
+    mutationFn: useConvexMutation(api.bills.host.lifecycle.createDemoBill),
   })
 }
 
 export function useSaveWorking() {
   return useMutation({
-    mutationFn: useConvexMutation(api.bills.lifecycle.saveWorking),
+    mutationFn: useConvexMutation(api.bills.host.lifecycle.saveWorking),
   })
 }
 
 export function usePublish() {
   return useMutation({
-    mutationFn: useConvexMutation(api.bills.lifecycle.publish),
+    mutationFn: useConvexMutation(api.bills.host.lifecycle.publish),
   })
 }
 
 export function useFinalize() {
   return useMutation({
-    mutationFn: useConvexMutation(api.bills.lifecycle.finalize),
+    mutationFn: useConvexMutation(api.bills.host.lifecycle.finalize),
   })
 }
 
 export function useRevokeShare() {
   return useMutation({
-    mutationFn: useConvexMutation(api.bills.lifecycle.revokeShare),
+    mutationFn: useConvexMutation(api.bills.host.lifecycle.revokeShare),
   })
 }
 
 export function useSetTipPercent() {
   return useMutation({
-    mutationFn: useConvexMutation(api.bills.lifecycle.setTipPercent),
+    mutationFn: useConvexMutation(api.bills.host.lifecycle.setTipPercent),
   })
 }
 
-// --- People (convex/bills/people.ts) ---
+// --- People (convex/bills/host/people.ts + guest/people.ts) ---
 
 export function useAddHostPerson() {
   return useMutation({
-    mutationFn: useConvexMutation(api.bills.people.addHostPerson),
+    mutationFn: useConvexMutation(api.bills.host.people.addHostPerson),
   })
 }
 
 export function useRemoveHostPerson() {
   return useMutation({
-    mutationFn: useConvexMutation(api.bills.people.removeHostPerson),
+    mutationFn: useConvexMutation(api.bills.host.people.removeHostPerson),
   })
 }
 
 export function useSetHostPersonPaid() {
   return useMutation({
-    mutationFn: useConvexMutation(api.bills.people.setHostPersonPaid),
+    mutationFn: useConvexMutation(api.bills.host.people.setHostPersonPaid),
   })
 }
 
 export function useSetGuestPersonPaid() {
   return useMutation({
-    mutationFn: useConvexMutation(api.bills.people.setGuestPersonPaid),
+    mutationFn: useConvexMutation(api.bills.guest.people.setGuestPersonPaid),
   })
 }
 
-// --- Host claims (convex/bills/hostClaims.ts) ---
+// --- Host claims (convex/bills/host/claims.ts) ---
 
 export function useSaveHostClaims() {
   return useMutation({
-    mutationFn: useConvexMutation(api.bills.hostClaims.saveHostClaims),
+    mutationFn: useConvexMutation(api.bills.host.claims.saveHostClaims),
   })
 }
 
 export function useShareHostItemEvenly() {
   return useMutation({
-    mutationFn: useConvexMutation(api.bills.hostClaims.shareHostItemEvenly),
+    mutationFn: useConvexMutation(api.bills.host.claims.shareHostItemEvenly),
   })
 }
 
 export function useSplitLeftoversEvenly() {
   return useMutation({
-    mutationFn: useConvexMutation(api.bills.hostClaims.splitLeftoversEvenly),
+    mutationFn: useConvexMutation(api.bills.host.claims.splitLeftoversEvenly),
   })
 }
 
-// --- Guest writes (convex/bills/guest.ts) ---
+// --- Guest writes (convex/bills/guest/people.ts + claims.ts) ---
 
 export function useJoinSplit() {
   return useMutation({
-    mutationFn: useConvexMutation(api.bills.guest.joinSplit),
+    mutationFn: useConvexMutation(api.bills.guest.people.joinSplit),
   })
 }
 
 export function useAddGuestPerson() {
   return useMutation({
-    mutationFn: useConvexMutation(api.bills.guest.addGuestPerson),
+    mutationFn: useConvexMutation(api.bills.guest.people.addGuestPerson),
   })
 }
 
 export function useSaveGuestClaims() {
   return useMutation({
-    mutationFn: useConvexMutation(api.bills.guest.saveGuestClaims),
+    mutationFn: useConvexMutation(api.bills.guest.claims.saveGuestClaims),
   })
 }

@@ -15,8 +15,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from '~/components/ui/dialog'
-import { BillSplitWorkspace } from '~/components/features/bill/BillSplitWorkspace'
-import { ShareSplitCard } from '~/components/features/bill/ShareSplitCard'
+import { BillSplitWorkspace, ShareSplitCard } from '~/components/features/bill'
 import {
   billQueries,
   useAddHostPerson,
@@ -29,11 +28,10 @@ import {
   useShareHostItemEvenly,
   useSplitLeftoversEvenly,
 } from '~/api'
-import { recordBill } from '~/lib/billHistory'
-import { claimsForPerson, unitsFor } from '~/lib/claims'
-import { remainingUnits, totalRemainingLbp } from '~/lib/split'
-import { formatUsd, toUsd } from '~/lib/currency'
-import { joinUrl } from '~/lib/shareText'
+import { recordBill } from '~/lib/session'
+import { claimsForPerson, unitsFor } from '~/lib/bill'
+import { remainingUnits, totalRemainingLbp, formatUsd, toUsd } from '~/lib/money'
+import { joinUrl } from '~/lib/format'
 
 export function SplitPage({ billId }: { billId: Id<'bills'> }) {
   const navigate = useNavigate()

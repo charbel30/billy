@@ -2,22 +2,22 @@ import { useEffect, useRef, useState } from 'react'
 import { useNavigate } from '@tanstack/react-router'
 import { useCreateDemoBill } from '~/api'
 import { scanErrorMessage, useScanUpload } from './hooks/useScanUpload'
-import { getDeviceId } from '~/lib/deviceId'
 import type { Id } from 'convex/_generated/dataModel'
 import {
+  getDeviceId,
   clearBillHistory,
   getBillHistory,
   type BillHistoryEntry,
-} from '~/lib/billHistory'
+} from '~/lib/session'
 import { motion } from 'motion/react'
 import { RiErrorWarningLine } from '@remixicon/react'
 import { LegalFooter } from '~/components/shared/LegalFooter'
 import { Alert, AlertTitle, AlertDescription } from '~/components/ui/alert'
-import { staggerChild, staggerContainer } from '~/lib/animations'
-import { ScannerViewfinder } from './ScannerViewfinder'
-import { ScanActions } from './ScanActions'
-import { ResumeBillCard } from './ResumeBillCard'
-import { RecentScanPanel } from './RecentScanPanel'
+import { staggerChild, staggerContainer } from '~/lib/ui'
+import { ScannerViewfinder } from './components/ScannerViewfinder'
+import { ScanActions } from './components/ScanActions'
+import { ResumeBillCard } from './components/ResumeBillCard'
+import { RecentScanPanel } from './components/RecentScanPanel'
 import { scanHubCopy } from './content'
 
 export function ScannerHub() {

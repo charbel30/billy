@@ -4,7 +4,7 @@ import {
   persistThemePreference,
   readThemePreference,
   type ThemePreference,
-} from "~/lib/theme";
+} from "~/lib/ui";
 
 // Theme preference state: persists to localStorage, applies the .dark class,
 // and tracks OS changes while on "system". The initial paint is handled by

@@ -7,9 +7,8 @@ import {
   DropdownMenuRadioItem,
   DropdownMenuTrigger,
 } from "~/components/ui/dropdown-menu";
-import { swap } from "~/lib/animations";
+import { swap, isThemePreference, type ThemePreference } from "~/lib/ui";
 import { useTheme } from "~/hooks/useTheme";
-import { isThemePreference, type ThemePreference } from "~/lib/theme";
 
 const OPTIONS: { value: ThemePreference; label: string; Icon: typeof RiSunLine }[] = [
   { value: "system", label: "System", Icon: RiComputerLine },

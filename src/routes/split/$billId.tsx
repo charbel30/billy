@@ -1,6 +1,6 @@
 import { createFileRoute } from '@tanstack/react-router'
 import type { Id } from 'convex/_generated/dataModel'
-import { ClaimListSkeleton } from '~/components/features/bill/ClaimListSkeleton'
+import { ClaimListSkeleton } from '~/components/features/bill'
 import { SplitPage } from '~/components/features/split/SplitPage'
 import { billQueries } from '~/api'
 

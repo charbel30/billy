@@ -49,15 +49,22 @@ structure says it goes, don't drift back to dumping files at the top of `compone
 
 ```
 convex/
-├── bills/            # public functions, split BY DOMAIN (one file = one api namespace):
-│   │                 #   lifecycle.ts (create/save/publish/finalize/revoke/tip)
-│   │                 #   people.ts (add/remove/mark-paid), hostClaims.ts, guest.ts
-│   │                 #   queries.ts, uploads.ts, extraction.ts, validators.ts, claimRows.ts
-│   │                 #   functions.ts — custom function builders (convex-helpers): every
-│   │                 #   public bills function registers through one; new cross-cutting
-│   │                 #   concerns (auth, limits, transformations) go in the builders
+├── bills/            # public bill functions, split by CALLER then domain — Convex file
+│   ├── host/         # path = api namespace, so these files ARE the public API:
+│   │                 #   lifecycle.ts (create/save/publish/finalize/revoke/tip),
+│   │                 #   people.ts, claims.ts, uploads.ts, queries.ts
+│   │                 #   → api.bills.host.<file>.*  (host writes, gated by bill id)
+│   ├── guest/        #   people.ts (join/add/mark-paid), claims.ts, queries.ts
+│   │                 #   → api.bills.guest.<file>.* (shareToken + guestSessionId scoped)
+│   ├── extraction.ts # applyExtraction (internal only)
+│   └── lib/          # registers NO functions (so no api namespace):
+│                     #   functions.ts — custom function builders (convex-helpers): every
+│                     #   public bills function registers through one; new cross-cutting
+│                     #   concerns (auth, roles, limits, transformations) go in the builders
+│                     #   validators.ts — reusable v.* validators derived from schema
 ├── model/            # plain-TS helpers (no registered functions) — public functions are
-│   │                 # THIN wrappers that call into here (official Convex pattern)
+│   │                 # THIN wrappers that call into here (official Convex pattern):
+│   │                 # bills.ts (gates/validation/claim math), claimRows.ts (claims-table seam)
 ├── extraction/ lib/ schema.ts crons.ts
 src/
 ├── api/              # THE ONLY place that touches convex/_generated/api:
@@ -70,19 +77,39 @@ src/
 │   ├── shared/       # cross-feature app chrome: AppHeader, Loader, NotFound,
 │   │                 # DefaultCatchBoundary, LegalFooter
 │   └── features/
-│       ├── scan/ review/ split/ summary/ join/   # one folder per screen/feature;
-│       │                 # each owns its page container (SplitPage…), sub-components,
-│       │                 # feature hooks (scan/hooks/useScanUpload), copy/constants (content.ts)
-│       └── bill/     # bill-domain components used by ≥2 features (workspace, claim list,
-│                     # person rail, summaries) — split/join/summary all compose these
+│       ├── scan/ review/ split/ summary/ join/   # one folder per screen/feature, uniform:
+│       │                 #   <Feature>Page.tsx (the ONLY file routes/other features import),
+│       │                 #   components/ (feature-private pieces), hooks/, content.ts (copy)
+│       └── bill/     # bill-domain components used by ≥2 features, in 5 clusters each with
+│                     # a barrel index.ts: claims/ people/ receipt/ workspace/ summary/
+│                     # + top index.ts = the surface other features import
 ├── hooks/            # cross-feature hooks only (useBillEditor, useOfflineIndicator)
-├── lib/              # pure logic, no React: bill/ (domain), claims.ts, guestSession.ts,
-│                     # animations.ts (motion presets), format.ts, currency.ts, split.ts…
+├── lib/              # pure logic, no React — grouped, each folder has a barrel index.ts:
+│   ├── money/        # currency.ts, split.ts, reconcile.ts — imported by convex, keep pure
+│   ├── bill/         # bill domain: types, edits, working, storage, ids, constants, claims…
+│   ├── format/       # format.ts, number.ts, shareText.ts
+│   ├── session/      # deviceId.ts, guestSession.ts, billHistory.ts — future auth-session home
+│   ├── ui/           # animations.ts (motion presets), haptics.ts, theme.ts, appContent.ts
+│   └── types.ts utils.ts invariant.ts seo.ts   # root: canonical domain types, cn(), misc
 ```
 
+**Barrel/import rules:** components keep their real PascalCase filenames; each cluster/group
+folder exposes a small `index.ts` barrel. Consumers outside a folder import the barrel
+(`~/lib/money`, `~/components/features/bill`); files inside a cluster import siblings
+relatively; clusters inside `features/bill/` import each other via the sibling cluster's
+barrel (`../people`) and NEVER import the top `features/bill/index.ts` (cycle risk).
+convex/ imports shared `src/lib` modules by CONCRETE file path (e.g. `src/lib/money/currency`),
+never via a barrel, so backend code can't accidentally pull in React.
+
+**Auth-readiness:** when roles/auth land, identity checks extend the builders in
+`convex/bills/lib/functions.ts` (handlers stay unchanged), server-side user data gets its own
+`convex/users/` domain, client session helpers live in `src/lib/session/`, and the new api
+namespace gets its own file in `src/api/`.
+
 **Learnings baked into this layout (don't undo them):**
-- One 800-line `mutations.ts` was the biggest pain point → domain files map 1:1 to
-  `api.bills.<domain>.*`; keep each new mutation in the file matching its domain.
+- One 800-line `mutations.ts` was the biggest pain point → function files map 1:1 to
+  `api.bills.<caller>.<domain>.*`; keep each new mutation in the file matching its caller
+  (host/guest) and domain, and keep non-function plumbing out of namespace folders.
 - Components >~300 lines always hid extractable pieces (ScannerHub had 5, the review route
   had 9). When a file grows an inner `function Foo()` component, give it its own file in the
   same feature folder immediately.
@@ -90,7 +117,7 @@ src/
   there was no obvious shared home — pure helpers go in `src/lib/`, never in a route/page.
 - Constants live in constants modules, not inline: bill-domain rules in
   `src/lib/bill/constants.ts` (shared with convex — MAX_PEOPLE, tip bounds, TIP_PRESETS),
-  feature copy/labels in the feature's `content.ts`, motion presets in `src/lib/animations.ts`.
+  feature copy/labels in the feature's `content.ts`, motion presets in `src/lib/ui/animations.ts`.
 - Naming: components `PascalCase.tsx`; everything else `camelCase.ts`; `components/ui/`
   stays kebab-case (shadcn convention).
 - A component is "ui/" only if it has zero domain knowledge; bill-domain but multi-feature →
@@ -102,16 +129,16 @@ src/
 `lineItems`, `people`, meta — while **`claims` is its own table** (one row per (item, person)
 pair, `by_bill` index): claims are high-churn, and embedding them meant every tap rewrote the
 whole document and contended on it (rationale + cost math in `architecture-decision.md`
-§Revisited 2026-07-06). All claim-row access goes through the `convex/bills/claimRows.ts`
+§Revisited 2026-07-06). All claim-row access goes through the `convex/model/claimRows.ts`
 seam (read, wire mapping, keyed row-diff sync); claim mutations do **not** touch the bill doc
 (no version bump). Queries assemble `{ ...bill, claims }`, so the frontend still sees one
 bill object. Embedded entities and claim `itemId`/`personId` use client-generated string ids
 (`src/lib/bill/ids.ts`), not Convex ids. Reusable validators/types are derived from the table
-validators in `convex/schema.ts` and shared via `convex/bills/validators.ts`. Mutation
+validators in `convex/schema.ts` and shared via `convex/bills/lib/validators.ts`. Mutation
 handlers stay thin: shared validation/gates/claim math live in `convex/model/bills.ts`
 (`assertEditableSplit`, `assertSettleOpen`, `saveClaimsForPerson`, …) — reuse those, don't
 re-implement checks inline. Identity + status gating is applied by the **custom function
-builders** in `convex/bills/functions.ts` (convex-helpers `customMutation`/`customQuery`):
+builders** in `convex/bills/lib/functions.ts` (convex-helpers `customMutation`/`customQuery`):
 `billMutation`/`editableBillMutation`/`settleBillMutation` consume `id` and inject `ctx.bill`;
 `guestMutation`/`guestSettleMutation` consume `shareToken`+`guestSessionId`, gate by status,
 and inject `ctx.bill`+`ctx.guestSessionId`; `deviceLimitedMutation(limit, msg)` consumes
@@ -173,14 +200,14 @@ deletes the image — `bills.extractionRunId` + the `by_extractionRunId` index m
 → the action reads image bytes, calls **Gemini via Cloudflare AI Gateway**
 (`convex/extraction/vision.ts`, swappable `callVisionModel` seam; prompt in
 `convex/extraction/prompt.ts`) → `applyExtraction` (internalMutation) normalizes to LBP,
-runs the arithmetic checksum (`src/lib/reconcile.ts`), flags low-confidence/implausible
+runs the arithmetic checksum (`src/lib/money/reconcile.ts`), flags low-confidence/implausible
 items, sets `PENDING` or `NEEDS_REVIEW`, and deletes the image. Storage access goes through the
 `convex/lib/imageStore.ts` seam (Convex storage today, R2 possible later).
 Rationale/eval plan: `convex-best-practices` skill, `rules/extraction-pipeline.md`.
 
 ### Currency
 
-`src/lib/currency.ts` is a pure module imported by **both** browser code and Convex functions.
+`src/lib/money/currency.ts` is a pure module imported by **both** browser code and Convex functions.
 **LBP is the internal unit of record**; USD is derived at display time via the bill's `rate`
 (default 90,000, `deriveRate` computes the venue rate when both printed totals exist;
 `rateSource` records `receipt`/`market`/`manual`). Never store converted amounts.
@@ -188,7 +215,7 @@ Rationale/eval plan: `convex-best-practices` skill, `rules/extraction-pipeline.m
 ### Routes
 
 `src/routes/`: `index.tsx` + `scan.tsx` (both render `ScannerHub`: capture, resume-last-bill,
-recent scans from localStorage `billy:bill-history` via `src/lib/billHistory.ts`),
+recent scans from localStorage `billy:bill-history` via `src/lib/session/billHistory.ts`),
 `review/$billId` (extraction review editor), `split/$billId` (host claim workspace),
 `summary/$billId` (totals + publish/share link), `join/$shareToken` (guest view; localStorage
 `guestSessionId`; guest mutations `joinSplit`/`addGuestPerson`/`saveGuestClaims` are
@@ -200,19 +227,26 @@ session-scoped, host writes are gated by status).
 ### Where code goes (quick router)
 
 - New screen/flow → `src/components/features/<feature>/` with a `<Feature>Page.tsx`; the
-  route file only wires `createFileRoute` + loader to it.
-- Component used by one feature → that feature's folder; bill-domain + used by ≥2 features
-  → `features/bill/`; fully generic → `components/ui/` (shadcn via CLI when one exists).
+  route file only wires `createFileRoute` + loader to it; sub-components in
+  `<feature>/components/`, hooks in `<feature>/hooks/`, copy in `content.ts`.
+- Component used by one feature → that feature's `components/`; bill-domain + used by ≥2
+  features → the matching `features/bill/<cluster>/` (claims/people/receipt/workspace/summary,
+  export it from the cluster barrel — and the top barrel only if other features need it);
+  fully generic → `components/ui/` (shadcn via CLI when one exists).
 - React state/lifecycle → feature hooks in the feature folder; cross-feature → `src/hooks/`.
-- Pure bill transforms → `src/lib/bill/*`; other pure helpers → `src/lib/*`.
-- Math shared by UI and backend → `src/lib/*` (`currency.ts`, `split.ts`, `reconcile.ts`,
-  `bill/constants.ts`) — these are imported by convex/, don't move or add React to them.
-- Convex function → the matching `convex/bills/<domain>.ts` (or a new domain file), logic in
-  `convex/model/`; then expose it to the UI via a hook in `src/api/`.
+- Pure helpers → the matching `src/lib/` group (`money/`, `bill/`, `format/`, `session/`,
+  `ui/`), exported from that group's barrel; never in a route/page.
+- Math shared by UI and backend → `src/lib/money/*`, `src/lib/bill/constants.ts`,
+  `src/lib/types.ts` — imported by convex/ via concrete paths; keep them pure (no React,
+  no barrels from convex).
+- Convex function → `convex/bills/<host|guest>/<domain>.ts` (pick by caller), registered
+  through a builder from `convex/bills/lib/functions.ts`, logic in `convex/model/`; then
+  expose it to the UI via a hook in `src/api/`. Files that register no functions never live
+  directly under `bills/host|guest/` — plumbing goes in `bills/lib/` or `model/`.
 - External API calls → Convex actions only; `convex/schema.ts` is the source of truth for
   persisted shape.
 - Constants → never inline in components: domain rules `lib/bill/constants.ts`, feature copy
-  `<feature>/content.ts`, animation presets `lib/animations.ts`.
+  `<feature>/content.ts`, animation presets `lib/ui/animations.ts`.
 
 ## Skills
 

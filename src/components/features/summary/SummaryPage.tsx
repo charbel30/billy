@@ -6,11 +6,10 @@ import { RiArrowLeftLine, RiChat1Line, RiInformationLine } from '@remixicon/reac
 import type { Id } from 'convex/_generated/dataModel'
 import { Button } from '~/components/ui/button'
 import { Alert, AlertTitle } from '~/components/ui/alert'
-import { BillSummary } from '~/components/features/bill/BillSummary'
-import { ShareSplitCard } from '~/components/features/bill/ShareSplitCard'
+import { BillSummary, ShareSplitCard } from '~/components/features/bill'
 import { billQueries, useRevokeShare, useSetHostPersonPaid } from '~/api'
-import { recordBill } from '~/lib/billHistory'
-import { buildTotalsMessage, joinUrl } from '~/lib/shareText'
+import { recordBill } from '~/lib/session'
+import { buildTotalsMessage, joinUrl } from '~/lib/format'
 
 export function SummaryPage({ billId }: { billId: Id<'bills'> }) {
   const navigate = useNavigate()
