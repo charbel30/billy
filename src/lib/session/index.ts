@@ -1,4 +1,5 @@
 export * from './deviceId'
 export * from './guestSession'
+export * from './hostToken'
 export * from './billHistory'
 export * from './currencyDisplay'

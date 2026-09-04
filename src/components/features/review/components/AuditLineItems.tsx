@@ -2,6 +2,7 @@ import {
   RiAddLine,
   RiAlertLine,
   RiDeleteBin6Line,
+  RiReceiptLine,
 } from '@remixicon/react'
 import { BlurCommitInput } from '~/components/ui/blur-commit-input'
 import { formatUsd, toUsd } from '~/lib/money'
@@ -13,6 +14,7 @@ import {
 } from '~/lib/bill/constants'
 import { cn } from '~/lib/utils'
 import type { LineItem } from '~/lib/types'
+import { reviewCopy } from '../content'
 
 export function AuditLineItems({
   lineItems,
@@ -27,6 +29,31 @@ export function AuditLineItems({
   onRemove: (id: string) => void
   onAdd: () => void
 }) {
+  // Empty is a first-class state, not an error: manual entry starts here, and
+  // so does a bill whose extraction failed. A bare "Add item" row reads like a
+  // broken screen, so lead with what to do.
+  if (lineItems.length === 0) {
+    return (
+      <div className="rounded-card border-2 border-dashed border-primary/30 px-6 py-10 text-center">
+        <RiReceiptLine className="mx-auto size-8 text-primary-strong/60" />
+        <p className="mt-3 text-lg font-black tracking-tight">
+          {reviewCopy.emptyTitle}
+        </p>
+        <p className="mx-auto mt-1 max-w-xs text-pretty text-sm text-muted-foreground">
+          {reviewCopy.emptyHint}
+        </p>
+        <button
+          type="button"
+          onClick={onAdd}
+          className="mt-5 inline-flex items-center justify-center gap-2 rounded-full bg-primary px-6 py-3.5 text-sm font-bold text-primary-foreground shadow-raised transition-[scale] duration-200 active:scale-[0.96]"
+        >
+          <RiAddLine className="size-5" />
+          {reviewCopy.addFirstAction}
+        </button>
+      </div>
+    )
+  }
+
   return (
     <div className="space-y-4">
       <div className="hidden gap-3 px-4 text-xs font-semibold uppercase tracking-wide text-muted-foreground sm:grid sm:grid-cols-[minmax(0,1fr)_9rem]">
@@ -52,7 +79,7 @@ export function AuditLineItems({
         className="flex w-full items-center justify-center gap-2 rounded-control border-2 border-dashed border-primary/30 px-4 py-4 text-sm font-bold text-primary-strong transition-[scale,background-color] hover:bg-primary/10 active:scale-[0.96]"
       >
         <RiAddLine className="size-5" />
-        Add item
+        {reviewCopy.addAction}
       </button>
     </div>
   )

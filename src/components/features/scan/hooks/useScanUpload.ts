@@ -7,7 +7,7 @@ import {
   useCreateBill,
   useGenerateUploadUrl,
 } from '~/api'
-import { getDeviceId } from '~/lib/session'
+import { getDeviceId, getHostToken, rememberHostToken } from '~/lib/session'
 
 /** Friendly message for scan failures — surfaces ConvexError data (rate
  *  limits, kill switch) which is written to be shown to users as-is. */
@@ -50,9 +50,12 @@ export function useScanUpload() {
     setBusy(true)
     try {
       const deviceId = getDeviceId()
-      const billId = await createBill.mutateAsync({ deviceId })
+      // createBill returns the host capability once and only once — persist it
+      // before anything else can fail, or this bill becomes read-only forever.
+      const { billId, hostToken } = await createBill.mutateAsync({ deviceId })
+      rememberHostToken(billId, hostToken)
       const imageRef = await uploadImage(file)
-      await attach.mutateAsync({ billId, imageRef, deviceId })
+      await attach.mutateAsync({ id: billId, imageRef, deviceId, hostToken })
       return billId
     } finally {
       setBusy(false)
@@ -63,7 +66,12 @@ export function useScanUpload() {
     setBusy(true)
     try {
       const imageRef = await uploadImage(file)
-      await attach.mutateAsync({ billId, imageRef, deviceId: getDeviceId() })
+      await attach.mutateAsync({
+        id: billId,
+        imageRef,
+        deviceId: getDeviceId(),
+        hostToken: getHostToken(billId),
+      })
     } finally {
       setBusy(false)
     }

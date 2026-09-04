@@ -123,6 +123,15 @@ const schema = defineSchema({
     imageRef: v.optional(v.string()),
 
     shareToken: v.string(), // unguessable
+    // The HOST's capability for this bill. The bill id lives in the address bar
+    // (/review|/split|/summary/$billId) and in browser history, so it can't be
+    // the secret that authorizes host writes — one pasted URL would hand a
+    // stranger "edit items / revoke the link / finalize". This token is minted
+    // server-side in createBill, returned exactly once, kept in localStorage on
+    // the host's device, and required by every host mutation
+    // (convex/bills/lib/functions.ts). It is NEVER returned by a query — the
+    // wire shape is built by toWireBill (convex/model/bills.ts), which strips it.
+    hostToken: v.string(),
     status: billStatus,
     // Set when the vision call failed or returned garbage — the review screen
     // offers "scan again / enter manually" instead of a silent empty bill.

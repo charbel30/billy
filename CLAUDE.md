@@ -139,7 +139,10 @@ handlers stay thin: shared validation/gates/claim math live in `convex/model/bil
 (`assertEditableSplit`, `assertSettleOpen`, `saveClaimsForPerson`, …) — reuse those, don't
 re-implement checks inline. Identity + status gating is applied by the **custom function
 builders** in `convex/bills/lib/functions.ts` (convex-helpers `customMutation`/`customQuery`):
-`billMutation`/`editableBillMutation`/`settleBillMutation` consume `id` and inject `ctx.bill`;
+`billMutation`/`editableBillMutation`/`settleBillMutation` consume `id`+`hostToken` and inject
+`ctx.bill` (**host writes need the bill's `hostToken`, not just its id** — the id is in the URL;
+the token is minted server-side by `createBill`, returned once, and stored per-bill in
+localStorage by `src/lib/session/hostToken.ts`; no query ever returns it);
 `guestMutation`/`guestSettleMutation` consume `shareToken`+`guestSessionId`, gate by status,
 and inject `ctx.bill`+`ctx.guestSessionId`; `deviceLimitedMutation(limit, msg)` consumes
 `deviceId` and charges the per-device rate limit; `billQuery`/`sharedBillQuery` do the same
@@ -214,8 +217,11 @@ Rationale/eval plan: `convex-best-practices` skill, `rules/extraction-pipeline.m
 
 ### Routes
 
-`src/routes/`: `index.tsx` + `scan.tsx` (both render `ScannerHub`: capture, resume-last-bill,
-recent scans from localStorage `billy:bill-history` via `src/lib/session/billHistory.ts`),
+`src/routes/`: `index.tsx` (renders `LandingPage` — marketing hero + "Scan a receipt" CTA +
+"Try a sample bill" demo; the camera only opens once the user navigates to `/scan`, so cold
+visitors are never met with a permission prompt), `scan.tsx` (renders `ScannerHub`: capture,
+resume-last-bill, recent scans from localStorage `billy:bill-history` via
+`src/lib/session/billHistory.ts`), `terms.tsx` + `privacy.tsx` (legal),
 `review/$billId` (extraction review editor), `split/$billId` (host claim workspace),
 `summary/$billId` (totals + publish/share link), `join/$shareToken` (guest view; localStorage
 `guestSessionId`; guest mutations `joinSplit`/`addGuestPerson`/`saveGuestClaims` are

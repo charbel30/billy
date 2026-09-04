@@ -14,7 +14,13 @@ export const rateLimiter = new RateLimiter(components.rateLimiter, {
   // The paid step. A real table scans a handful of receipts per sitting.
   extractPerDevice: { kind: 'token bucket', rate: 12, period: HOUR, capacity: 6 },
   uploadUrlPerDevice: { kind: 'token bucket', rate: 12, period: HOUR, capacity: 6 },
-  extractGlobalDaily: { kind: 'fixed window', rate: 1000, period: 24 * HOUR },
+  // Sized to a ~$30/mo ceiling on gemini-2.5-flash-lite ($0.10/M input,
+  // $0.40/M output). A 2000px receipt tiles to ~1.5k image tokens; with the
+  // prompt and a JSON response that is roughly $0.0007 per call. The retrier
+  // (maxFailures: 3) can triple that on a persistently failing image, so budget
+  // the worst case: 400/day * 3 * $0.0007 * 30d ~= $25/mo. At the old cap of
+  // 1000/day the same worst case was ~$63/mo — over budget.
+  extractGlobalDaily: { kind: 'fixed window', rate: 400, period: 24 * HOUR },
   // A leaked share link shouldn't allow unbounded guest spam on one bill.
   guestJoinPerBill: { kind: 'token bucket', rate: 30, period: HOUR, capacity: 15 },
 })

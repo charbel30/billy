@@ -44,7 +44,7 @@ export function buildTotalsMessage(
   const tipLbp = portfolios.reduce((s, p) => s + p.tipShareLbp, 0)
 
   const lines: string[] = [
-    `🧾 ${bill.merchantName.trim() || 'Bill split'} — split with Billy`,
+    `🧾 ${bill.merchantName.trim() || 'Bill split'} — split with Spolio`,
     '',
   ]
   const paidById = new Map(bill.people.map((p) => [p.id, p.paidAt != null]))

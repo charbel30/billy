@@ -97,6 +97,43 @@ export async function getBillByShareToken(ctx: QueryCtx, shareToken: string) {
   return bill
 }
 
+// ---------------------------------------------------------------------------
+// Host capability. `bills.hostToken` is a bearer secret minted server-side on
+// create and held only on the host's device — the bill id (which is in the URL)
+// authorizes nothing on its own. Applied by the builders in
+// convex/bills/lib/functions.ts, never inline in a handler.
+// ---------------------------------------------------------------------------
+
+/** Length-safe compare with no early exit on the first differing character.
+ *  The stored token's length is a fixed public constant, so the only
+ *  input-dependent work is over the caller's own string. */
+function secretEquals(a: string, b: string): boolean {
+  let diff = a.length ^ b.length
+  const len = Math.min(a.length, b.length)
+  for (let i = 0; i < len; i++) {
+    diff |= a.charCodeAt(i) ^ b.charCodeAt(i)
+  }
+  return diff === 0
+}
+
+export function assertHostToken(bill: Bill, hostToken: string) {
+  if (!secretEquals(bill.hostToken, hostToken)) {
+    // ConvexError so the message survives prod error redaction: a host opening
+    // their own bill on a second device needs to understand why it's read-only.
+    throw new ConvexError(
+      "This device doesn't have edit access to this bill — open it on the device that scanned it.",
+    )
+  }
+}
+
+/** The wire shape of a bill: the document plus its claim rows, MINUS the host
+ *  capability. Every query goes through here so the secret can't leak into a
+ *  response — including the guest response, which anyone with the link reads. */
+export function toWireBill<T extends Bill>(bill: T, claims: Claim[]) {
+  const { hostToken: _hostToken, ...rest } = bill
+  return { ...rest, claims }
+}
+
 export function findGuestPerson(bill: Bill, guestSessionId: string) {
   return bill.people.find((p) => p.guestSessionId === guestSessionId) ?? null
 }

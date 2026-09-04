@@ -2,7 +2,6 @@ import { LegalFooter } from '~/components/shared/LegalFooter'
 import { HeroSection } from './components/HeroSection'
 import { HowItWorksSection } from './components/HowItWorksSection'
 import { DualCurrencySection } from './components/DualCurrencySection'
-import { VenueSection } from './components/VenueSection'
 
 export function LandingPage() {
   return (
@@ -11,7 +10,6 @@ export function LandingPage() {
         <HeroSection />
         <HowItWorksSection />
         <DualCurrencySection />
-        <VenueSection />
         <LegalFooter />
       </div>
     </div>

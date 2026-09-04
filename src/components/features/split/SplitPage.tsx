@@ -28,13 +28,16 @@ import {
   useShareHostItemEvenly,
   useSplitLeftoversEvenly,
 } from '~/api'
-import { recordBill } from '~/lib/session'
+import { getHostToken, recordBill } from '~/lib/session'
 import { claimsForPerson, unitsFor } from '~/lib/bill'
 import { remainingUnits, totalRemainingLbp, formatUsd, toUsd } from '~/lib/money'
 import { joinUrl } from '~/lib/format'
 
 export function SplitPage({ billId }: { billId: Id<'bills'> }) {
   const navigate = useNavigate()
+  // Host writes carry the bill's capability, not just its id (the id is right
+  // there in the URL). Read at call time so it's always the current value.
+  const hostArgs = () => ({ id: billId, hostToken: getHostToken(billId) })
   const { data: bill } = useSuspenseQuery(billQueries.detail(billId))
   const publish = usePublish()
   const finalize = useFinalize()
@@ -90,12 +93,12 @@ export function SplitPage({ billId }: { billId: Id<'bills'> }) {
   }
 
   async function addPerson(name: string) {
-    const result = await addHostPerson.mutateAsync({ id: billId, name })
+    const result = await addHostPerson.mutateAsync({ ...hostArgs(), name })
     setActiveId(result.personId)
   }
 
   async function removePerson(personId: string) {
-    await removeHostPerson.mutateAsync({ id: billId, personId })
+    await removeHostPerson.mutateAsync({ ...hostArgs(), personId })
   }
 
   async function savePersonClaims(
@@ -103,7 +106,7 @@ export function SplitPage({ billId }: { billId: Id<'bills'> }) {
     nextClaims: Array<{ itemId: string; units: number }>,
   ) {
     const result = await saveHostClaims.mutateAsync({
-      id: billId,
+      ...hostArgs(),
       personId,
       claims: nextClaims,
     })
@@ -129,7 +132,7 @@ export function SplitPage({ billId }: { billId: Id<'bills'> }) {
   }
 
   function shareEvenly(itemId: string, personIds: string[]) {
-    void shareHostItemEvenly.mutateAsync({ id: billId, itemId, personIds })
+    void shareHostItemEvenly.mutateAsync({ ...hostArgs(), itemId, personIds })
   }
 
   const pendingItemId =
@@ -143,15 +146,15 @@ export function SplitPage({ billId }: { billId: Id<'bills'> }) {
   // navigator.share lives inside the dialog on its own fresh tap, which keeps
   // iOS's user-gesture requirement happy.
   function openInvite() {
-    if (!shared) void publish.mutateAsync({ id: billId })
+    if (!shared) void publish.mutateAsync(hostArgs())
     setQrOpen(true)
   }
 
   async function finalizeSplit(splitLeftovers: boolean) {
     if (splitLeftovers) {
-      await splitLeftoversEvenly.mutateAsync({ id: billId })
+      await splitLeftoversEvenly.mutateAsync(hostArgs())
     }
-    await finalize.mutateAsync({ id: billId })
+    await finalize.mutateAsync(hostArgs())
     setFinalizeOpen(false)
     navigate({ to: '/summary/$billId', params: { billId } })
   }
@@ -187,7 +190,7 @@ export function SplitPage({ billId }: { billId: Id<'bills'> }) {
       onTipChange={
         finalized
           ? undefined
-          : (pct) => setTipPercent.mutate({ id: billId, tipPercent: pct })
+          : (pct) => setTipPercent.mutate({ ...hostArgs(), tipPercent: pct })
       }
       tipPending={setTipPercent.isPending}
       pendingItemId={pendingItemId}
@@ -236,7 +239,7 @@ export function SplitPage({ billId }: { billId: Id<'bills'> }) {
                   onRevoke={
                     shared
                       ? async () => {
-                          await revokeShare.mutateAsync({ id: billId })
+                          await revokeShare.mutateAsync(hostArgs())
                           setQrOpen(false)
                         }
                       : undefined

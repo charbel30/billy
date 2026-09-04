@@ -2,11 +2,13 @@ import { useEffect, useRef, useState } from 'react'
 import { useNavigate } from '@tanstack/react-router'
 import { useCreateDemoBill } from '~/api'
 import { scanErrorMessage, useScanUpload } from './hooks/useScanUpload'
+import { useManualBill } from '~/hooks/useManualBill'
 import type { Id } from 'convex/_generated/dataModel'
 import {
   getDeviceId,
   clearBillHistory,
   getBillHistory,
+  rememberHostToken,
   type BillHistoryEntry,
 } from '~/lib/session'
 import { motion } from 'motion/react'
@@ -18,12 +20,13 @@ import { ScannerViewfinder } from './components/ScannerViewfinder'
 import { ScanActions } from './components/ScanActions'
 import { ResumeBillCard } from './components/ResumeBillCard'
 import { RecentScanPanel } from './components/RecentScanPanel'
-import { scanHubCopy } from './content'
+import { scanHubCopy, scanPrivacyNote } from './content'
 
 export function ScannerHub() {
   const navigate = useNavigate()
   const scan = useScanUpload()
   const createDemoBill = useCreateDemoBill()
+  const manual = useManualBill()
   const cameraInputRef = useRef<HTMLInputElement>(null)
   // Photo picked but not yet confirmed — extraction is a paid call, so the
   // user gets one look ("readable? whole receipt in frame?") before we send it.
@@ -32,7 +35,7 @@ export function ScannerHub() {
   )
   const [error, setError] = useState<string | null>(null)
   const [history, setHistory] = useState<BillHistoryEntry[]>([])
-  const busy = scan.busy || createDemoBill.isPending
+  const busy = scan.busy || createDemoBill.isPending || manual.busy
 
   // Read local bill history on mount (client-only / localStorage).
   useEffect(() => {
@@ -98,10 +101,24 @@ export function ScannerHub() {
     if (busy) return
     setError(null)
     try {
-      const billId = await createDemoBill.mutateAsync({
+      const { billId, hostToken } = await createDemoBill.mutateAsync({
         deviceId: getDeviceId(),
       })
+      rememberHostToken(billId, hostToken)
       navigate({ to: '/review/$billId', params: { billId } })
+    } catch (err) {
+      setError(scanErrorMessage(err, scanHubCopy.fallbackError))
+    }
+  }
+
+  // The no-camera fallback: a blank bill, straight into the review editor.
+  // Never blocked by the extraction rate limits or the EXTRACTION_DISABLED kill
+  // switch — this is the path those errors tell people to take.
+  async function enterManually() {
+    if (busy) return
+    setError(null)
+    try {
+      await manual.startManualBill()
     } catch (err) {
       setError(scanErrorMessage(err, scanHubCopy.fallbackError))
     }
@@ -142,7 +159,12 @@ export function ScannerHub() {
               onRetake={retake}
               onStartScan={startScan}
               onTrySample={() => void trySampleBill()}
+              onEnterManually={() => void enterManually()}
             />
+
+            <p className="text-center text-xs text-muted-foreground">
+              {scanPrivacyNote}
+            </p>
 
             {error ? (
               <Alert variant="destructive">

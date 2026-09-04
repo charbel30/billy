@@ -20,8 +20,8 @@ export const Route = createFileRoute('/join/$shareToken')({
   head: ({ loaderData }) => ({
     meta: seo({
       title: loaderData?.merchantName
-        ? `Split at ${loaderData.merchantName} — Billy`
-        : 'Join the split — Billy',
+        ? `Split at ${loaderData.merchantName} — Spolio`
+        : 'Join the split — Spolio',
       description: loaderData
         ? `${formatUsd(toUsd(loaderData.totalLbp, loaderData.rate))} / ${formatLbp(
             loaderData.totalLbp,

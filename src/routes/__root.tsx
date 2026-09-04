@@ -1,12 +1,10 @@
 /// <reference types="vite/client" />
-import { ReactQueryDevtools } from "@tanstack/react-query-devtools/production";
 import {
   Outlet,
   createRootRouteWithContext,
   HeadContent,
   Scripts,
 } from "@tanstack/react-router";
-import { TanStackRouterDevtools } from "@tanstack/react-router-devtools";
 import * as React from "react";
 import { MotionConfig } from "motion/react";
 import { Toaster } from "react-hot-toast";
@@ -104,13 +102,36 @@ function RootDocument({ children }: { children: React.ReactNode }) {
             }}
           />
         </DirectionProvider>
-        <ReactQueryDevtools />
-        <TanStackRouterDevtools position="bottom-right" />
+        <React.Suspense fallback={null}>
+          <Devtools />
+        </React.Suspense>
         <Scripts />
       </body>
     </html>
   );
 }
+
+// Devtools are dev-only: lazily imported behind import.meta.env.DEV so the
+// packages are dead-code-eliminated from the production bundle rather than
+// shipped and hidden. (They used to mount unconditionally, via the
+// react-query-devtools "/production" build — visible to real users.)
+const Devtools = import.meta.env.DEV
+  ? React.lazy(async () => {
+      const [{ ReactQueryDevtools }, { TanStackRouterDevtools }] =
+        await Promise.all([
+          import("@tanstack/react-query-devtools"),
+          import("@tanstack/react-router-devtools"),
+        ]);
+      return {
+        default: () => (
+          <>
+            <ReactQueryDevtools />
+            <TanStackRouterDevtools position="bottom-right" />
+          </>
+        ),
+      };
+    })
+  : () => null;
 
 function AppLayout({ children }: { children: React.ReactNode }) {
   return (

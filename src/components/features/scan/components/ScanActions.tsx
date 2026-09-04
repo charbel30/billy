@@ -9,8 +9,9 @@ import { swap, tapHaptic } from '~/lib/ui'
 import { scanHubCopy } from '../content'
 
 // The buttons under the viewfinder. With a pending photo: confirm ("Use this
-// photo") + retake. Otherwise: the big Start Scan CTA + the sample-bill escape
-// hatch (demo bill, zero camera).
+// photo") + retake. Otherwise: the big Start Scan CTA + the two zero-camera
+// escape hatches — the sample bill (a pre-filled demo) and manual entry (an
+// empty bill you type yourself, the fallback when scanning is unavailable).
 export function ScanActions({
   hasPending,
   busy,
@@ -18,6 +19,7 @@ export function ScanActions({
   onRetake,
   onStartScan,
   onTrySample,
+  onEnterManually,
 }: {
   hasPending: boolean
   busy: boolean
@@ -25,6 +27,7 @@ export function ScanActions({
   onRetake: () => void
   onStartScan: () => void
   onTrySample: () => void
+  onEnterManually: () => void
 }) {
   if (hasPending) {
     return (
@@ -84,14 +87,33 @@ export function ScanActions({
         </AnimatePresence>
         {busy ? scanHubCopy.scanningStatus : scanHubCopy.primaryAction}
       </button>
-      <button
-        type="button"
-        onClick={onTrySample}
-        disabled={busy}
-        className="mx-auto block rounded-full px-4 py-1.5 text-sm font-semibold text-primary-strong transition-colors hover:bg-primary/10 disabled:pointer-events-none disabled:opacity-70"
-      >
-        Try a sample bill — no camera needed
-      </button>
+      <div className="flex flex-wrap items-center justify-center gap-1">
+        <button
+          type="button"
+          onClick={onTrySample}
+          disabled={busy}
+          className={SECONDARY_ACTION}
+        >
+          {scanHubCopy.sampleAction}
+        </button>
+        <span aria-hidden className="text-muted-foreground/40">
+          &middot;
+        </span>
+        <button
+          type="button"
+          onClick={() => {
+            tapHaptic()
+            onEnterManually()
+          }}
+          disabled={busy}
+          className={SECONDARY_ACTION}
+        >
+          {scanHubCopy.manualAction}
+        </button>
+      </div>
     </>
   )
 }
+
+const SECONDARY_ACTION =
+  'rounded-full px-4 py-1.5 text-sm font-semibold text-primary-strong transition-colors hover:bg-primary/10 disabled:pointer-events-none disabled:opacity-70'

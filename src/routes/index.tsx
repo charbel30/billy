@@ -6,4 +6,5 @@ import { seo } from '~/lib/seo'
 export const Route = createFileRoute('/')({
   head: () => ({ meta: seo(landingSeo) }),
   component: LandingPage,
+
 })

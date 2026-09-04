@@ -17,13 +17,18 @@ import { SettlementSummary } from './components/SettlementSummary'
 import { MobileReviewAction } from './components/MobileReviewAction'
 import { ExtractingBanner, ExtractionFailedBanner } from './components/ExtractionBanners'
 import { SaveStatus } from './components/SaveStatus'
+import { reviewCopy } from './content'
 
 export function ReviewPage({ billId }: { billId: Id<'bills'> }) {
   const navigate = useNavigate()
   const editor = useBillEditor(billId)
   const { bill, setMeta, addLineItem, updateLineItem, removeLineItem } = editor
   const { meta } = bill
-  const canContinue = bill.lineItems.length > 0 && canPersistWorkingBill(bill)
+  // An empty bill is a normal starting point (manual entry, or a scan whose
+  // extraction failed) — the screen just has to ask for items instead of
+  // asking the user to review nothing.
+  const isEmpty = bill.lineItems.length === 0
+  const canContinue = !isEmpty && canPersistWorkingBill(bill)
   // Raw server doc (live) — carries extraction failure state the editor's
   // working copy doesn't track.
   const { data: serverBill } = useSuspenseQuery(billQueries.detail(billId))
@@ -50,7 +55,7 @@ export function ReviewPage({ billId }: { billId: Id<'bills'> }) {
     <div className="mx-auto w-full max-w-7xl px-4 pb-8 pt-4 sm:px-6 lg:px-10">
       <div className="mb-6 text-center lg:hidden">
         <p className="text-sm text-muted-foreground">
-          Review the scanned items before splitting.
+          {isEmpty ? reviewCopy.emptySubhead : reviewCopy.subhead}
         </p>
       </div>
 
@@ -75,7 +80,7 @@ export function ReviewPage({ billId }: { billId: Id<'bills'> }) {
               />
               <p className="mt-2 flex items-center gap-2 text-sm text-muted-foreground">
                 <RiReceiptLine className="size-4" />
-                Receipt audit
+                {isEmpty ? reviewCopy.emptyCaption : reviewCopy.caption}
               </p>
             </div>
           </div>

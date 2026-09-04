@@ -12,6 +12,7 @@ import {
   updatePersonInBill,
 } from '~/lib/bill/edits'
 import { SAVE_DELAY_MS } from '~/lib/bill/constants'
+import { getHostToken } from '~/lib/session'
 import {
   clearWorkingBill,
   persistWorkingBill,
@@ -74,6 +75,7 @@ export function useBillEditor(id: Id<'bills'>): BillEditor {
     try {
       await saveWorkingRef.current({
         id,
+        hostToken: getHostToken(id),
         lineItems: clean.lineItems,
         people: clean.people,
         meta: clean.meta,

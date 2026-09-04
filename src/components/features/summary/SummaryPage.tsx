@@ -8,12 +8,15 @@ import { Button } from '~/components/ui/button'
 import { Alert, AlertTitle } from '~/components/ui/alert'
 import { BillSummary, ShareSplitCard } from '~/components/features/bill'
 import { billQueries, useRevokeShare, useSetHostPersonPaid } from '~/api'
-import { recordBill } from '~/lib/session'
+import { getHostToken, recordBill } from '~/lib/session'
 import { buildTotalsMessage, joinUrl } from '~/lib/format'
 
 export function SummaryPage({ billId }: { billId: Id<'bills'> }) {
   const navigate = useNavigate()
   const { data: bill } = useSuspenseQuery(billQueries.detail(billId))
+  // Host writes carry the bill's capability, not just its id (the id is right
+  // there in the URL). Read at call time so it's always the current value.
+  const hostArgs = () => ({ id: billId, hostToken: getHostToken(billId) })
   const revokeShare = useRevokeShare()
   const setHostPersonPaid = useSetHostPersonPaid()
   const finalized = bill.status === 'FINALIZED'
@@ -56,7 +59,7 @@ export function SummaryPage({ billId }: { billId: Id<'bills'> }) {
           finalized
             ? undefined
             : async () => {
-                await revokeShare.mutateAsync({ id: billId })
+                await revokeShare.mutateAsync(hostArgs())
               }
         }
       />
@@ -89,7 +92,7 @@ export function SummaryPage({ billId }: { billId: Id<'bills'> }) {
           onTogglePaid={
             shared
               ? (personId, paid) =>
-                  setHostPersonPaid.mutate({ id: billId, personId, paid })
+                  setHostPersonPaid.mutate({ ...hostArgs(), personId, paid })
               : undefined
           }
           paidPendingId={

@@ -1,7 +1,13 @@
 import type { Doc } from 'convex/_generated/dataModel'
 import type { WorkingBill } from './types'
 
-export function workingBillFromDoc(d: Doc<'bills'>): WorkingBill {
+// The bill as the CLIENT sees it: the stored document minus `hostToken`, which
+// queries strip (convex/model/bills.ts, toWireBill) because it's the host's
+// write capability. Typing it away here keeps "the browser never holds the
+// token on a bill object" a compile-time fact.
+type WireBillDoc = Omit<Doc<'bills'>, 'hostToken'>
+
+export function workingBillFromDoc(d: WireBillDoc): WorkingBill {
   return {
     lineItems: d.lineItems,
     people: d.people,

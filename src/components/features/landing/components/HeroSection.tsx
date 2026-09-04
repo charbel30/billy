@@ -2,7 +2,7 @@ import { useState } from 'react'
 import { Link, useNavigate } from '@tanstack/react-router'
 import { motion } from 'motion/react'
 import { useCreateDemoBill } from '~/api'
-import { getDeviceId } from '~/lib/session'
+import { getDeviceId, rememberHostToken } from '~/lib/session'
 import { staggerChild, staggerContainer } from '~/lib/ui'
 import { Badge } from '~/components/ui/badge'
 import { Button } from '~/components/ui/button'
@@ -16,9 +16,10 @@ export function HeroSection() {
   async function trySampleBill() {
     if (isPending) return
     try {
-      const billId = await createDemoBill.mutateAsync({
+      const { billId, hostToken } = await createDemoBill.mutateAsync({
         deviceId: getDeviceId(),
       })
+      rememberHostToken(billId, hostToken)
       navigate({ to: '/review/$billId', params: { billId } })
     } catch {
       // Global MutationCache.onError toasts every mutation error.

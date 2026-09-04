@@ -10,7 +10,7 @@ import {
   deviceLimitedMutation,
   editableBillMutation,
 } from '../lib/functions'
-import { metaValidator } from '../lib/validators'
+import { createdBillValidator, metaValidator } from '../lib/validators'
 import {
   assertFiniteNumber,
   definedOnly,
@@ -27,6 +27,7 @@ import {
 } from '../../../src/lib/bill/constants'
 import {
   newClientId,
+  newHostToken,
   newShareToken,
   nextPersonColor,
 } from '../../../src/lib/bill/ids'
@@ -38,14 +39,33 @@ const newBillMutation = deviceLimitedMutation(
   'Too many new bills from this device — try again in a bit.',
 )
 
+// Both creators mint the host capability HERE, server-side, and return it
+// exactly once. Server-side because a client-supplied token would let an
+// attacker create a bill with a token they chose, and because the caller must
+// not be able to weaken the entropy of the secret that guards its own bill.
+// The caller stores it on the device (src/lib/session/hostToken.ts); it is
+// never readable again through any query.
+
+// Two callers: the scan flow (src/components/features/scan/hooks/useScanUpload.ts,
+// which then uploads a photo and asks for extraction) and manual entry
+// (src/hooks/useManualBill.ts, which navigates straight to the review editor).
+// INVARIANT — never add `assertExtractionEnabled` or any extraction rate limit
+// here. Those belong to convex/bills/host/uploads.ts. Manual entry is the escape
+// hatch users are pointed at when scanning is paused or exhausted (see the
+// EXTRACTION_DISABLED message in convex/lib/rateLimits.ts and the "scan again /
+// enter manually" contract on `extractionError` in convex/schema.ts); gating bill
+// creation on extraction would break it in exactly the case it exists for.
+// Status is PENDING for both: an empty bill has nothing to audit yet, and READY
+// is earned by going through the review editor (saveWorking sets it).
 export const createBill = newBillMutation({
   args: {
     merchantName: v.optional(v.string()),
     currencyPrimary: v.optional(v.string()),
   },
-  returns: v.id('bills'),
+  returns: createdBillValidator,
   handler: async (ctx, args) => {
-    return await ctx.db.insert('bills', {
+    const hostToken = newHostToken()
+    const billId = await ctx.db.insert('bills', {
       merchantName: args.merchantName ?? '',
       currencyPrimary: args.currencyPrimary ?? 'LBP',
       rate: DEFAULT_RATE,
@@ -59,6 +79,7 @@ export const createBill = newBillMutation({
       serviceSplitMode: 'proportional',
       tipPercent: DEFAULT_TIP_PERCENT,
       shareToken: newShareToken(),
+      hostToken,
       status: 'PENDING',
       version: 0,
       updatedAt: now(),
@@ -71,6 +92,7 @@ export const createBill = newBillMutation({
         },
       ],
     })
+    return { billId, hostToken }
   },
 })
 
@@ -94,9 +116,10 @@ const DEMO_LINES: Array<[name: string, qty: number, lineTotalLbp: number]> = [
 
 export const createDemoBill = newBillMutation({
   args: {},
-  returns: v.id('bills'),
+  returns: createdBillValidator,
   handler: async (ctx) => {
-    return await ctx.db.insert('bills', {
+    const hostToken = newHostToken()
+    const billId = await ctx.db.insert('bills', {
       merchantName: 'Maison Zola (sample)',
       branch: 'Gemmayze, Beirut',
       currencyPrimary: 'LBP',
@@ -110,6 +133,7 @@ export const createDemoBill = newBillMutation({
       printedTotalLbp: 19_440_000,
       printedTotalUsd: 216,
       shareToken: newShareToken(),
+      hostToken,
       status: 'READY',
       version: 0,
       updatedAt: now(),
@@ -128,6 +152,7 @@ export const createDemoBill = newBillMutation({
         },
       ],
     })
+    return { billId, hostToken }
   },
 })
 

@@ -29,6 +29,10 @@ export const billDocValidator = v.object({
   printedTotalUsd: v.optional(v.number()),
   imageRef: v.optional(v.string()),
   shareToken: v.string(),
+  // `hostToken` is deliberately ABSENT: it is the host's write capability, and
+  // this validator is the return type of BOTH getBill and getBillByToken (which
+  // anyone with the share link can call). Queries strip it via toWireBill; if a
+  // handler ever forgets, Convex rejects the response against this validator.
   status: billStatus,
   extractionError: v.optional(v.string()),
   extractionRunId: v.optional(v.string()),
@@ -37,6 +41,14 @@ export const billDocValidator = v.object({
   lineItems: v.array(lineItem),
   people: v.array(person),
   claims: v.array(claim),
+})
+
+// What createBill/createDemoBill hand back: the id (goes in the URL) plus the
+// host capability (goes in localStorage, never in the URL). This is the ONLY
+// response that ever contains a hostToken.
+export const createdBillValidator = v.object({
+  billId: v.id('bills'),
+  hostToken: v.string(),
 })
 
 export const metaValidator = v.object({

@@ -41,7 +41,7 @@ function HeaderLeft() {
   return onBill ? null : <BrandMark />;
 }
 
-// The Billy logo — a primary monogram tile + wordmark; links home. `compact`
+// The Spolio logo — a primary monogram tile + wordmark; links home. `compact`
 // keeps just the mark on small screens (used next to the step nav).
 function BrandMark({ compact = false }: { compact?: boolean }) {
   return (
