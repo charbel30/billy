@@ -117,7 +117,7 @@ function CloudflareWebAnalytics() {
   const token = import.meta.env.VITE_CLOUDFLARE_WEB_ANALYTICS_TOKEN?.trim()
   const onPublicPage = useRouterState({
     select: (state) =>
-      ['/', '/scan', '/privacy', '/terms'].includes(state.location.pathname),
+      ['/', '/privacy', '/terms'].includes(state.location.pathname),
   })
 
   if (!token || !onPublicPage) return null

@@ -103,6 +103,48 @@
   opacity: .55;
   cursor: wait;
 }
+.landing-scan:disabled,
+.landing-manual:disabled {
+  opacity: .55;
+  cursor: wait;
+}
+.landing-secondary-actions {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 8px 20px;
+  margin-top: 12px;
+}
+.landing-secondary-actions .landing-sample {
+  margin-top: 0;
+}
+.landing-manual {
+  min-height: 44px;
+  border-radius: 8px;
+  color: var(--landing-muted);
+  font-size: 12px;
+  transition: color 180ms, scale 180ms;
+}
+.landing-manual:hover {
+  color: var(--landing-green);
+  text-decoration: underline;
+  text-underline-offset: 4px;
+}
+.landing-scan-privacy {
+  max-width: 310px;
+  margin-top: 8px;
+  color: var(--landing-muted);
+  font-size: 11px;
+  line-height: 1.5;
+}
+@media (max-width: 760px) {
+  .landing-secondary-actions {
+    justify-content: center;
+  }
+  .landing-scan-privacy {
+    margin-inline: auto;
+  }
+}
 .landing-page :is(button, a):focus-visible {
   outline: 2px solid var(--landing-green);
   outline-offset: 5px;

@@ -194,7 +194,8 @@ through the scoped claim mutations (`saveHostClaims`/`saveGuestClaims`/…) as r
 **Constraint:** Convex queries/mutations cannot call external APIs (`fetch` unavailable) —
 external calls MUST be Convex **actions**.
 
-Flow: `ScannerHub` compresses the photo (`browser-image-compression`) → `createBill` →
+Flow: the landing page's `ScanReceiptActions` confirms the photo → `createBill` →
+compression (`browser-image-compression`, loaded on demand) →
 `generateUploadUrl` → POST to Convex storage → `attachImageAndExtract` patches `imageRef` and
 runs `internal.extraction.actions.extractReceipt` (internalAction) via
 **`@convex-dev/action-retrier`** (`convex/lib/retrier.ts`: transient vision failures retry
@@ -218,10 +219,10 @@ Rationale/eval plan: `convex-best-practices` skill, `rules/extraction-pipeline.m
 ### Routes
 
 `src/routes/`: `index.tsx` (renders `LandingPage` — marketing hero + "Scan a receipt" CTA +
-"Try a sample bill" demo; the camera only opens once the user navigates to `/scan`, so cold
-visitors are never met with a permission prompt), `scan.tsx` (renders `ScannerHub`: capture,
-resume-last-bill, recent scans from localStorage `billy:bill-history` via
-`src/lib/session/billHistory.ts`), `terms.tsx` + `privacy.tsx` (legal),
+"Try a sample bill" demo; the scan CTA opens the native photo picker directly on tap.
+Photo confirmation, manual entry, and recent bills from localStorage `billy:bill-history`
+also live on the landing page; the separate `/scan` route has been removed),
+`terms.tsx` + `privacy.tsx` (legal),
 `review/$billId` (extraction review editor), `split/$billId` (host claim workspace),
 `summary/$billId` (totals + publish/share link), `join/$shareToken` (guest view; localStorage
 `guestSessionId`; guest mutations `joinSplit`/`addGuestPerson`/`saveGuestClaims` are

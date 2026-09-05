@@ -1,6 +1,5 @@
 import { useState } from 'react'
 import { ConvexError } from 'convex/values'
-import imageCompression from 'browser-image-compression'
 import type { Id } from 'convex/_generated/dataModel'
 import {
   useAttachImageAndExtract,
@@ -24,7 +23,7 @@ export function scanErrorMessage(err: unknown, fallback: string): string {
 }
 
 // Shared scan pipeline: compress → upload to Convex storage → attach + schedule
-// extraction. Used by ScannerHub (new bill) and the review screen's
+// extraction. Used by the landing page (new bill) and the review screen's
 // "scan again" path after a failed extraction (same bill).
 export function useScanUpload() {
   const createBill = useCreateBill()
@@ -33,6 +32,7 @@ export function useScanUpload() {
   const [busy, setBusy] = useState(false)
 
   async function uploadImage(file: File): Promise<Id<'_storage'>> {
+    const { default: imageCompression } = await import('browser-image-compression')
     // Shrink before upload because image tokens dominate extraction cost.
     const compressed = await imageCompression(file, {
       maxSizeMB: 0.8,

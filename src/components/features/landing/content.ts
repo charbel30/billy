@@ -14,7 +14,7 @@ export const heroCopy = {
   headline: ['Good food.', 'Fair split.'],
   subhead:
     'Scan the receipt. Pick what you had. Send everyone their share. Dinner math, done.',
-  primaryCta: 'Scan a receipt', // → /scan
+  primaryCta: 'Scan a receipt', // → native photo picker
   secondaryCta: 'Try a sample bill', // → demo mutation → /review/$billId
 }
 

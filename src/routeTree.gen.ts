@@ -10,7 +10,6 @@
 
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as TermsRouteImport } from './routes/terms'
-import { Route as ScanRouteImport } from './routes/scan'
 import { Route as PrivacyRouteImport } from './routes/privacy'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as SummaryBillIdRouteImport } from './routes/summary/$billId'
@@ -21,11 +20,6 @@ import { Route as JoinShareTokenRouteImport } from './routes/join/$shareToken'
 const TermsRoute = TermsRouteImport.update({
   id: '/terms',
   path: '/terms',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const ScanRoute = ScanRouteImport.update({
-  id: '/scan',
-  path: '/scan',
   getParentRoute: () => rootRouteImport,
 } as any)
 const PrivacyRoute = PrivacyRouteImport.update({
@@ -62,7 +56,6 @@ const JoinShareTokenRoute = JoinShareTokenRouteImport.update({
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/privacy': typeof PrivacyRoute
-  '/scan': typeof ScanRoute
   '/terms': typeof TermsRoute
   '/join/$shareToken': typeof JoinShareTokenRoute
   '/review/$billId': typeof ReviewBillIdRoute
@@ -72,7 +65,6 @@ export interface FileRoutesByFullPath {
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/privacy': typeof PrivacyRoute
-  '/scan': typeof ScanRoute
   '/terms': typeof TermsRoute
   '/join/$shareToken': typeof JoinShareTokenRoute
   '/review/$billId': typeof ReviewBillIdRoute
@@ -83,7 +75,6 @@ export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
   '/privacy': typeof PrivacyRoute
-  '/scan': typeof ScanRoute
   '/terms': typeof TermsRoute
   '/join/$shareToken': typeof JoinShareTokenRoute
   '/review/$billId': typeof ReviewBillIdRoute
@@ -95,7 +86,6 @@ export interface FileRouteTypes {
   fullPaths:
     | '/'
     | '/privacy'
-    | '/scan'
     | '/terms'
     | '/join/$shareToken'
     | '/review/$billId'
@@ -105,7 +95,6 @@ export interface FileRouteTypes {
   to:
     | '/'
     | '/privacy'
-    | '/scan'
     | '/terms'
     | '/join/$shareToken'
     | '/review/$billId'
@@ -115,7 +104,6 @@ export interface FileRouteTypes {
     | '__root__'
     | '/'
     | '/privacy'
-    | '/scan'
     | '/terms'
     | '/join/$shareToken'
     | '/review/$billId'
@@ -126,7 +114,6 @@ export interface FileRouteTypes {
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   PrivacyRoute: typeof PrivacyRoute
-  ScanRoute: typeof ScanRoute
   TermsRoute: typeof TermsRoute
   JoinShareTokenRoute: typeof JoinShareTokenRoute
   ReviewBillIdRoute: typeof ReviewBillIdRoute
@@ -141,13 +128,6 @@ declare module '@tanstack/react-router' {
       path: '/terms'
       fullPath: '/terms'
       preLoaderRoute: typeof TermsRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/scan': {
-      id: '/scan'
-      path: '/scan'
-      fullPath: '/scan'
-      preLoaderRoute: typeof ScanRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/privacy': {
@@ -198,7 +178,6 @@ declare module '@tanstack/react-router' {
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   PrivacyRoute: PrivacyRoute,
-  ScanRoute: ScanRoute,
   TermsRoute: TermsRoute,
   JoinShareTokenRoute: JoinShareTokenRoute,
   ReviewBillIdRoute: ReviewBillIdRoute,

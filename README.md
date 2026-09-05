@@ -49,7 +49,7 @@ Claims are written only through the scoped claim mutations as row diffs.
 
 ```mermaid
 flowchart TD
-  ScanRoute[Scan route] --> UploadMutation[generateUploadUrl]
+  ScanRoute[Landing page photo capture] --> UploadMutation[generateUploadUrl]
   UploadMutation --> AttachMutation[attachImageAndExtract]
   AttachMutation --> ExtractAction[extraction action]
   ExtractAction --> ApplyExtraction[applyExtraction mutation]
@@ -89,8 +89,10 @@ Start with the shape, then the client flow, then the backend flow:
 Routes are thin: each one wires `createFileRoute` (+ loader) to a feature page
 under `src/components/features/`.
 
-- `src/routes/scan.tsx`: creates a bill, compresses/uploads the receipt image,
-  and starts extraction (renders `ScannerHub`).
+- `src/routes/index.tsx`: renders the landing page. Its scan button opens the
+  photo picker directly; `ScanReceiptActions` previews the photo, then creates
+  a bill, uploads it, and starts extraction. Manual entry and recent bills are
+  also available here; there is no separate `/scan` page.
 - `src/routes/review/$billId.tsx`: review screen for editing merchant metadata,
   printed totals, service/tax, and receipt lines (renders `ReviewPage`).
 - `src/routes/split/$billId.tsx`: split screen where people claim item units

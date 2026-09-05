@@ -3,6 +3,7 @@ import { Link } from '@tanstack/react-router'
 import { trackFunnelMilestone } from '~/lib/observability'
 import { HeroSection } from './components/HeroSection'
 import { HowItWorksSection } from './components/HowItWorksSection'
+import { RecentBills } from '~/components/features/scan/components/RecentBills'
 import './landing.css'
 
 export function LandingPage() {
@@ -14,6 +15,7 @@ export function LandingPage() {
     <div className="landing-page">
       <div className="landing-container">
         <HeroSection />
+        <RecentBills />
         <HowItWorksSection />
         <footer className="landing-footer">
           <p>Made for meals with friends. Built for Lebanon.</p>

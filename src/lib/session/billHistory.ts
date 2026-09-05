@@ -1,5 +1,5 @@
-// A local, client-side history of the bills you've worked on. Powers the scan
-// page's "resume" shortcut (most recent) and the "recent scans" list. Stored in
+// A local, client-side history of the bills you've worked on. Powers the
+// landing page's recent bills list. Stored in
 // localStorage only — no server round-trip.
 export type BillStep = 'review' | 'split' | 'summary'
 

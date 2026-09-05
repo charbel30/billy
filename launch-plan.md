@@ -32,8 +32,8 @@ restructures existing code.
 | Spend | $30/mo target ceiling. Existing limiter is 400/day; dollar bounds and total operating-cost coverage remain unverified. |
 | Failure path | Rescan offered first, **blank-bill entry** as the floor beneath it. Both before launch. |
 | Analytics | Cloudflare Web Analytics + Sentry (client-side). Convex event table deferred. |
-| Root route | Hero -> prominent Scan CTA -> how-it-works below fold. Camera opens on tap only. `/scan` stays. |
-| Legal | Short, truthful terms + privacy. Plus a one-line disclosure on the scan screen. |
+| Root route | Hero -> prominent Scan CTA opens the photo picker directly -> photo confirmation -> review. Camera opens on tap only. Separate `/scan` page removed; manual entry and recent bills live on `/`. |
+| Legal | Short, truthful terms + privacy. Plus a one-line disclosure beside the landing scan action and photo confirmation. |
 | Language | English UI. Arabic **extraction** must still be tested. |
 | Devices | Host: iOS Safari. Guest: must also work on Android Chrome + WhatsApp in-app browser. |
 
@@ -69,7 +69,7 @@ Verify mutation rejection directly, as well as the view-only UI.
 
 ### 4. Rescan + blank bill — IMPLEMENTED
 
-Rescan is the first offer after a bad extraction. Blank-bill entry on `/scan`
+Rescan is the first offer after a bad extraction. Blank-bill entry on `/`
 uses `useManualBill` and `createBill`; manual entry on `/review` edits the
 existing bill. Neither requires extraction to be available. Bill creation
 still has its own per-device limit. Verify manual completion with extraction
@@ -274,7 +274,7 @@ item 1.
   in exactly the case it exists for.
 - **The failure banner does NOT mint a second bill.** On /review the bill already
   exists, so "Enter items manually" dismisses the banner and edits in place.
-  useManualBill is only for the scan screen, where no bill exists yet.
+  useManualBill is only for the landing page's new-bill flow, where no bill exists yet.
 - **Sentry session replay must stay OFF** — it would record receipt contents,
   merchant names and the names of everyone at the table, and would falsify the
   privacy page. Same for `dataCollection.httpBodies`. Errors only.
