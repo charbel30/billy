@@ -11,6 +11,7 @@ export function BlurCommitInput({
   placeholder,
   className,
   align = 'left',
+  readOnly = false,
 }: {
   value: string | number | null | undefined
   onCommit: (raw: string) => void
@@ -18,6 +19,7 @@ export function BlurCommitInput({
   placeholder?: string
   className?: string
   align?: 'left' | 'center' | 'right'
+  readOnly?: boolean
 }) {
   const initial = value == null ? '' : String(value)
   const [draft, setDraft] = useState(initial)
@@ -37,6 +39,7 @@ export function BlurCommitInput({
       inputMode={numeric ? 'decimal' : undefined}
       placeholder={placeholder}
       value={draft}
+      readOnly={readOnly}
       onChange={(e) => setDraft(e.target.value)}
       onKeyDown={(e) => {
         if (e.key === 'Enter') e.currentTarget.blur()
@@ -47,6 +50,7 @@ export function BlurCommitInput({
         }
       }}
       onBlur={() => {
+        if (readOnly) return
         if (cancelled.current) {
           cancelled.current = false
           return
@@ -59,6 +63,8 @@ export function BlurCommitInput({
       className={cn(
         'rounded-control bg-transparent px-1 outline-none transition-colors duration-300',
         'hover:bg-muted/50 focus-visible:bg-card focus-visible:ring-2 focus-visible:ring-ring/50',
+        readOnly &&
+          'cursor-default hover:bg-transparent focus-visible:bg-transparent focus-visible:ring-0',
         numeric && 'font-receipt',
         flash && 'bg-success-subtle duration-0',
         align === 'center' && 'text-center',

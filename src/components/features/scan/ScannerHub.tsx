@@ -21,6 +21,7 @@ import { ScanActions } from './components/ScanActions'
 import { ResumeBillCard } from './components/ResumeBillCard'
 import { RecentScanPanel } from './components/RecentScanPanel'
 import { scanHubCopy, scanPrivacyNote } from './content'
+import { trackFunnelMilestone } from '~/lib/observability'
 
 export function ScannerHub() {
   const navigate = useNavigate()
@@ -46,6 +47,7 @@ export function ScannerHub() {
 
   function startScan() {
     if (busy) return
+    trackFunnelMilestone('scan_started')
     cameraInputRef.current?.click()
   }
 

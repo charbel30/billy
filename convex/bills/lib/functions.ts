@@ -89,7 +89,7 @@ type DeviceLimit =
   | 'uploadUrlPerDevice'
   | 'extractPerDevice'
 
-function assertDeviceId(deviceId: string) {
+export function assertDeviceId(deviceId: string) {
   if (deviceId.trim().length < 8) {
     throw new ConvexError('Invalid device id')
   }

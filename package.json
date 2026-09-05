@@ -20,6 +20,7 @@
     "@fontsource-variable/cascadia-mono": "^5.2.2",
     "@fontsource-variable/figtree": "^5.2.10",
     "@remixicon/react": "^4.9.0",
+    "@sentry/react": "^10.73.0",
     "@tanstack/react-query": "^5.90.0",
     "@tanstack/react-query-devtools": "^5.90.0",
     "@tanstack/react-router": "^1.170.15",

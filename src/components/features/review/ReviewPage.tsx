@@ -5,12 +5,15 @@ import { RiErrorWarningLine, RiReceiptLine } from '@remixicon/react'
 import type { Id } from 'convex/_generated/dataModel'
 import { BlurCommitInput } from '~/components/ui/blur-commit-input'
 import { Alert, AlertDescription, AlertTitle } from '~/components/ui/alert'
+import { ReadOnlyNotice } from '~/components/shared/ReadOnlyNotice'
 import { useBillEditor } from '~/hooks/useBillEditor'
+import { useHasHostToken } from '~/hooks/useHostAccess'
 import { billQueries } from '~/api'
 import { reconcile, formatLbp } from '~/lib/money'
 import { parseNumericInput } from '~/lib/format'
 import { canPersistWorkingBill } from '~/lib/bill'
 import { recordBill } from '~/lib/session'
+import { trackExtractionOutcome } from '~/lib/observability'
 import { RateField } from './components/RateField'
 import { AuditLineItems } from './components/AuditLineItems'
 import { SettlementSummary } from './components/SettlementSummary'
@@ -21,7 +24,8 @@ import { reviewCopy } from './content'
 
 export function ReviewPage({ billId }: { billId: Id<'bills'> }) {
   const navigate = useNavigate()
-  const editor = useBillEditor(billId)
+  const canEdit = useHasHostToken(billId)
+  const editor = useBillEditor(billId, { readOnly: !canEdit })
   const { bill, setMeta, addLineItem, updateLineItem, removeLineItem } = editor
   const { meta } = bill
   // An empty bill is a normal starting point (manual entry, or a scan whose
@@ -35,8 +39,23 @@ export function ReviewPage({ billId }: { billId: Id<'bills'> }) {
   const [failureDismissed, setFailureDismissed] = useState(false)
 
   useEffect(() => {
+    if (!canEdit) return
     recordBill({ billId, step: 'review', name: meta.merchantName })
-  }, [billId, meta.merchantName])
+  }, [billId, canEdit, meta.merchantName])
+
+  useEffect(() => {
+    if (editor.extracting) return
+    if (serverBill.extractionError) {
+      trackExtractionOutcome(billId, 'failed')
+    } else if (serverBill.lineItems.length > 0) {
+      trackExtractionOutcome(billId, 'ok')
+    }
+  }, [
+    billId,
+    editor.extracting,
+    serverBill.extractionError,
+    serverBill.lineItems.length,
+  ])
 
   const recon = reconcile({
     lineItems: bill.lineItems,
@@ -55,13 +74,34 @@ export function ReviewPage({ billId }: { billId: Id<'bills'> }) {
     <div className="mx-auto w-full max-w-7xl px-4 pb-8 pt-4 sm:px-6 lg:px-10">
       <div className="mb-6 text-center lg:hidden">
         <p className="text-sm text-muted-foreground">
-          {isEmpty ? reviewCopy.emptySubhead : reviewCopy.subhead}
+          {isEmpty
+            ? canEdit
+              ? reviewCopy.emptySubhead
+              : 'This bill does not have any items to show.'
+            : reviewCopy.subhead}
         </p>
       </div>
 
+      {!canEdit ? (
+        <div className="mb-5">
+          <ReadOnlyNotice
+            shareToken={
+              serverBill.status === 'PUBLISHED' ||
+              serverBill.status === 'FINALIZED'
+                ? serverBill.shareToken
+                : null
+            }
+            finalized={serverBill.status === 'FINALIZED'}
+          />
+        </div>
+      ) : null}
+
       {editor.extracting ? <ExtractingBanner /> : null}
 
-      {serverBill.extractionError && !editor.extracting && !failureDismissed ? (
+      {canEdit &&
+      serverBill.extractionError &&
+      !editor.extracting &&
+      !failureDismissed ? (
         <ExtractionFailedBanner
           billId={billId}
           onDismiss={() => setFailureDismissed(true)}
@@ -76,11 +116,14 @@ export function ReviewPage({ billId }: { billId: Id<'bills'> }) {
                 value={meta.merchantName}
                 placeholder="Store name"
                 onCommit={(raw) => setMeta({ merchantName: raw })}
+                readOnly={!canEdit}
                 className="w-full text-3xl font-black tracking-tight sm:text-4xl"
               />
               <p className="mt-2 flex items-center gap-2 text-sm text-muted-foreground">
                 <RiReceiptLine className="size-4" />
-                {isEmpty ? reviewCopy.emptyCaption : reviewCopy.caption}
+                {isEmpty && canEdit
+                  ? reviewCopy.emptyCaption
+                  : reviewCopy.caption}
               </p>
             </div>
           </div>
@@ -88,11 +131,12 @@ export function ReviewPage({ billId }: { billId: Id<'bills'> }) {
           <div className="mb-6 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
             <RateField
               rate={meta.rate}
+              readOnly={!canEdit}
               onCommit={(raw) =>
                 setMeta({ rate: parseNumericInput(raw), rateSource: 'manual' })
               }
             />
-            <SaveStatus saving={editor.saving} />
+            {canEdit ? <SaveStatus saving={editor.saving} /> : null}
           </div>
 
           <AuditLineItems
@@ -101,6 +145,7 @@ export function ReviewPage({ billId }: { billId: Id<'bills'> }) {
             onUpdate={updateLineItem}
             onRemove={removeLineItem}
             onAdd={() => addLineItem()}
+            readOnly={!canEdit}
           />
 
           {recon.diff != null && !recon.ok && meta.printedTotalLbp != null ? (
@@ -125,15 +170,18 @@ export function ReviewPage({ billId }: { billId: Id<'bills'> }) {
           onMetaChange={setMeta}
           canContinue={canContinue}
           onContinue={continueToSplit}
+          readOnly={!canEdit}
         />
       </div>
 
-      <MobileReviewAction
-        total={recon.computed}
-        rate={meta.rate}
-        canContinue={canContinue}
-        onContinue={continueToSplit}
-      />
+      {canEdit ? (
+        <MobileReviewAction
+          total={recon.computed}
+          rate={meta.rate}
+          canContinue={canContinue}
+          onContinue={continueToSplit}
+        />
+      ) : null}
     </div>
   )
 }

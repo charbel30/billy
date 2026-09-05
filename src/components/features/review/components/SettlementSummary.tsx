@@ -13,6 +13,7 @@ export function SettlementSummary({
   onMetaChange,
   canContinue,
   onContinue,
+  readOnly = false,
 }: {
   total: number
   rate: number | null | undefined
@@ -20,6 +21,7 @@ export function SettlementSummary({
   onMetaChange: (patch: Partial<WorkingMeta>) => void
   canContinue: boolean
   onContinue: () => Promise<void>
+  readOnly?: boolean
 }) {
   return (
     <aside className="hidden lg:sticky lg:top-24 lg:block">
@@ -45,17 +47,23 @@ export function SettlementSummary({
           </div>
         </div>
 
-        <CompactServiceTaxControl meta={meta} onChange={onMetaChange} />
+        <CompactServiceTaxControl
+          meta={meta}
+          onChange={onMetaChange}
+          readOnly={readOnly}
+        />
 
-        <Button
-          size="lg"
-          className="mt-6 h-14 w-full text-base shadow-raised"
-          disabled={!canContinue}
-          onClick={() => void onContinue()}
-        >
-          Proceed to split
-          <RiArrowRightLine />
-        </Button>
+        {readOnly ? null : (
+          <Button
+            size="lg"
+            className="mt-6 h-14 w-full text-base shadow-raised"
+            disabled={!canContinue}
+            onClick={() => void onContinue()}
+          >
+            Proceed to split
+            <RiArrowRightLine />
+          </Button>
+        )}
       </section>
     </aside>
   )

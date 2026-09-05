@@ -38,7 +38,10 @@ import {
 // Claims are NOT edited here — they live in their own table, written by the
 // scoped claim mutations; saveWorking reconciles the rows server-side.
 
-export function useBillEditor(id: Id<'bills'>): BillEditor {
+export function useBillEditor(
+  id: Id<'bills'>,
+  { readOnly = false }: { readOnly?: boolean } = {},
+): BillEditor {
   const { data: serverDoc } = useSuspenseQuery(billQueries.detail(id))
   const saveWorking = useSaveWorking()
 
@@ -65,6 +68,7 @@ export function useBillEditor(id: Id<'bills'>): BillEditor {
     const cur = workingRef.current
     if (!cur) return true
     const clean = sanitizeWorkingBill(cur)
+    if (readOnly) return canPersistWorkingBill(clean)
     if (!dirtyRef.current) return canPersistWorkingBill(clean)
     if (!canPersistWorkingBill(clean)) {
       dirtyRef.current = true
@@ -89,7 +93,7 @@ export function useBillEditor(id: Id<'bills'>): BillEditor {
       dirtyRef.current = true // leave dirty so a later flush retries
       return false
     }
-  }, [id])
+  }, [id, readOnly])
 
   const scheduleFlush = useCallback(() => {
     if (timer.current) clearTimeout(timer.current)
@@ -98,13 +102,14 @@ export function useBillEditor(id: Id<'bills'>): BillEditor {
 
   const commit = useCallback(
     (next: WorkingBill) => {
+      if (readOnly) return
       workingRef.current = next
       dirtyRef.current = true
       setWorking(next)
       persistWorkingBill(id, next)
       scheduleFlush()
     },
-    [id, scheduleFlush],
+    [id, readOnly, scheduleFlush],
   )
 
   const mutate = useCallback(
@@ -132,6 +137,7 @@ export function useBillEditor(id: Id<'bills'>): BillEditor {
   // Replay a locally-saved working copy (e.g. tab was closed mid-edit) when it's
   // at least as new as the server doc.
   useEffect(() => {
+    if (readOnly) return
     const local = readWorkingBill(id)
     if (local && local.version >= serverDoc.version) {
       workingRef.current = local
@@ -141,7 +147,7 @@ export function useBillEditor(id: Id<'bills'>): BillEditor {
     }
     // run once on mount for this bill
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [id])
+  }, [id, readOnly])
 
   // Flush on tab-hide and pagehide (beforeunload is unreliable on iOS Safari) and
   // when the component unmounts (route change).

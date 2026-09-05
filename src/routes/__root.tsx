@@ -4,6 +4,7 @@ import {
   createRootRouteWithContext,
   HeadContent,
   Scripts,
+  useRouterState,
 } from "@tanstack/react-router";
 import * as React from "react";
 import { MotionConfig } from "motion/react";
@@ -31,7 +32,7 @@ export const Route = createRootRouteWithContext<{
         content: "width=device-width, initial-scale=1, viewport-fit=cover",
       },
       ...seo({
-        title: "Receipt Splitter — split a bill in LBP & USD",
+        title: "Spolio — split a bill in LBP & USD",
         description: `Scan a Lebanese receipt, see it in both LBP and USD at the venue's rate, and split it item-by-item.`,
       }),
     ],
@@ -54,7 +55,7 @@ export const Route = createRootRouteWithContext<{
         sizes: "16x16",
         href: "/favicon-16x16.png",
       },
-      { rel: "manifest", href: "/site.webmanifest", color: "#fffff" },
+      { rel: "manifest", href: "/site.webmanifest", color: "#ffffff" },
       { rel: "icon", href: "/favicon.ico" },
     ],
   }),
@@ -105,10 +106,31 @@ function RootDocument({ children }: { children: React.ReactNode }) {
         <React.Suspense fallback={null}>
           <Devtools />
         </React.Suspense>
+        <CloudflareWebAnalytics />
         <Scripts />
       </body>
     </html>
   );
+}
+
+function CloudflareWebAnalytics() {
+  const token = import.meta.env.VITE_CLOUDFLARE_WEB_ANALYTICS_TOKEN?.trim()
+  const onPublicPage = useRouterState({
+    select: (state) =>
+      ['/', '/scan', '/privacy', '/terms'].includes(state.location.pathname),
+  })
+
+  if (!token || !onPublicPage) return null
+
+  return (
+    <script
+      defer
+      src="https://static.cloudflareinsights.com/beacon.min.js"
+      // Dynamic routes contain bill/share capabilities. Disabling SPA
+      // measurement ensures Cloudflare sees only this initial public path.
+      data-cf-beacon={JSON.stringify({ token, spa: false })}
+    />
+  )
 }
 
 // Devtools are dev-only: lazily imported behind import.meta.env.DEV so the

@@ -22,12 +22,14 @@ export function AuditLineItems({
   onUpdate,
   onRemove,
   onAdd,
+  readOnly = false,
 }: {
   lineItems: LineItem[]
   rate: number | null | undefined
   onUpdate: (id: string, patch: Partial<LineItem>) => void
   onRemove: (id: string) => void
   onAdd: () => void
+  readOnly?: boolean
 }) {
   // Empty is a first-class state, not an error: manual entry starts here, and
   // so does a bill whose extraction failed. A bare "Add item" row reads like a
@@ -40,16 +42,20 @@ export function AuditLineItems({
           {reviewCopy.emptyTitle}
         </p>
         <p className="mx-auto mt-1 max-w-xs text-pretty text-sm text-muted-foreground">
-          {reviewCopy.emptyHint}
+          {readOnly
+            ? 'No receipt items are available to view.'
+            : reviewCopy.emptyHint}
         </p>
-        <button
-          type="button"
-          onClick={onAdd}
-          className="mt-5 inline-flex items-center justify-center gap-2 rounded-full bg-primary px-6 py-3.5 text-sm font-bold text-primary-foreground shadow-raised transition-[scale] duration-200 active:scale-[0.96]"
-        >
-          <RiAddLine className="size-5" />
-          {reviewCopy.addFirstAction}
-        </button>
+        {readOnly ? null : (
+          <button
+            type="button"
+            onClick={onAdd}
+            className="mt-5 inline-flex items-center justify-center gap-2 rounded-full bg-primary px-6 py-3.5 text-sm font-bold text-primary-foreground shadow-raised transition-[scale] duration-200 active:scale-[0.96]"
+          >
+            <RiAddLine className="size-5" />
+            {reviewCopy.addFirstAction}
+          </button>
+        )}
       </div>
     )
   }
@@ -69,18 +75,21 @@ export function AuditLineItems({
             rate={rate}
             onUpdate={onUpdate}
             onRemove={onRemove}
+            readOnly={readOnly}
           />
         ))}
       </div>
 
-      <button
-        type="button"
-        onClick={onAdd}
-        className="flex w-full items-center justify-center gap-2 rounded-control border-2 border-dashed border-primary/30 px-4 py-4 text-sm font-bold text-primary-strong transition-[scale,background-color] hover:bg-primary/10 active:scale-[0.96]"
-      >
-        <RiAddLine className="size-5" />
-        {reviewCopy.addAction}
-      </button>
+      {readOnly ? null : (
+        <button
+          type="button"
+          onClick={onAdd}
+          className="flex w-full items-center justify-center gap-2 rounded-control border-2 border-dashed border-primary/30 px-4 py-4 text-sm font-bold text-primary-strong transition-[scale,background-color] hover:bg-primary/10 active:scale-[0.96]"
+        >
+          <RiAddLine className="size-5" />
+          {reviewCopy.addAction}
+        </button>
+      )}
     </div>
   )
 }
@@ -90,11 +99,13 @@ function AuditLineItem({
   rate,
   onUpdate,
   onRemove,
+  readOnly,
 }: {
   item: LineItem
   rate: number | null | undefined
   onUpdate: (id: string, patch: Partial<LineItem>) => void
   onRemove: (id: string) => void
+  readOnly: boolean
 }) {
   const low =
     item.confidence != null && item.confidence < LOW_CONFIDENCE_THRESHOLD
@@ -122,6 +133,7 @@ function AuditLineItem({
               value={item.name}
               placeholder="Item"
               onCommit={(raw) => onUpdate(item.id, { name: raw })}
+              readOnly={readOnly}
               className="w-full min-w-0 text-lg font-black leading-tight tracking-tight"
             />
             {low ? (
@@ -141,6 +153,7 @@ function AuditLineItem({
                 value={Math.round(item.lineTotal)}
                 numeric
                 onCommit={commitLineTotal}
+                readOnly={readOnly}
                 align="right"
                 className="w-24 text-right text-muted-foreground"
               />
@@ -149,7 +162,14 @@ function AuditLineItem({
           </div>
         </div>
 
-        <div className="mt-4 grid grid-cols-[5.5rem_minmax(0,1fr)_2.5rem] gap-2">
+        <div
+          className={cn(
+            'mt-4 grid gap-2',
+            readOnly
+              ? 'grid-cols-[5.5rem_minmax(0,1fr)]'
+              : 'grid-cols-[5.5rem_minmax(0,1fr)_2.5rem]',
+          )}
+        >
           <label className="rounded-control bg-muted/65 px-3 py-2">
             <span className="block text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">
               Qty
@@ -158,6 +178,7 @@ function AuditLineItem({
               value={item.qty}
               numeric
               onCommit={commitQty}
+              readOnly={readOnly}
               align="center"
               className="mt-0.5 w-full text-center text-base font-bold text-foreground"
             />
@@ -172,14 +193,16 @@ function AuditLineItem({
             </span>
           </div>
 
-          <button
-            type="button"
-            onClick={() => onRemove(item.id)}
-            className="grid place-items-center rounded-control bg-muted/65 text-muted-foreground transition-[scale,background-color,color] hover:bg-destructive/10 hover:text-destructive active:scale-[0.96]"
-            aria-label="Remove item"
-          >
-            <RiDeleteBin6Line className="size-5" />
-          </button>
+          {readOnly ? null : (
+            <button
+              type="button"
+              onClick={() => onRemove(item.id)}
+              className="grid place-items-center rounded-control bg-muted/65 text-muted-foreground transition-[scale,background-color,color] hover:bg-destructive/10 hover:text-destructive active:scale-[0.96]"
+              aria-label="Remove item"
+            >
+              <RiDeleteBin6Line className="size-5" />
+            </button>
+          )}
         </div>
       </div>
 
@@ -196,6 +219,7 @@ function AuditLineItem({
               value={item.name}
               placeholder="Item"
               onCommit={(raw) => onUpdate(item.id, { name: raw })}
+              readOnly={readOnly}
               className="w-full min-w-0 text-base font-black leading-tight tracking-tight"
             />
             {low ? (
@@ -212,20 +236,23 @@ function AuditLineItem({
               value={item.qty}
               numeric
               onCommit={commitQty}
+              readOnly={readOnly}
               align="center"
               className="w-8 rounded-full bg-muted/70 px-1.5 py-0 text-center font-bold text-foreground"
             />
             <span className="min-w-0 truncate tabular-nums">
               {formatLbpCompact(item.unitPrice)} LBP each
             </span>
-            <button
-              type="button"
-              onClick={() => onRemove(item.id)}
-              className="ml-1 inline-flex size-9 items-center justify-center rounded-full text-muted-foreground opacity-0 transition-[scale,color,opacity] hover:text-destructive active:scale-[0.96] group-hover:opacity-100 focus-visible:opacity-100"
-              aria-label="Remove item"
-            >
-              <RiDeleteBin6Line className="size-4" />
-            </button>
+            {readOnly ? null : (
+              <button
+                type="button"
+                onClick={() => onRemove(item.id)}
+                className="ml-1 inline-flex size-9 items-center justify-center rounded-full text-muted-foreground opacity-0 transition-[scale,color,opacity] hover:text-destructive active:scale-[0.96] group-hover:opacity-100 focus-visible:opacity-100"
+                aria-label="Remove item"
+              >
+                <RiDeleteBin6Line className="size-4" />
+              </button>
+            )}
           </div>
         </div>
 
@@ -238,6 +265,7 @@ function AuditLineItem({
               value={Math.round(item.lineTotal)}
               numeric
               onCommit={commitLineTotal}
+              readOnly={readOnly}
               align="right"
               className="w-24 text-right text-muted-foreground"
             />

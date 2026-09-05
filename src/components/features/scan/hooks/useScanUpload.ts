@@ -8,6 +8,12 @@ import {
   useGenerateUploadUrl,
 } from '~/api'
 import { getDeviceId, getHostToken, rememberHostToken } from '~/lib/session'
+import {
+  captureFrontendError,
+  markExtractionPending,
+  trackExtractionOutcome,
+  trackFunnelMilestone,
+} from '~/lib/observability'
 
 /** Friendly message for scan failures — surfaces ConvexError data (rate
  *  limits, kill switch) which is written to be shown to users as-is. */
@@ -26,7 +32,7 @@ export function useScanUpload() {
   const attach = useAttachImageAndExtract()
   const [busy, setBusy] = useState(false)
 
-  async function uploadImage(file: File): Promise<string> {
+  async function uploadImage(file: File): Promise<Id<'_storage'>> {
     // Shrink before upload because image tokens dominate extraction cost.
     const compressed = await imageCompression(file, {
       maxSizeMB: 0.8,
@@ -42,21 +48,29 @@ export function useScanUpload() {
       body: compressed,
     })
     if (!res.ok) throw new Error('Upload failed')
-    const { storageId } = (await res.json()) as { storageId: string }
+    const { storageId } = (await res.json()) as { storageId: Id<'_storage'> }
     return storageId
   }
 
   async function scanNew(file: File): Promise<Id<'bills'>> {
     setBusy(true)
+    let pendingBillId: Id<'bills'> | null = null
     try {
       const deviceId = getDeviceId()
       // createBill returns the host capability once and only once — persist it
       // before anything else can fail, or this bill becomes read-only forever.
       const { billId, hostToken } = await createBill.mutateAsync({ deviceId })
+      pendingBillId = billId
       rememberHostToken(billId, hostToken)
+      markExtractionPending(billId)
       const imageRef = await uploadImage(file)
       await attach.mutateAsync({ id: billId, imageRef, deviceId, hostToken })
       return billId
+    } catch (error) {
+      captureFrontendError(error)
+      if (pendingBillId) trackExtractionOutcome(pendingBillId, 'failed')
+      else trackFunnelMilestone('extraction_failed')
+      throw error
     } finally {
       setBusy(false)
     }
@@ -64,6 +78,7 @@ export function useScanUpload() {
 
   async function rescan(billId: Id<'bills'>, file: File): Promise<void> {
     setBusy(true)
+    markExtractionPending(billId)
     try {
       const imageRef = await uploadImage(file)
       await attach.mutateAsync({
@@ -72,6 +87,10 @@ export function useScanUpload() {
         deviceId: getDeviceId(),
         hostToken: getHostToken(billId),
       })
+    } catch (error) {
+      captureFrontendError(error)
+      trackExtractionOutcome(billId, 'failed')
+      throw error
     } finally {
       setBusy(false)
     }

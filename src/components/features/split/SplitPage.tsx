@@ -16,6 +16,7 @@ import {
   DialogTitle,
 } from '~/components/ui/dialog'
 import { BillSplitWorkspace, ShareSplitCard } from '~/components/features/bill'
+import { ReadOnlyNotice } from '~/components/shared/ReadOnlyNotice'
 import {
   billQueries,
   useAddHostPerson,
@@ -29,12 +30,15 @@ import {
   useSplitLeftoversEvenly,
 } from '~/api'
 import { getHostToken, recordBill } from '~/lib/session'
+import { useHasHostToken } from '~/hooks/useHostAccess'
 import { claimsForPerson, unitsFor } from '~/lib/bill'
 import { remainingUnits, totalRemainingLbp, formatUsd, toUsd } from '~/lib/money'
 import { joinUrl } from '~/lib/format'
+import { trackFunnelMilestone } from '~/lib/observability'
 
 export function SplitPage({ billId }: { billId: Id<'bills'> }) {
   const navigate = useNavigate()
+  const canEdit = useHasHostToken(billId)
   // Host writes carry the bill's capability, not just its id (the id is right
   // there in the URL). Read at call time so it's always the current value.
   const hostArgs = () => ({ id: billId, hostToken: getHostToken(billId) })
@@ -75,8 +79,9 @@ export function SplitPage({ billId }: { billId: Id<'bills'> }) {
 
   // Remember this bill locally for the scan page's resume + recent list.
   useEffect(() => {
+    if (!canEdit) return
     recordBill({ billId, step: 'split', name: bill.merchantName })
-  }, [billId, bill.merchantName])
+  }, [billId, bill.merchantName, canEdit])
 
   const workspaceBill = {
     merchantName: bill.merchantName,
@@ -146,7 +151,11 @@ export function SplitPage({ billId }: { billId: Id<'bills'> }) {
   // navigator.share lives inside the dialog on its own fresh tap, which keeps
   // iOS's user-gesture requirement happy.
   function openInvite() {
-    if (!shared) void publish.mutateAsync(hostArgs())
+    if (!shared) {
+      publish.mutate(hostArgs(), {
+        onSuccess: () => trackFunnelMilestone('published'),
+      })
+    }
     setQrOpen(true)
   }
 
@@ -164,9 +173,20 @@ export function SplitPage({ billId }: { billId: Id<'bills'> }) {
   return (
     <BillSplitWorkspace
       bill={workspaceBill}
-      description="Pick a person, claim their items, and invite everyone from this same screen."
+      description={
+        canEdit
+          ? 'Pick a person, claim their items, and invite everyone from this same screen.'
+          : finalized
+            ? 'A read-only view of the finalized receipt.'
+            : 'A read-only view of the live split.'
+      }
       notice={
-        finalized ? (
+        !canEdit ? (
+          <ReadOnlyNotice
+            shareToken={shared ? bill.shareToken : null}
+            finalized={finalized}
+          />
+        ) : finalized ? (
           <div className="flex items-center gap-2.5 rounded-control bg-muted px-4 py-2.5 text-xs font-medium text-muted-foreground ring-1 ring-border/60">
             <RiLockLine className="size-4 shrink-0" />
             This split is finalized, so edits are locked for everyone.
@@ -176,11 +196,18 @@ export function SplitPage({ billId }: { billId: Id<'bills'> }) {
       people={bill.people}
       activeId={activeId}
       onSelect={setActiveId}
-      onAdd={finalized ? undefined : addPerson}
-      onRemove={finalized ? undefined : removePerson}
+      onAdd={finalized || !canEdit ? undefined : addPerson}
+      onRemove={finalized || !canEdit ? undefined : removePerson}
       onStep={stepClaim}
       onShareEvenly={shareEvenly}
-      showClaims={!finalized}
+      showClaims={!finalized && canEdit}
+      summaryDescription={
+        finalized
+          ? 'This split is finalized and read-only.'
+          : canEdit
+            ? 'Updates live as people claim items.'
+            : 'View only. The split can still change on the host device.'
+      }
       conflictMessage={conflictMessage}
       savingMessage={
         saveHostClaims.isPending || shareHostItemEvenly.isPending
@@ -188,14 +215,14 @@ export function SplitPage({ billId }: { billId: Id<'bills'> }) {
           : null
       }
       onTipChange={
-        finalized
+        finalized || !canEdit
           ? undefined
           : (pct) => setTipPercent.mutate({ ...hostArgs(), tipPercent: pct })
       }
       tipPending={setTipPercent.isPending}
       pendingItemId={pendingItemId}
       actionSlot={
-        finalized ? (
+        !canEdit ? null : finalized ? (
           <Button
             size="lg"
             className="w-full"

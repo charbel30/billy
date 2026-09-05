@@ -75,7 +75,11 @@ export async function callVisionModel(
     method: 'POST',
     headers: {
       'content-type': 'application/json',
-      'cf-aig-cache-ttl': '86400', // identical retries are served from cache
+      // Cap any cache entry at 24h when gateway caching is enabled.
+      'cf-aig-cache-ttl': '86400',
+      // Keep gateway request/timing/token metadata, but never persist the
+      // receipt image or extracted JSON in AI Gateway logs.
+      'cf-aig-collect-log-payload': 'false',
       ...(apiKey ? { 'x-goog-api-key': apiKey } : {}),
       ...(gatewayToken
         ? { 'cf-aig-authorization': `Bearer ${gatewayToken}` }
@@ -100,7 +104,9 @@ export async function callVisionModel(
   })
 
   if (!res.ok) {
-    throw new Error(`Vision model error ${res.status}: ${await res.text()}`)
+    // Provider error bodies can echo request/response content. Keep them out of
+    // retrier and Convex logs; the HTTP status is sufficient operational data.
+    throw new Error(`Vision model error ${res.status}`)
   }
   const json = await res.json()
   const raw: string | undefined =

@@ -32,12 +32,14 @@ function Privacy() {
           <p>
             When you take a photo, your browser shrinks it and uploads it to the
             backend. A job then sends it to Google Gemini through Cloudflare AI
-            Gateway, which reads out the items and prices. The image is deleted
-            from storage as soon as that finishes — and also if the reading
-            fails after its retries, so either way the photo doesn&apos;t stick
-            around. One caveat worth stating rather than hiding: the AI gateway
-            is configured to cache a scan for up to 24 hours, so a copy can sit
-            there briefly before it expires.
+            Gateway, which reads out the items and prices. Request and response
+            payload logging is disabled at the gateway. The image is deleted
+            from Spolio&apos;s storage as soon as processing finishes, or after a
+            final failure or rejected upload. An hourly cleanup also attempts to
+            remove uploads once they are 24 hours old and retries failed
+            deletions. The request caps any gateway cache entry at 24 hours, so
+            if caching is enabled Cloudflare may temporarily cache it during
+            that period.
           </p>
         </section>
 
@@ -78,12 +80,28 @@ function Privacy() {
         </section>
 
         <section className="space-y-2">
-          <h2 className="text-base font-bold">No tracking, no payments</h2>
+          <h2 className="text-base font-bold">Analytics and error reports</h2>
           <p>
-            There is no analytics, no advertising and no third-party tracking
-            script on this site, and no profile of you anywhere. Spolio never
-            touches money: no card numbers, no bank details, no payments ever.
-            If analytics is ever added, this page changes first.
+            Spolio uses Cloudflare Web Analytics for aggregate page visits and
+            performance, and Sentry for browser error reports and counts of a
+            few milestones such as starting a scan, publishing a split, or
+            joining one. Cloudflare Web Analytics does not use cookies or
+            collect personal data. These services receive the page URL and
+            ordinary browser/network diagnostics needed to provide their
+            reports. Cloudflare measurements are limited to initial loads of
+            public pages, so bill and share-link URLs are excluded.
+          </p>
+          <p>
+            Sentry session replay, performance tracing, breadcrumbs, user
+            identity, cookies, HTTP headers, query strings, and request and
+            response bodies are disabled. Error messages are redacted. Spolio
+            does not send receipt photos or text, participant names, bill ids,
+            share tokens, or device ids to analytics. There is no advertising
+            and no analytics profile tied to you.
+          </p>
+          <p>
+            Spolio never touches money: no card numbers, no bank details, no
+            payments ever.
           </p>
         </section>
 

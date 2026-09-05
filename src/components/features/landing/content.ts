@@ -4,7 +4,9 @@ export const landingSeo = {
     'Scan a Lebanese receipt, split it item-by-item, and share a live link on WhatsApp. Spolio reads both the LL and $ totals and uses the venue’s real rate. No install, no account.',
   keywords:
     'bill splitter, receipt scanner, split the bill, Lebanon, LBP, USD, lira rate, restaurant bill',
-  image: '/og-image.png', // TODO: absolute URL once production domain is fixed
+  image: 'https://spolio.net/og-image.png',
+  imageAlt: 'Spolio — one receipt, two currencies, zero arguments.',
+  url: 'https://spolio.net/',
 }
 
 export const heroCopy = {

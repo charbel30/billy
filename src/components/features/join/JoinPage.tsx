@@ -16,6 +16,7 @@ import {
 import { claimsForPerson, unitsFor } from '~/lib/bill'
 import { getOrCreateGuestSessionId } from '~/lib/session'
 import { LegalFooter } from '~/components/shared/LegalFooter'
+import { trackFunnelMilestone } from '~/lib/observability'
 
 export function JoinPage({ shareToken }: { shareToken: string }) {
   const { data: bill } = useSuspenseQuery(billQueries.byToken(shareToken))
@@ -64,6 +65,7 @@ export function JoinPage({ shareToken }: { shareToken: string }) {
       guestSessionId,
       name,
     })
+    trackFunnelMilestone('guest_joined')
     setActiveId(result.personId)
     setJoinName('')
   }

@@ -5,13 +5,19 @@ import {
   useRouter,
 } from '@tanstack/react-router'
 import type { ErrorComponentProps } from '@tanstack/react-router'
+import { useEffect } from 'react'
 import { Button } from '~/components/ui/button'
+import { captureFrontendError } from '~/lib/observability'
 
 export function DefaultCatchBoundary({ error }: ErrorComponentProps) {
   const router = useRouter()
   const isRoot = useLocation({
     select: (location) => location.pathname === '/',
   })
+
+  useEffect(() => {
+    captureFrontendError(error)
+  }, [error])
 
   console.error(error)
 

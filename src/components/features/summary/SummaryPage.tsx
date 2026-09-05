@@ -7,12 +7,15 @@ import type { Id } from 'convex/_generated/dataModel'
 import { Button } from '~/components/ui/button'
 import { Alert, AlertTitle } from '~/components/ui/alert'
 import { BillSummary, ShareSplitCard } from '~/components/features/bill'
+import { ReadOnlyNotice } from '~/components/shared/ReadOnlyNotice'
 import { billQueries, useRevokeShare, useSetHostPersonPaid } from '~/api'
 import { getHostToken, recordBill } from '~/lib/session'
 import { buildTotalsMessage, joinUrl } from '~/lib/format'
+import { useHasHostToken } from '~/hooks/useHostAccess'
 
 export function SummaryPage({ billId }: { billId: Id<'bills'> }) {
   const navigate = useNavigate()
+  const canEdit = useHasHostToken(billId)
   const { data: bill } = useSuspenseQuery(billQueries.detail(billId))
   // Host writes carry the bill's capability, not just its id (the id is right
   // there in the URL). Read at call time so it's always the current value.
@@ -44,8 +47,9 @@ export function SummaryPage({ billId }: { billId: Id<'bills'> }) {
   }
 
   useEffect(() => {
+    if (!canEdit) return
     recordBill({ billId, step: 'summary', name: bill.merchantName })
-  }, [billId, bill.merchantName])
+  }, [billId, bill.merchantName, canEdit])
 
   const shareCard = shared ? (
     <section className="rounded-card border border-border bg-card p-4">
@@ -56,7 +60,7 @@ export function SummaryPage({ billId }: { billId: Id<'bills'> }) {
         url={joinUrl(bill.shareToken)}
         merchantName={bill.merchantName}
         onRevoke={
-          finalized
+          finalized || !canEdit
             ? undefined
             : async () => {
                 await revokeShare.mutateAsync(hostArgs())
@@ -71,7 +75,14 @@ export function SummaryPage({ billId }: { billId: Id<'bills'> }) {
     // pragmatic, not a separate design.
     <div className="mx-auto w-full max-w-md p-4 sm:p-6 lg:grid lg:max-w-5xl lg:grid-cols-[minmax(0,1fr)_380px] lg:items-start lg:gap-8 lg:space-y-0">
       <div className="space-y-4">
-        {!finalized ? (
+        {!canEdit ? (
+          <ReadOnlyNotice
+            shareToken={shared ? bill.shareToken : null}
+            finalized={finalized}
+          />
+        ) : null}
+
+        {!finalized && canEdit ? (
           <Alert variant="info">
             <RiInformationLine />
             <AlertTitle>
@@ -90,7 +101,7 @@ export function SummaryPage({ billId }: { billId: Id<'bills'> }) {
               : 'Preview only. The split can still change.'
           }
           onTogglePaid={
-            shared
+            shared && canEdit
               ? (personId, paid) =>
                   setHostPersonPaid.mutate({ ...hostArgs(), personId, paid })
               : undefined

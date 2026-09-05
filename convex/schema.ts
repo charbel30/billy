@@ -151,6 +151,9 @@ const schema = defineSchema({
     .index('by_share_token', ['shareToken'])
     // Powers the TTL purge cron (oldest-inactive first).
     .index('by_updatedAt', ['updatedAt'])
+    // Lets the storage-retention sweep distinguish orphaned uploads from an
+    // image still owned by an in-flight extraction.
+    .index('by_imageRef', ['imageRef'])
     // Powers the extraction onComplete callback (run id → bill).
     .index('by_extractionRunId', ['extractionRunId']),
 
@@ -164,7 +167,15 @@ const schema = defineSchema({
     itemId: v.string(),
     personId: v.string(),
     units: v.number(),
-  }).index('by_bill', ['billId']),
+    // Claim writes deliberately avoid touching the subscribed bill document.
+    // Keep their activity here instead so the TTL job can roll the newest
+    // timestamp into bills.updatedAt without making concurrent claim taps
+    // contend on one aggregate row. Optional for existing rows deployed before
+    // activity tracking; their _creationTime is the fallback.
+    updatedAt: v.optional(v.number()),
+  })
+    .index('by_bill', ['billId'])
+    .index('by_bill_and_updatedAt', ['billId', 'updatedAt']),
 })
 export default schema
 

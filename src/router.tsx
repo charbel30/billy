@@ -11,9 +11,11 @@ import { ConvexProvider } from 'convex/react'
 import { routeTree } from './routeTree.gen'
 import { DefaultCatchBoundary } from './components/shared/DefaultCatchBoundary'
 import { NotFound } from './components/shared/NotFound'
+import { captureFrontendError, initObservability } from './lib/observability'
 
 export function getRouter() {
   if (typeof document !== 'undefined') {
+    initObservability()
     notifyManager.setScheduler(window.requestAnimationFrame)
   }
 
@@ -32,6 +34,7 @@ export function getRouter() {
     },
     mutationCache: new MutationCache({
       onError: (error) => {
+        captureFrontendError(error)
         toast(error.message, { className: 'bg-red-500 text-white' })
       },
     }),

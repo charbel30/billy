@@ -11,11 +11,24 @@ import { formatLbpCompact } from '~/lib/format'
 export function RateField({
   rate,
   onCommit,
+  readOnly = false,
 }: {
   rate: number | null | undefined
   onCommit: (raw: string) => void
+  readOnly?: boolean
 }) {
   const [open, setOpen] = useState(false)
+
+  if (readOnly) {
+    return (
+      <div className="inline-flex items-center gap-2 rounded-full bg-primary/10 px-4 py-2 text-xs font-semibold text-primary-strong">
+        <RiExchangeDollarLine className="size-4" />
+        <span className="font-receipt tabular-nums">
+          1 USD = {formatLbpCompact(rate ?? 0)}
+        </span>
+      </div>
+    )
+  }
 
   return (
     <AnimatePresence mode="wait" initial={false}>

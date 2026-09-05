@@ -17,14 +17,18 @@ export const extractReceipt = internalAction({
     const parsed = await callVisionModel(bytes, mimeType)
     await ctx.runMutation(internal.bills.extraction.applyExtraction, {
       billId,
+      imageRef,
       parsed,
     })
     // delete-after-extract (spec §10); best-effort — a throw here would retry
     // the whole (already applied) extraction for nothing.
     try {
       await imageStore.deleteImage(ctx, imageRef)
-    } catch {
-      // Already gone or not deletable.
+    } catch (error) {
+      console.error('[privacy] failed to delete extracted receipt upload', {
+        imageRef,
+        error: error instanceof Error ? error.message : 'unknown error',
+      })
     }
     return null
   },

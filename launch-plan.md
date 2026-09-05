@@ -74,12 +74,18 @@ flow, so there is no way to start a bill without a photo — which also means th
 rate-limit message at `convex/lib/rateLimits.ts:26` promises manual entry that
 does not exist.
 
-### 5. Analytics + Sentry
+### 5. Analytics + Sentry — DONE in code (credentials outstanding)
 Cloudflare Web Analytics (no cookies, no consent banner) + Sentry for frontend
 errors. Funnel events: landing -> scan started -> extraction ok/failed ->
 published -> guest joined. Convex cannot capture render crashes, camera
 permission failures, or in-app-browser quirks — it only sees requests that
 succeeded.
+
+Cloudflare records public-page views and Web Vitals only; its Web Analytics
+product does not support custom events. The six funnel milestones therefore go
+to Sentry as allowlisted metrics, with no bill, share, device, participant, or
+receipt data attached. Sentry replay, tracing, breadcrumbs, request data, and
+user context remain disabled.
 
 ### 6. Legal copy + scan disclosure — DONE
 Rewrite `src/routes/terms.tsx` and `privacy.tsx`: short, plain, accurate.
@@ -116,10 +122,10 @@ actual launch blockers will surface.
 - ~~**Support email.**~~ Set to support@spolio.net in both legal pages.
   ACTION: the mailbox must actually exist and be monitored before launch — the
   privacy page promises deletion-on-request through it.
-- **og-image.png** has "Billy" rendered into it. Must be remade — it is the
-  Reddit thumbnail.
-- **landingSeo.image** needs the absolute production URL or WhatsApp/Reddit
-  link previews break.
+- ~~**og-image.png** had "Billy" rendered into it.~~ CLOSED 2026-09-04: replaced
+  with a 1200x630 Spolio social card.
+- ~~**landingSeo.image** needed an absolute production URL.~~ CLOSED 2026-09-04:
+  canonical and image metadata now use `https://spolio.net` URLs.
 - **Analytics credentials**: Cloudflare Web Analytics site token + Sentry DSN.
 
 ## Consequence of the host token (decided, worth remembering)
@@ -134,12 +140,19 @@ item 1.
 
 ## Found during implementation (worth remembering)
 
-- **Cloudflare AI Gateway caches scans for 24h** (`cf-aig-cache-ttl: 86400`,
-  convex/extraction/vision.ts:78). So "the photo is deleted immediately" was not
-  the whole truth — Convex deletes its copy, but the gateway holds one for up to
-  a day. The privacy page now discloses this. It is a cost optimisation (identical
-  requests skip a paid Gemini call); lowering the TTL is a privacy-vs-pennies
-  trade, currently left as-is.
+- **Receipt-image retention is now bounded and logged safely.** AI Gateway
+  payload logging is explicitly disabled. Convex deletes photos after success,
+  rejection, or final failure; an hourly sweep also attempts to delete uploads
+  once they are 24 hours old and retries deletion failures. The existing
+  per-request 24-hour gateway cache cap remains disclosed as a privacy-vs-cost
+  trade.
+- **Host URLs without the local capability now render as view-only.** Review,
+  split, and summary hide every host mutation affordance and offer the published
+  guest route when one exists; backend token checks remain the authority.
+- **Claim edits now count as bill activity for the 60-day TTL.** Claim rows keep
+  their own activity timestamp so normal claim contention stays row-scoped, and
+  the daily purge rolls the latest timestamp into the bill before deciding
+  whether to delete it.
 - **Manual entry reuses `createBill`** rather than adding a function: createBill
   only inserts a row and charges `createBillPerDevice`. The invariant "never add
   extraction gating to createBill" is documented at convex/bills/host/lifecycle.ts:52

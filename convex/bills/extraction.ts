@@ -19,12 +19,16 @@ const MIN_PLAUSIBLE_LBP = 1000
 export const applyExtraction = internalMutation({
   args: {
     billId: v.id('bills'),
+    imageRef: v.string(),
     parsed: extractedReceiptValidator,
   },
   returns: v.null(),
-  handler: async (ctx, { billId, parsed: receipt }) => {
+  handler: async (ctx, { billId, imageRef, parsed: receipt }) => {
     const bill = await ctx.db.get(billId)
     if (!bill) return null
+    // A second scan can supersede a run while its model request is in flight.
+    // Never let that older result clear or overwrite the newer image/run.
+    if (bill.imageRef !== imageRef) return null
 
     // Normalize to LBP at the boundary. A USD-printed receipt has small dollar
     // figures ($17) that the LBP-internal split/reconcile would otherwise read as
@@ -157,8 +161,11 @@ export const onExtractionComplete = internalMutation({
     if (imageRef) {
       try {
         await imageStore.deleteImage(ctx, imageRef)
-      } catch {
-        // Already gone or not deletable.
+      } catch (error) {
+        console.error('[privacy] failed to delete failed receipt upload', {
+          imageRef,
+          error: error instanceof Error ? error.message : 'unknown error',
+        })
       }
     }
     return null
