@@ -5,8 +5,10 @@ lets someone scan a receipt, review the extracted line items, split individual
 units between people, and publish a live share link with per-person totals in
 LBP and USD.
 
-Production/go-to-market plan: see [`ROADMAP.md`](./ROADMAP.md) — launch blockers, the
-"Billy for Venues" QR table-session product, pricing, and the Lebanon marketing plan.
+Consumer launch plan: see [`launch-plan.md`](./launch-plan.md) — September 15 launch
+scope, readiness gates, production verification, and launch follow-up.
+The older [`ROADMAP.md`](./ROADMAP.md) covers venue-product ideas and background;
+the consumer launch plan takes precedence for this release.
 Deeper product ideas and pitch material: [`IDEAS.md`](./IDEAS.md).
 
 The app uses:

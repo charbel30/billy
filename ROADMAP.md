@@ -1,5 +1,9 @@
 # Billy — Production Roadmap & Go-To-Market (Lebanon)
 
+> Superseded for the September 2026 consumer launch by
+> [`launch-plan.md`](./launch-plan.md). This document retains historical status
+> and venue-product planning; its completion claims are not current launch evidence.
+
 The plan for taking Billy from working MVP to a launched product with paying venues.
 Strategy decided 2026-07: **venue-led, dual-track** — the free consumer splitter is the
 viral funnel; a venue subscription ("Billy for Venues": QR table sessions) is the revenue
@@ -14,9 +18,9 @@ engine and the pitch centerpiece.
 > (IDEAS §1, trimmed scope) shipped 2026-07-06, and the guest `/join` page now shows
 > the whole table read-only (guests act only on their own people).
 
-This document is the single source of truth for: what to polish, what to build for venues,
-how to price it, and how to market it in Lebanon. Implementation happens against the
-checkbox lists in §7. Deeper product ideas and pitch material from the 2026-07 code
+This document records the earlier venue strategy: what to polish, what to build for venues,
+how to price it, and how to market it in Lebanon. Its historical implementation
+checklists are in §7. Deeper product ideas and pitch material from the 2026-07 code
 walkthrough live in [`IDEAS.md`](./IDEAS.md); the highest-value ones are already folded
 into the phase lists below.
 

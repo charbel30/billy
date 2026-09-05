@@ -10,42 +10,28 @@ export const landingSeo = {
 }
 
 export const heroCopy = {
-  badge: 'Built for Lebanon’s two-currency bills',
-  headline: 'One receipt. Two currencies. Zero arguments.',
+  badge: 'THE BILL SPLITTER FOR YOUR TABLE',
+  headline: ['Good food.', 'Fair split.'],
   subhead:
-    'Snap the receipt, split it item-by-item, and share a live link in the group chat. Spolio reads both the LL and $ totals and does the math at the rate the venue actually used — no install, no account.',
+    'Scan the receipt. Pick what you had. Send everyone their share. Dinner math, done.',
   primaryCta: 'Scan a receipt', // → /scan
   secondaryCta: 'Try a sample bill', // → demo mutation → /review/$billId
 }
 
 export const howItWorksCopy = {
-  title: 'From receipt to "you owe me" in three steps',
+  title: 'Less calculating. More hanging out.',
   steps: [
     {
       title: 'Scan',
-      body: 'Snap the check. Spolio reads every line item — and both totals.',
+      body: 'Take a photo. Check the items.',
     },
     {
-      title: 'Split',
-      body: 'Share the link. Everyone claims their own items from their phone — nothing to install.',
+      title: 'Pick',
+      body: 'Claim your food. Share the sides.',
     },
     {
-      title: 'Settle',
-      body: 'Live totals per person, in LBP and USD. The link stays up to date as people claim.',
+      title: 'Share',
+      body: 'Drop the link in the group chat.',
     },
   ],
-}
-
-export const dualCurrencyCopy = {
-  title: 'The venue’s real rate, not today’s guess',
-  body:
-    'Lebanese receipts print two totals — TOTAL LL and TOTAL $. Spolio derives the exact rate the venue used from those two numbers, so every share is right in both currencies. No "what’s the rate today?" debate.',
-  receiptDemo: {
-    lbpLabel: 'TOTAL LL',
-    lbpValue: '4,475,000',
-    usdLabel: 'TOTAL $',
-    usdValue: '50.00',
-    rateLabel: 'Rate Spolio derives',
-    rateValue: '89,500 LL / $',
-  },
 }

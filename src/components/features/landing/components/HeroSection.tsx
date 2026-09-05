@@ -1,12 +1,9 @@
-import { useState } from 'react'
 import { Link, useNavigate } from '@tanstack/react-router'
-import { motion } from 'motion/react'
+import { RiArrowRightLine, RiCameraLine, RiLoader4Line } from '@remixicon/react'
 import { useCreateDemoBill } from '~/api'
 import { getDeviceId, rememberHostToken } from '~/lib/session'
-import { staggerChild, staggerContainer } from '~/lib/ui'
-import { Badge } from '~/components/ui/badge'
-import { Button } from '~/components/ui/button'
 import { heroCopy } from '../content'
+import { ReceiptPlayground } from './ReceiptPlayground'
 
 export function HeroSection() {
   const navigate = useNavigate()
@@ -20,53 +17,43 @@ export function HeroSection() {
         deviceId: getDeviceId(),
       })
       rememberHostToken(billId, hostToken)
-      navigate({ to: '/review/$billId', params: { billId } })
+      await navigate({ to: '/review/$billId', params: { billId } })
     } catch {
       // Global MutationCache.onError toasts every mutation error.
     }
   }
 
   return (
-    <motion.section
-      variants={staggerContainer}
-      initial="hidden"
-      animate="show"
-      className="mx-auto flex max-w-2xl flex-col items-center gap-5 text-center"
-    >
-      <motion.div variants={staggerChild}>
-        <Badge variant="secondary">{heroCopy.badge}</Badge>
-      </motion.div>
-
-      <motion.h1
-        variants={staggerChild}
-        className="text-4xl font-black tracking-tight text-balance sm:text-5xl"
-      >
-        {heroCopy.headline}
-      </motion.h1>
-
-      <motion.p
-        variants={staggerChild}
-        className="text-pretty text-muted-foreground"
-      >
-        {heroCopy.subhead}
-      </motion.p>
-
-      <motion.div
-        variants={staggerChild}
-        className="flex flex-col justify-center gap-3 sm:flex-row"
-      >
-        <Button size="lg" render={<Link to="/scan" />}>
-          {heroCopy.primaryCta}
-        </Button>
-        <Button
-          variant="outline"
-          size="lg"
-          disabled={isPending}
-          onClick={() => void trySampleBill()}
-        >
-          {heroCopy.secondaryCta}
-        </Button>
-      </motion.div>
-    </motion.section>
+    <section className="landing-hero" aria-labelledby="landing-title">
+      <div className="landing-pitch">
+        <p className="landing-eyebrow landing-enter">{heroCopy.badge}</p>
+        <h1 id="landing-title" className="landing-title landing-enter">
+          {heroCopy.headline[0]}<br />
+          <span>{heroCopy.headline[1]}</span>
+        </h1>
+        <p className="landing-description landing-enter">{heroCopy.subhead}</p>
+        <div className="landing-actions landing-enter">
+          <Link to="/scan" className="landing-scan">
+            <RiCameraLine size={21} aria-hidden="true" />
+            {heroCopy.primaryCta}
+            <RiArrowRightLine size={20} aria-hidden="true" />
+          </Link>
+          <p className="landing-reassurance">No account. No app to download.</p>
+          <button
+            type="button"
+            className="landing-sample"
+            disabled={isPending}
+            aria-busy={isPending}
+            onClick={() => void trySampleBill()}
+          >
+            {isPending ? 'Opening sample…' : heroCopy.secondaryCta}
+            {isPending
+              ? <RiLoader4Line size={16} className="animate-spin" aria-hidden="true" />
+              : <RiArrowRightLine size={16} aria-hidden="true" />}
+          </button>
+        </div>
+      </div>
+      <ReceiptPlayground />
+    </section>
   )
 }

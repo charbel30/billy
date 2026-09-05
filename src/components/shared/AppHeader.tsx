@@ -11,14 +11,19 @@ import { pillSpring, appContent } from "~/lib/ui";
 import { ThemeToggle } from "~/components/shared/ThemeToggle";
 
 export function AppHeader() {
+  const onLanding = useRouterState({ select: (s) => s.location.pathname === "/" });
+
   return (
-    <header className="sticky top-0 z-30 border-b border-border/40 bg-background/85 px-4 py-3 backdrop-blur-xl sm:px-6">
-      <div className="mx-auto grid w-full max-w-7xl grid-cols-[1fr_auto_1fr] items-center">
+    <header className={cn(
+      "z-30 bg-background/85 px-4 py-3 sm:px-6",
+      onLanding ? "relative md:px-12 md:py-5" : "sticky top-0 border-b border-border/40 backdrop-blur-xl",
+    )}>
+      <div className={cn("mx-auto grid w-full grid-cols-[1fr_auto_1fr] items-center", onLanding ? "max-w-[1120px]" : "max-w-7xl")}>
         <div className="justify-self-start">
           <HeaderLeft />
         </div>
-        <HeaderCenter />
-        <div className="justify-self-end">
+        {onLanding ? <span className="hidden text-[11px] text-muted-foreground sm:block">A little less bill drama.</span> : <HeaderCenter />}
+        <div className="col-start-3 justify-self-end">
           <ThemeToggle />
         </div>
       </div>
