@@ -4,16 +4,16 @@ export const landingSeo = {
     'Scan a Lebanese receipt, split it item-by-item, and share a live link on WhatsApp. Spolio reads both the LL and $ totals and uses the venue’s real rate. No install, no account.',
   keywords:
     'bill splitter, receipt scanner, split the bill, Lebanon, LBP, USD, lira rate, restaurant bill',
-  image: 'https://spolio.net/og-image.png',
-  imageAlt: 'Spolio — one receipt, two currencies, zero arguments.',
+  image: 'https://spolio.net/og-image.png?v=spolio-circle-1',
+  imageAlt: 'Spolio — split the bill in dollars and lira. Made for the Lebanese table.',
   url: 'https://spolio.net/',
 }
 
 export const heroCopy = {
-  badge: 'THE BILL SPLITTER FOR YOUR TABLE',
+  badge: 'Made for the Lebanese table.',
   headline: ['Good food.', 'Fair split.'],
   subhead:
-    'Scan the receipt. Pick what you had. Send everyone their share. Dinner math, done.',
+    'Scan your receipt. Pick what you had. Share the bill in dollars and lira, at your table’s rate.',
   primaryCta: 'Scan a receipt', // → native photo picker
   secondaryCta: 'Try a sample bill', // → demo mutation → /review/$billId
 }

@@ -3,6 +3,7 @@
 @import "shadcn/tailwind.css";
 @import '@fontsource-variable/cascadia-mono/wght.css';
 @import '@fontsource-variable/figtree';
+@import './brand.css';
 @custom-variant dark (&:is(.dark *));
 
 @layer base {
@@ -125,18 +126,20 @@
 }
 
 :root {
+  --brand-gold: #f7c928;
+  --brand-ink: #202820;
+  --brand-green: #285647;
   /* warm neutrals — hue ~85, low chroma: warm paper, not blue-gray */
-  --background: oklch(0.98 0.004 85);
-  --foreground: oklch(0.19 0.006 85);
+  --background: #f8f7f3;
+  --foreground: var(--brand-ink);
   --card: oklch(1 0 0);
   --card-foreground: oklch(0.19 0.006 85);
   --popover: oklch(1 0 0);
   --popover-foreground: oklch(0.19 0.006 85);
-  /* two-tier accent: --primary is a gold FILL; --primary-strong is the
-     text/link/ring-capable deep gold (gold at L 0.84 fails contrast as text) */
-  --primary: oklch(0.84 0.17 89);
-  --primary-foreground: oklch(0.3 0.07 70);
-  --primary-strong: oklch(0.54 0.12 80);
+  /* Gold fills carry the brand; deep green handles readable links and amounts. */
+  --primary: var(--brand-gold);
+  --primary-foreground: var(--brand-ink);
+  --primary-strong: var(--brand-green);
   --secondary: oklch(0.955 0.004 85);
   --secondary-foreground: oklch(0.25 0.008 85);
   --muted: oklch(0.955 0.004 85);
@@ -195,7 +198,7 @@
 }
 
 .dark {
-  --background: oklch(0.16 0.005 85);
+  --background: #100f0c;
   --foreground: oklch(0.97 0.004 85);
   --card: oklch(0.21 0.006 85);
   --card-foreground: oklch(0.97 0.004 85);
@@ -204,7 +207,7 @@
   --primary: oklch(0.8 0.15 88);
   --primary-foreground: oklch(0.28 0.06 70);
   /* lighter in dark so it stays text/ring-capable */
-  --primary-strong: oklch(0.79 0.12 85);
+  --primary-strong: #b5cfac;
   --secondary: oklch(0.27 0.006 85);
   --secondary-foreground: oklch(0.97 0.004 85);
   --muted: oklch(0.26 0.006 85);

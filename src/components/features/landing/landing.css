@@ -1,8 +1,8 @@
 .landing-page {
-  --landing-green: #285647;
+  --landing-green: var(--brand-green);
   --landing-soft: #e8ecdf;
   --landing-paper: #fffef9;
-  --landing-ink: #283c32;
+  --landing-ink: var(--brand-ink);
   --landing-muted: #6b7063;
   flex: 1;
   background: var(--background);
@@ -31,10 +31,10 @@
   padding-bottom: 20px;
 }
 .landing-eyebrow {
-  color: var(--landing-muted);
-  font-size: 11px;
+  color: var(--landing-green);
+  font-size: 13px;
   font-weight: 650;
-  letter-spacing: .16em;
+  letter-spacing: 0;
 }
 .landing-title {
   margin-block: 25px;
@@ -44,10 +44,10 @@
   letter-spacing: -.065em;
 }
 .landing-title > span {
-  color: var(--landing-green);
+  color: inherit;
 }
 .landing-description {
-  max-width: 335px;
+  max-width: 365px;
   margin-top: 28px;
   color: var(--landing-muted);
   font-size: 18px;
@@ -200,9 +200,8 @@
   text-align: center;
 }
 .receipt-overline {
-  font-family: var(--font-mono);
-  font-size: 9px;
-  letter-spacing: .13em;
+  font-size: 11px;
+  font-weight: 650;
   color: var(--landing-muted);
 }
 .receipt-heading h2 {
@@ -282,7 +281,8 @@
 }
 .receipt-checkbox svg {
   opacity: 0;
-  transition: opacity 180ms;
+  transform: scale(.6);
+  transition: opacity 180ms, transform 180ms;
 }
 .receipt-item[aria-pressed='true'] .receipt-checkbox {
   background: var(--landing-green);
@@ -291,6 +291,7 @@
 }
 .receipt-item[aria-pressed='true'] .receipt-checkbox svg {
   opacity: 1;
+  transform: scale(1);
 }
 .receipt-food {
   font-size: 21px;
@@ -326,6 +327,16 @@
 .receipt-total > div > span {
   font-size: 13px;
   font-weight: 750;
+}
+.receipt-total-values { text-align: right; }
+.receipt-total-number { display: block; }
+.receipt-total .receipt-total-converted {
+  display: block;
+  margin-top: 4px;
+  color: var(--landing-muted);
+  font-size: 12px;
+  font-weight: 550;
+  font-variant-numeric: tabular-nums;
 }
 .receipt-total small {
   display: block;
@@ -392,18 +403,17 @@
   width: 114px;
   height: 114px;
   place-content: center;
-  border: 1px solid #d4b446;
   border-radius: 50%;
-  background: #f2d66d;
-  color: #4a4426;
-  box-shadow: inset 0 0 0 5px #f2d66d, inset 0 0 0 6px rgb(74 68 38 / .25), 0 3px 6px rgb(0 0 0 / .05);
-  transform: rotate(12deg);
-  font-family: Georgia, 'Times New Roman', serif;
-  font-size: 15px;
-  font-style: italic;
+  background: var(--brand-gold);
+  color: var(--brand-ink);
+  box-shadow: 0 3px 6px rgb(0 0 0 / .08);
+  transform: rotate(8deg);
+  font-size: 12px;
+  font-weight: 700;
   line-height: 1.35;
   text-align: center;
 }
+.receipt-sticker svg { width: 50px; margin-inline: auto; }
 .receipt-invitation {
   display: flex;
   align-items: center;
@@ -441,11 +451,15 @@
   align-items: flex-start;
   gap: 15px;
 }
-.landing-step-number {
-  padding-top: 3px;
+.landing-step-icon {
+  display: grid;
+  width: 44px;
+  height: 44px;
+  flex-shrink: 0;
+  place-items: center;
+  border-radius: 14px;
+  background: var(--landing-soft);
   color: var(--landing-green);
-  font-family: var(--font-mono);
-  font-size: 12px;
 }
 .landing-steps h3 {
   font-size: 17px;
@@ -488,6 +502,8 @@
   display: flex;
   gap: 20px;
 }
+.landing-footer-brand { display: grid; gap: 12px; }
+.landing-footer-brand > span { color: var(--foreground); }
 .landing-footer a {
   display: inline-flex;
   min-height: 40px;
@@ -501,6 +517,8 @@
 }
 
 @media (prefers-reduced-motion: no-preference) {
+  .receipt-total-number { animation: amount-confirm 220ms ease-out; }
+  @keyframes amount-confirm { from { opacity: .45; } to { opacity: 1; } }
   .landing-enter {
     animation: landing-arrive 550ms both;
   }
@@ -568,15 +586,15 @@
     text-align: center;
   }
   .landing-eyebrow {
-    font-size: 9px;
-    letter-spacing: .14em;
+    font-size: 12px;
+    letter-spacing: 0;
   }
   .landing-title {
     margin-block: 22px;
-    font-size: clamp(61px, 15vw, 84px);
+    font-size: clamp(54px, 15vw, 84px);
   }
   .landing-description {
-    max-width: 290px;
+    max-width: 320px;
     margin: 22px auto 0;
     font-size: 16px;
     line-height: 1.6;
@@ -607,7 +625,7 @@
     right: -1px;
     width: 96px;
     height: 96px;
-    font-size: 13px;
+    font-size: 10px;
   }
   .receipt-heading {
     padding-bottom: 18px;
@@ -650,11 +668,17 @@
   }
   .landing-footer {
     flex-direction: column;
-    gap: 4px;
+    gap: 16px;
     margin-top: 28px;
     padding-bottom: max(16px, env(safe-area-inset-bottom));
     font-size: 10px;
   }
+  .landing-footer-brand { justify-items: center; gap: 14px; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .landing-page :is(button, a):active { scale: 1; }
+  .receipt-checkbox svg { transform: none; transition: opacity 180ms; }
 }
 
 @media (max-width: 360px) {

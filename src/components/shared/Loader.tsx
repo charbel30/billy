@@ -1,13 +1,13 @@
 import { cn } from '~/lib/utils'
+import { BrandSymbol } from '~/components/shared/Brand'
 
 const SIZE = {
-  sm: 'size-5 border-2',
-  md: 'size-8 border-[3px]',
-  lg: 'size-12 border-4',
+  sm: 'size-6',
+  md: 'size-10',
+  lg: 'size-14',
 } as const
 
-// Token-based spinner. Fills its container and centers itself; pass `label`
-// for a short caption under the ring (e.g. "Loading bill…").
+// The split mark breathes only while loading; reduced motion keeps it static.
 export function Loader({
   size = 'lg',
   label,
@@ -20,17 +20,10 @@ export function Loader({
   return (
     <div className={cn('flex h-full grow', className)}>
       <div className="m-auto flex flex-col items-center gap-3">
-        <div
-          aria-label={label ?? 'Loading'}
-          role="status"
-          className={cn(
-            'animate-spin rounded-full border-muted border-t-primary-strong',
-            SIZE[size],
-          )}
-        />
-        {label ? (
-          <p className="text-xs font-medium text-muted-foreground">{label}</p>
-        ) : null}
+        <BrandSymbol className={cn('brand-loading text-primary-strong', SIZE[size])} />
+        <p role="status" className={cn('text-sm font-medium text-muted-foreground', !label && 'sr-only')}>
+          {label ?? 'Loading'}
+        </p>
       </div>
     </div>
   )

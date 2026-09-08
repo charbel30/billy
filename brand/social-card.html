@@ -1,0 +1,32 @@
+<!doctype html>
+<html lang="en">
+<meta charset="utf-8">
+<title>Spolio — social preview source</title>
+<style>
+/* EMBED_FONT */
+*{box-sizing:border-box}body{margin:0;width:1200px;height:630px;overflow:hidden;background:#f8f7f3;color:#202820;font-family:Figtree,Arial,sans-serif}.layout{display:grid;grid-template-columns:650px 1fr;height:100%;padding:54px 58px;gap:30px}.brand{display:flex;gap:12px;align-items:center;font-size:36px;font-weight:800;letter-spacing:-2px}.brand svg{width:48px;height:48px}.pitch h1{font-size:78px;line-height:1.02;letter-spacing:-4px;font-weight:800;margin:51px 0 22px;max-width:610px}.pitch p{font-size:25px;line-height:1.4;margin:0;color:#526254;max-width:570px}.address{font-size:20px;font-weight:650;margin-top:36px}.scene{position:relative;display:flex;align-items:center;justify-content:center}.plate{position:absolute;width:390px;height:390px;background:#f7c928;border-radius:50%;top:65px;left:-25px}.receipt{position:relative;background:white;width:342px;padding:27px 25px 24px;transform:rotate(5deg);box-shadow:0 18px 42px #20282020}.receipt:after{content:'';position:absolute;left:0;right:0;bottom:-9px;height:10px;background:linear-gradient(135deg,white 25%,transparent 25%) -5px 0/10px 10px,linear-gradient(225deg,white 25%,transparent 25%) -5px 0/10px 10px}.receipt .top{font-size:23px;font-weight:750;text-align:center;margin-bottom:5px}.receipt .sub{text-align:center;font-size:15px;color:#647062;margin-bottom:23px}.line{display:flex;justify-content:space-between;padding:12px 0;font-size:18px;gap:16px}.rule{border-top:1px dashed #c7cec5;margin:10px 0}.total{font-size:31px;font-weight:800;color:#285647;letter-spacing:-1px}.lbp{font-size:22px;font-weight:650;color:#285647;text-align:right}.note{margin-top:23px;font-size:13px;color:#647062;text-align:center}.currency{display:inline-flex;gap:10px;margin-top:22px;font-size:15px;font-weight:750}.currency span{padding:8px 13px;background:#e8ecdf;border-radius:20px}
+</style>
+<div class="layout">
+  <div class="pitch">
+    <div class="brand"><!-- BRAND_SYMBOL --><span>Spolio</span></div>
+    <h1>Good food.<br>Fair split.</h1>
+    <p>Split the bill in dollars and lira.<br>Made for the Lebanese table.</p>
+    <div class="address">spolio.net</div>
+  </div>
+  <div class="scene">
+    <div class="plate"></div>
+    <div class="receipt">
+      <div class="top">Your part of a good night.</div>
+      <div class="sub">A little less dinner math.</div>
+      <div class="rule"></div>
+      <div class="line"><span>Chicken taouk</span><b>$9.00</b></div>
+      <div class="line"><span>Your share of fries</span><b>$2.00</b></div>
+      <div class="rule"></div>
+      <div class="line"><span>Your share</span><b class="total">$11.00</b></div>
+      <div class="lbp">984,500 LL</div>
+      <div class="note">Example · $1 = 89,500 LL</div>
+      <div class="currency"><span>Scan</span><span>Pick</span><span>Share</span></div>
+    </div>
+  </div>
+</div>
+</html>

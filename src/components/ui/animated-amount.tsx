@@ -1,5 +1,5 @@
 import { useEffect } from 'react'
-import { motion, useSpring, useTransform } from 'motion/react'
+import { motion, useReducedMotion, useSpring, useTransform } from 'motion/react'
 import { cn } from '~/lib/utils'
 
 // A number that smoothly counts to its target — the "totals tick" feel from
@@ -14,10 +14,13 @@ export function AnimatedAmount({
   format: (n: number) => string
   className?: string
 }) {
+  const reducedMotion = useReducedMotion()
   const spring = useSpring(value, { stiffness: 140, damping: 22, mass: 0.6 })
   useEffect(() => {
-    spring.set(value)
-  }, [value, spring])
+    if (reducedMotion) spring.jump(value)
+    else spring.set(value)
+  }, [value, spring, reducedMotion])
   const text = useTransform(spring, (v) => format(v))
+  if (reducedMotion) return <span className={cn('font-receipt', className)}>{format(value)}</span>
   return <motion.span className={cn('font-receipt', className)}>{text}</motion.span>
 }

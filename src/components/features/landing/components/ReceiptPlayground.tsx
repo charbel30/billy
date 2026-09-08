@@ -1,5 +1,6 @@
 import { useState } from 'react'
 import { RiArrowLeftDownLine, RiCheckLine } from '@remixicon/react'
+import { BrandSymbol } from '~/components/shared/Brand'
 
 const ITEMS = [
   { id: 'taouk', name: 'Chicken taouk', price: 900, emoji: '🥙' },
@@ -29,10 +30,10 @@ export function ReceiptPlayground() {
   return (
     <div className="receipt-playground landing-enter">
       <div className="receipt-placemat" aria-hidden="true" />
-      <div className="receipt-sticker" aria-hidden="true">the only thing<br />you need to split.</div>
+      <div className="receipt-sticker" aria-hidden="true"><BrandSymbol /><span>Dollars & lira</span></div>
       <div className="receipt-paper">
         <div className="receipt-heading">
-          <span className="receipt-overline">SPOLIO’S LITTLE DEMO</span>
+          <span className="receipt-overline">A taste of Spolio</span>
           <h2>A good night out.</h2>
           <p>3 friends · 1 bill · zero mental math</p>
         </div>
@@ -81,7 +82,12 @@ export function ReceiptPlayground() {
             <span>Your share</span>
             <small>{selected.length === 0 ? 'Pick something above' : 'Just what you picked.'}</small>
           </div>
-          <strong>{formatAmount(total)}</strong>
+          <div className="receipt-total-values">
+            <strong key={`${currency}-${total}`} className="receipt-total-number">{formatAmount(total)}</strong>
+            <span className="receipt-total-converted">{currency === 'USD'
+              ? `${Math.round(total / 100 * EXAMPLE_RATE).toLocaleString('en-US')} LL`
+              : `$${(total / 100).toFixed(2)}`}</span>
+          </div>
         </div>
         <div className="receipt-signoff">
           <span className="receipt-diners" aria-hidden="true"><i>Y</i><i>N</i><i>R</i></span>

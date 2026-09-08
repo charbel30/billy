@@ -3,6 +3,7 @@ import { RiCameraLine, RiErrorWarningLine, RiLoader4Line } from '@remixicon/reac
 import type { Id } from 'convex/_generated/dataModel'
 import { Button } from '~/components/ui/button'
 import { Alert, AlertDescription, AlertTitle } from '~/components/ui/alert'
+import { ReceiptScan } from '~/components/shared/ReceiptScan'
 import {
   scanErrorMessage,
   useScanUpload,
@@ -74,8 +75,12 @@ export function ExtractionFailedBanner({
 
 export function ExtractingBanner() {
   return (
-    <Alert variant="info" className="mb-5 flex items-center justify-center gap-2">
-      <RiLoader4Line className="animate-spin" /> Reading your receipt...
-    </Alert>
+    <div role="status" aria-live="polite" className="mb-5 flex items-center gap-4 rounded-card bg-primary/10 p-4 sm:p-5">
+      <ReceiptScan />
+      <div>
+        <p className="text-base font-bold tracking-tight">Reading your receipt</p>
+        <p className="mt-1 text-sm text-muted-foreground">Finding the items and totals in LBP and USD.</p>
+      </div>
+    </div>
   )
 }

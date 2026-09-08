@@ -31,9 +31,13 @@ export const Route = createRootRouteWithContext<{
         // viewport-fit=cover exposes env(safe-area-inset-*) for the mobile dock.
         content: "width=device-width, initial-scale=1, viewport-fit=cover",
       },
+      { name: "application-name", content: "Spolio" },
+      { name: "apple-mobile-web-app-title", content: "Spolio" },
       ...seo({
         title: "Spolio — split a bill in LBP & USD",
         description: `Scan a Lebanese receipt, see it in both LBP and USD at the venue's rate, and split it item-by-item.`,
+        image: 'https://spolio.net/og-image.png?v=spolio-circle-1',
+        imageAlt: 'Spolio — split the bill in dollars and lira. Made for the Lebanese table.',
       }),
     ],
     links: [
@@ -41,22 +45,23 @@ export const Route = createRootRouteWithContext<{
       {
         rel: "apple-touch-icon",
         sizes: "180x180",
-        href: "/apple-touch-icon.png",
+        href: "/apple-touch-icon.png?v=spolio-circle-1",
       },
       {
         rel: "icon",
         type: "image/png",
         sizes: "32x32",
-        href: "/favicon-32x32.png",
+        href: "/favicon-32x32.png?v=spolio-circle-1",
       },
       {
         rel: "icon",
         type: "image/png",
         sizes: "16x16",
-        href: "/favicon-16x16.png",
+        href: "/favicon-16x16.png?v=spolio-circle-1",
       },
-      { rel: "manifest", href: "/site.webmanifest", color: "#ffffff" },
-      { rel: "icon", href: "/favicon.ico" },
+      { rel: "manifest", href: "/site.webmanifest?v=spolio-circle-1" },
+      { rel: "icon", href: "/favicon.ico?v=spolio-circle-1", sizes: "16x16 32x32 48x48" },
+      { rel: "icon", type: "image/svg+xml", href: "/favicon.svg?v=spolio-circle-1", sizes: "any" },
     ],
   }),
   errorComponent: (props) => {
@@ -84,10 +89,10 @@ function RootDocument({ children }: { children: React.ReactNode }) {
   return (
     <html lang="en" suppressHydrationWarning>
       <head>
+        <HeadContent />
         {/* Applies the stored/system theme before first paint — prevents a
             light flash when the resolved theme is dark. */}
         <script dangerouslySetInnerHTML={{ __html: THEME_INIT_SCRIPT }} />
-        <HeadContent />
       </head>
       <body>
         <DirectionProvider direction="ltr">

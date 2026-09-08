@@ -26,11 +26,11 @@ export function EmptyState({
         className,
       )}
     >
-      <span className="grid size-12 place-items-center rounded-full bg-muted text-muted-foreground">
+      <span className="grid size-14 place-items-center rounded-[18px] bg-primary/15 text-primary-strong">
         <Icon className="size-6" />
       </span>
-      <p className="text-[15px] font-semibold">{title}</p>
-      {hint ? <p className="text-xs text-muted-foreground">{hint}</p> : null}
+      <p className="text-base font-bold tracking-tight">{title}</p>
+      {hint ? <p className="max-w-sm text-sm leading-relaxed text-muted-foreground">{hint}</p> : null}
       {action ? <div className="mt-2">{action}</div> : null}
     </motion.div>
   )

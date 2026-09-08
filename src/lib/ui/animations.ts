@@ -24,8 +24,8 @@ export const crossfadeSpring = {
 // Sliding active-pill in segmented controls (header step nav).
 export const pillSpring = {
   type: 'spring' as const,
-  duration: 0.4,
-  bounce: 0.15,
+  duration: 0.3,
+  bounce: 0,
 }
 
 // Page/section enter: rise + unblur. Exits (softExit) are softer than enters.

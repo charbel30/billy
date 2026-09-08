@@ -2,6 +2,7 @@ import { motion } from 'motion/react'
 import type { Claim, LineItem } from '~/lib/types'
 import { effectiveUnitPrice, totalRemainingLbp, formatLbp, formatUsd, toUsd } from '~/lib/money'
 import { AnimatedAmount } from '~/components/ui/animated-amount'
+import { RiCheckLine } from '@remixicon/react'
 
 // The "remaining to split" hero (ui-flow-vision.md). A bold, primary-tinted card
 // so it reads as the focal point (not floating muted whitespace): the remaining
@@ -29,11 +30,12 @@ export function SplitHero({
       <p
         className={
           done
-            ? 'text-xs font-semibold uppercase tracking-widest text-success-subtle-foreground'
-            : 'text-xs font-semibold uppercase tracking-widest text-primary-strong/70'
+            ? 'flex items-center gap-1.5 text-sm font-semibold text-success-subtle-foreground'
+            : 'text-sm font-semibold text-primary-strong'
         }
       >
-        {done ? 'All assigned 🎉' : 'Remaining to split'}
+        {done && <RiCheckLine className="size-4" aria-hidden="true" />}
+        {done ? 'All items assigned' : 'Remaining to split'}
       </p>
       <AnimatedAmount
         value={toUsd(remaining, rate)}
@@ -43,7 +45,7 @@ export function SplitHero({
       <AnimatedAmount
         value={remaining}
         format={formatLbp}
-        className="mt-0.5 block font-receipt text-sm font-semibold text-primary-strong/60"
+        className="mt-0.5 block font-receipt text-sm font-semibold text-muted-foreground"
       />
 
       <div className="mt-4 h-2.5 overflow-hidden rounded-full bg-primary/10">

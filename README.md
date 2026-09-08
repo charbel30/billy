@@ -10,6 +10,7 @@ scope, readiness gates, production verification, and launch follow-up.
 The older [`ROADMAP.md`](./ROADMAP.md) covers venue-product ideas and background;
 the consumer launch plan takes precedence for this release.
 Deeper product ideas and pitch material: [`IDEAS.md`](./IDEAS.md).
+Brand assets, colors, motion, and export instructions: [`brand/README.md`](./brand/README.md).
 
 The app uses:
 

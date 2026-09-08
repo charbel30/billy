@@ -5,6 +5,7 @@ import { HeroSection } from './components/HeroSection'
 import { HowItWorksSection } from './components/HowItWorksSection'
 import { RecentBills } from '~/components/features/scan/components/RecentBills'
 import './landing.css'
+import { Brand } from '~/components/shared/Brand'
 
 export function LandingPage() {
   useEffect(() => {
@@ -18,7 +19,7 @@ export function LandingPage() {
         <RecentBills />
         <HowItWorksSection />
         <footer className="landing-footer">
-          <p>Made for meals with friends. Built for Lebanon.</p>
+          <div className="landing-footer-brand"><Brand /><p>Made for meals with friends. Built for Lebanon.</p></div>
           <nav aria-label="Legal">
             <Link to="/privacy">Privacy</Link>
             <Link to="/terms">Terms</Link>

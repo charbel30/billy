@@ -1,15 +1,17 @@
-import { useEffect, useState } from 'react'
-import { createPortal } from 'react-dom'
+import { useEffect, useRef, useState } from 'react'
 import { AnimatePresence, motion } from 'motion/react'
 import { QRCodeSVG } from 'qrcode.react'
 import toast from 'react-hot-toast'
 import {
-  RiCloseLine,
   RiFullscreenLine,
   RiLinkUnlinkM,
   RiShareLine,
+  RiCheckLine,
 } from '@remixicon/react'
 import { Button } from '~/components/ui/button'
+import { Brand } from '~/components/shared/Brand'
+import { swap } from '~/lib/ui'
+import { Dialog, DialogContent, DialogDescription, DialogTitle } from '~/components/ui/dialog'
 
 // Share surface for a published split: QR for the table ("scan this"), one
 // share button for chats (native sheet → clipboard fallback), a fullscreen
@@ -26,25 +28,42 @@ export function ShareSplitCard({
 }) {
   const [revoking, setRevoking] = useState(false)
   const [presenting, setPresenting] = useState(false)
+  const presentButtonRef = useRef<HTMLButtonElement>(null)
+  const [sharing, setSharing] = useState(false)
+  const [feedback, setFeedback] = useState<'copied' | 'shared' | null>(null)
+
+  useEffect(() => {
+    if (!feedback) return
+    const timer = setTimeout(() => setFeedback(null), 2200)
+    return () => clearTimeout(timer)
+  }, [feedback])
 
   async function share() {
-    if (typeof navigator.share === 'function') {
-      try {
-        await navigator.share({
-          title: `Split: ${merchantName || 'the bill'}`,
-          text: 'Join the split and claim your items',
-          url,
-        })
-        return
-      } catch (err) {
-        if (err instanceof DOMException && err.name === 'AbortError') return
-      }
-    }
+    if (sharing) return
+    setSharing(true)
     try {
-      await navigator.clipboard.writeText(url)
-      toast.success('Split link copied')
-    } catch {
-      toast(url)
+      if (typeof navigator.share === 'function') {
+        try {
+          await navigator.share({
+            title: `${merchantName || 'Join the split'} — Spolio`,
+            text: 'Pick what you had and see your share in dollars and lira.',
+            url,
+          })
+          setFeedback('shared')
+          return
+        } catch (err) {
+          if (err instanceof DOMException && err.name === 'AbortError') return
+        }
+      }
+      try {
+        await navigator.clipboard.writeText(url)
+        setFeedback('copied')
+        toast.success('Split link copied')
+      } catch {
+        toast(url)
+      }
+    } finally {
+      setSharing(false)
     }
   }
 
@@ -63,15 +82,6 @@ export function ShareSplitCard({
     }
   }
 
-  useEffect(() => {
-    if (!presenting) return
-    const onKeyDown = (e: KeyboardEvent) => {
-      if (e.key === 'Escape') setPresenting(false)
-    }
-    window.addEventListener('keydown', onKeyDown)
-    return () => window.removeEventListener('keydown', onKeyDown)
-  }, [presenting])
-
   return (
     <div className="space-y-4">
       {/* Intentionally literal white (not bg-card): the QR must stay
@@ -83,16 +93,22 @@ export function ShareSplitCard({
         Point a phone camera at the code, or send the link.
       </p>
 
-      <Button size="lg" className="w-full" onClick={() => void share()}>
-        <RiShareLine />
-        Share link
+      <Button size="lg" className="h-12 w-full gap-2 font-bold" disabled={sharing} aria-busy={sharing} onClick={() => void share()}>
+        <AnimatePresence initial={false} mode="popLayout">
+          <motion.span key={feedback ? 'done' : 'share'} {...swap} className="grid size-5 place-items-center" aria-hidden="true">
+            {feedback ? <RiCheckLine className="size-5" /> : <RiShareLine className="size-5" />}
+          </motion.span>
+        </AnimatePresence>
+        {feedback === 'copied' ? 'Link copied' : feedback === 'shared' ? 'Link shared' : 'Share link'}
       </Button>
+      <span role="status" className="sr-only">{feedback === 'copied' ? 'Split link copied. Paste it in your group chat.' : feedback === 'shared' ? 'Split link shared.' : ''}</span>
 
       <div className="flex items-center justify-center gap-1">
         <button
           type="button"
+          ref={presentButtonRef}
           onClick={() => setPresenting(true)}
-          className="rounded-full px-3 py-1 text-xs font-semibold text-muted-foreground transition-colors hover:text-foreground"
+          className="min-h-11 rounded-full px-3 py-1 text-xs font-semibold text-muted-foreground transition-colors hover:text-foreground focus-visible:outline-2 focus-visible:outline-ring"
         >
           <RiFullscreenLine className="mr-1 inline size-3.5 align-[-2px]" />
           Present at the table
@@ -102,7 +118,7 @@ export function ShareSplitCard({
             type="button"
             onClick={() => void revoke()}
             disabled={revoking}
-            className="rounded-full px-3 py-1 text-xs font-semibold text-muted-foreground transition-colors hover:text-destructive disabled:opacity-60"
+            className="min-h-11 rounded-full px-3 py-1 text-xs font-semibold text-muted-foreground transition-colors hover:text-destructive disabled:opacity-60 focus-visible:outline-2 focus-visible:outline-ring"
           >
             <RiLinkUnlinkM className="mr-1 inline size-3.5 align-[-2px]" />
             Revoke this link
@@ -110,56 +126,27 @@ export function ShareSplitCard({
         ) : null}
       </div>
 
-      {/* Fullscreen "present" takeover for table stands / a staff phone laid on
-          the table. Portaled to <body>: DialogContent's centering transform
-          would otherwise capture this fixed overlay. Always white for QR
-          contrast, so text colors are explicit rather than themed. */}
-      {typeof document !== 'undefined'
-        ? createPortal(
-            <AnimatePresence>
-              {presenting ? (
-                <motion.div
-                  initial={{ opacity: 0 }}
-                  animate={{ opacity: 1 }}
-                  exit={{ opacity: 0 }}
-                  transition={{ type: 'spring', duration: 0.35, bounce: 0 }}
-                  onClick={() => setPresenting(false)}
-                  className="fixed inset-0 z-[60] flex cursor-pointer flex-col items-center justify-center gap-6 bg-white px-6"
-                >
-                  <button
-                    type="button"
-                    aria-label="Close"
-                    onClick={() => setPresenting(false)}
-                    className="absolute right-4 top-4 grid size-11 place-items-center rounded-full bg-neutral-100 text-neutral-500 transition-[scale,background-color] hover:bg-neutral-200 active:scale-[0.96]"
-                  >
-                    <RiCloseLine className="size-6" />
-                  </button>
-                  <motion.div
-                    initial={{ scale: 0.92, opacity: 0 }}
-                    animate={{ scale: 1, opacity: 1 }}
-                    exit={{ scale: 0.96, opacity: 0 }}
-                    transition={{ type: 'spring', duration: 0.4, bounce: 0 }}
-                    className="flex flex-col items-center gap-6 text-center"
-                  >
-                    <h2 className="text-2xl font-black tracking-tight text-neutral-900 [text-wrap:balance]">
-                      {merchantName || 'Join the split'}
-                    </h2>
-                    <QRCodeSVG
-                      value={url}
-                      size={720}
-                      marginSize={2}
-                      className="h-auto w-[min(78vw,58vh)] rounded-card"
-                    />
-                    <p className="text-base font-semibold text-neutral-500">
-                      Scan to join the split
-                    </p>
-                  </motion.div>
-                </motion.div>
-              ) : null}
-            </AnimatePresence>,
-            document.body,
-          )
-        : null}
+      <Dialog open={presenting} onOpenChange={setPresenting}>
+        <DialogContent
+          finalFocus={presentButtonRef}
+          className="share-present inset-0 start-0 top-0 z-[60] flex h-dvh w-screen max-w-none translate-x-0 translate-y-0 flex-col items-center justify-center gap-5 overflow-y-auto rounded-none bg-white px-6 py-16 text-center text-[#202820] sm:max-w-none data-open:zoom-in-100 data-closed:zoom-out-100 [&_[data-slot=dialog-close]]:size-11 [&_[data-slot=dialog-close]]:bg-neutral-100 [&_[data-slot=dialog-close]]:text-neutral-700"
+        >
+          <Brand className="text-[#202820]" />
+          <DialogTitle className="text-2xl font-extrabold tracking-tight">
+            {merchantName || 'Join the split'}
+          </DialogTitle>
+          {/* Literal dark-on-white contrast keeps the code scannable in both themes. */}
+          <QRCodeSVG
+            value={url}
+            size={720}
+            marginSize={2}
+            className="h-auto w-[min(74vw,50dvh)] shrink-0 rounded-card"
+          />
+          <DialogDescription className="text-base font-semibold text-neutral-600">
+            Scan to join the split
+          </DialogDescription>
+        </DialogContent>
+      </Dialog>
     </div>
   )
 }

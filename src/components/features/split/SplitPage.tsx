@@ -171,187 +171,194 @@ export function SplitPage({ billId }: { billId: Id<'bills'> }) {
   const finalizePending = finalize.isPending || splitLeftoversEvenly.isPending
 
   return (
-    <BillSplitWorkspace
-      bill={workspaceBill}
-      description={
-        canEdit
-          ? 'Pick a person, claim their items, and invite everyone from this same screen.'
-          : finalized
-            ? 'A read-only view of the finalized receipt.'
-            : 'A read-only view of the live split.'
-      }
-      notice={
-        !canEdit ? (
-          <ReadOnlyNotice
-            shareToken={shared ? bill.shareToken : null}
-            finalized={finalized}
-          />
-        ) : finalized ? (
-          <div className="flex items-center gap-2.5 rounded-control bg-muted px-4 py-2.5 text-xs font-medium text-muted-foreground ring-1 ring-border/60">
-            <RiLockLine className="size-4 shrink-0" />
-            This split is finalized, so edits are locked for everyone.
-          </div>
-        ) : null
-      }
-      people={bill.people}
-      activeId={activeId}
-      onSelect={setActiveId}
-      onAdd={finalized || !canEdit ? undefined : addPerson}
-      onRemove={finalized || !canEdit ? undefined : removePerson}
-      onStep={stepClaim}
-      onShareEvenly={shareEvenly}
-      showClaims={!finalized && canEdit}
-      summaryDescription={
-        finalized
-          ? 'This split is finalized and read-only.'
-          : canEdit
-            ? 'Updates live as people claim items.'
-            : 'View only. The split can still change on the host device.'
-      }
-      conflictMessage={conflictMessage}
-      savingMessage={
-        saveHostClaims.isPending || shareHostItemEvenly.isPending
-          ? 'Saving split...'
-          : null
-      }
-      onTipChange={
-        finalized || !canEdit
-          ? undefined
-          : (pct) => setTipPercent.mutate({ ...hostArgs(), tipPercent: pct })
-      }
-      tipPending={setTipPercent.isPending}
-      pendingItemId={pendingItemId}
-      actionSlot={
-        !canEdit ? null : finalized ? (
-          <Button
-            size="lg"
-            className="w-full"
-            onClick={() => navigate({ to: '/summary/$billId', params: { billId } })}
-          >
-            View final summary <RiArrowRightLine />
-          </Button>
-        ) : (
-          <>
-            {/* Two actions side by side keeps the mobile dock short. When
-                everything is claimed, Finalize takes over as the primary. */}
-            <div className="grid grid-cols-2 gap-2">
-              <Button
-                size="lg"
-                variant={allClaimed ? 'outline' : 'default'}
-                onClick={openInvite}
-                disabled={publish.isPending}
-              >
-                <RiQrCodeLine />
-                Invite
-              </Button>
-              <Button
-                size="lg"
-                variant={allClaimed ? 'default' : 'destructive'}
-                onClick={() => setFinalizeOpen(true)}
-                disabled={finalizePending}
-              >
-                <RiLockLine />
-                Finalize
-              </Button>
+    <>
+      <BillSplitWorkspace
+        bill={workspaceBill}
+        description={
+          canEdit
+            ? 'Pick a person, claim their items, and invite everyone from this same screen.'
+            : finalized
+              ? 'A read-only view of the finalized receipt.'
+              : 'A read-only view of the live split.'
+        }
+        notice={
+          !canEdit ? (
+            <ReadOnlyNotice
+              shareToken={shared ? bill.shareToken : null}
+              finalized={finalized}
+            />
+          ) : finalized ? (
+            <div className="flex items-center gap-2.5 rounded-control bg-muted px-4 py-2.5 text-xs font-medium text-muted-foreground ring-1 ring-border/60">
+              <RiLockLine className="size-4 shrink-0" />
+              This split is finalized, so edits are locked for everyone.
             </div>
+          ) : null
+        }
+        people={bill.people}
+        activeId={activeId}
+        onSelect={setActiveId}
+        onAdd={finalized || !canEdit ? undefined : addPerson}
+        onRemove={finalized || !canEdit ? undefined : removePerson}
+        onStep={stepClaim}
+        onShareEvenly={shareEvenly}
+        showClaims={!finalized && canEdit}
+        summaryDescription={
+          finalized
+            ? 'This split is finalized and read-only.'
+            : canEdit
+              ? 'Updates live as people claim items.'
+              : 'View only. The split can still change on the host device.'
+        }
+        conflictMessage={conflictMessage}
+        savingMessage={
+          saveHostClaims.isPending || shareHostItemEvenly.isPending
+            ? 'Saving split...'
+            : null
+        }
+        onTipChange={
+          finalized || !canEdit
+            ? undefined
+            : (pct) => setTipPercent.mutate({ ...hostArgs(), tipPercent: pct })
+        }
+        tipPending={setTipPercent.isPending}
+        pendingItemId={pendingItemId}
+        actionSlot={
+          !canEdit ? null : finalized ? (
+            <Button
+              size="lg"
+              className="w-full"
+              onClick={() => navigate({ to: '/summary/$billId', params: { billId } })}
+            >
+              View final summary <RiArrowRightLine />
+            </Button>
+          ) : (
+            <>
+              {/* Two actions side by side keeps the mobile dock short. When
+                  everything is claimed, Finalize takes over as the primary. */}
+              <div className="grid grid-cols-2 gap-2">
+                <Button
+                  size="lg"
+                  variant={allClaimed ? 'outline' : 'default'}
+                  onClick={openInvite}
+                  disabled={publish.isPending}
+                >
+                  <RiQrCodeLine />
+                  Invite
+                </Button>
+                <Button
+                  size="lg"
+                  variant={allClaimed ? 'default' : 'destructive'}
+                  onClick={() => setFinalizeOpen(true)}
+                  disabled={finalizePending}
+                >
+                  <RiLockLine />
+                  Finalize
+                </Button>
+              </div>
+            </>
+          )
+        }
+      />
+      {/* actionSlot renders in desktop and mobile surfaces. Portaled dialogs
+          belong here so only one modal/focus scope mounts per page. */}
+      {canEdit && !finalized && (
+        <>
+          <Dialog open={qrOpen} onOpenChange={setQrOpen}>
+            <DialogContent className="max-w-sm">
+              <DialogHeader>
+                <DialogTitle>Scan to join the split</DialogTitle>
+              </DialogHeader>
+              <ShareSplitCard
+                url={joinUrl(bill.shareToken)}
+                merchantName={bill.merchantName}
+                onRevoke={
+                  shared
+                    ? async () => {
+                        await revokeShare.mutateAsync(hostArgs())
+                        setQrOpen(false)
+                      }
+                    : undefined
+                }
+              />
+            </DialogContent>
+          </Dialog>
 
-            <Dialog open={qrOpen} onOpenChange={setQrOpen}>
-              <DialogContent className="max-w-sm">
-                <DialogHeader>
-                  <DialogTitle>Scan to join the split</DialogTitle>
-                </DialogHeader>
-                <ShareSplitCard
-                  url={joinUrl(bill.shareToken)}
-                  merchantName={bill.merchantName}
-                  onRevoke={
-                    shared
-                      ? async () => {
-                          await revokeShare.mutateAsync(hostArgs())
-                          setQrOpen(false)
-                        }
-                      : undefined
-                  }
-                />
-              </DialogContent>
-            </Dialog>
-
-            <Dialog open={finalizeOpen} onOpenChange={setFinalizeOpen}>
-              <DialogContent className="max-w-sm">
-                {allClaimed ? (
-                  <>
-                    <DialogHeader>
-                      <DialogTitle>Finalize this split?</DialogTitle>
-                    </DialogHeader>
-                    <p className="text-sm text-muted-foreground">
-                      This locks edits for everyone and turns the summary into
-                      a read-only receipt.
-                    </p>
-                    <div className="grid gap-2">
-                      <Button
-                        size="lg"
-                        onClick={() => void finalizeSplit(false)}
-                        disabled={finalizePending}
-                      >
-                        <RiLockLine />
-                        Finalize split
-                      </Button>
-                      <Button
-                        size="lg"
-                        variant="outline"
-                        onClick={() => setFinalizeOpen(false)}
-                        disabled={finalizePending}
-                      >
-                        Cancel
-                      </Button>
-                    </div>
-                  </>
-                ) : (
-                  <>
-                    <DialogHeader>
-                      <DialogTitle>Some items are still unclaimed</DialogTitle>
-                    </DialogHeader>
-                    <p className="text-sm text-muted-foreground">
-                      <span className="font-semibold text-foreground tabular-nums">
-                        {formatUsd(toUsd(remainingLbp, bill.rate))}
-                      </span>{' '}
-                      across {leftoverItemCount}{' '}
-                      {leftoverItemCount === 1 ? 'item' : 'items'} has no owner
-                      yet. Split it evenly, or finalize with it left off
-                      everyone's totals.
-                    </p>
-                    <div className="grid gap-2">
-                      <Button
-                        size="lg"
-                        onClick={() => void finalizeSplit(true)}
-                        disabled={finalizePending}
-                      >
-                        <RiGroupLine />
-                        Split leftovers evenly
-                      </Button>
-                      <Button
-                        size="lg"
-                        variant="outline"
-                        onClick={() => void finalizeSplit(false)}
-                        disabled={finalizePending}
-                      >
-                        Finalize as is
-                      </Button>
-                      <Button
-                        size="lg"
-                        variant="ghost"
-                        onClick={() => setFinalizeOpen(false)}
-                        disabled={finalizePending}
-                      >
-                        Keep splitting
-                      </Button>
-                    </div>
-                  </>
-                )}
-              </DialogContent>
-            </Dialog>
-          </>
-        )
-      }
-    />
+          <Dialog open={finalizeOpen} onOpenChange={setFinalizeOpen}>
+            <DialogContent className="max-w-sm">
+              {allClaimed ? (
+                <>
+                  <DialogHeader>
+                    <DialogTitle>Finalize this split?</DialogTitle>
+                  </DialogHeader>
+                  <p className="text-sm text-muted-foreground">
+                    This locks edits for everyone and turns the summary into
+                    a read-only receipt.
+                  </p>
+                  <div className="grid gap-2">
+                    <Button
+                      size="lg"
+                      onClick={() => void finalizeSplit(false)}
+                      disabled={finalizePending}
+                    >
+                      <RiLockLine />
+                      Finalize split
+                    </Button>
+                    <Button
+                      size="lg"
+                      variant="outline"
+                      onClick={() => setFinalizeOpen(false)}
+                      disabled={finalizePending}
+                    >
+                      Cancel
+                    </Button>
+                  </div>
+                </>
+              ) : (
+                <>
+                  <DialogHeader>
+                    <DialogTitle>Some items are still unclaimed</DialogTitle>
+                  </DialogHeader>
+                  <p className="text-sm text-muted-foreground">
+                    <span className="font-semibold text-foreground tabular-nums">
+                      {formatUsd(toUsd(remainingLbp, bill.rate))}
+                    </span>{' '}
+                    across {leftoverItemCount}{' '}
+                    {leftoverItemCount === 1 ? 'item' : 'items'} has no owner
+                    yet. Split it evenly, or finalize with it left off
+                    everyone's totals.
+                  </p>
+                  <div className="grid gap-2">
+                    <Button
+                      size="lg"
+                      onClick={() => void finalizeSplit(true)}
+                      disabled={finalizePending}
+                    >
+                      <RiGroupLine />
+                      Split leftovers evenly
+                    </Button>
+                    <Button
+                      size="lg"
+                      variant="outline"
+                      onClick={() => void finalizeSplit(false)}
+                      disabled={finalizePending}
+                    >
+                      Finalize as is
+                    </Button>
+                    <Button
+                      size="lg"
+                      variant="ghost"
+                      onClick={() => setFinalizeOpen(false)}
+                      disabled={finalizePending}
+                    >
+                      Keep splitting
+                    </Button>
+                  </div>
+                </>
+              )}
+            </DialogContent>
+          </Dialog>
+        </>
+      )}
+    </>
   )
 }
