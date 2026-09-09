@@ -1,5 +1,6 @@
+import { metadataError } from '../../../src/lib/bill/validation'
 import { ConvexError, v } from 'convex/values'
-import { lineItem, person } from '../../schema'
+import { lineItem } from '../../schema'
 import {
   claimRowsForBill,
   syncClaimRows,
@@ -10,7 +11,11 @@ import {
   deviceLimitedMutation,
   editableBillMutation,
 } from '../lib/functions'
-import { createdBillValidator, metaValidator } from '../lib/validators'
+import {
+  createdBillValidator,
+  metaValidator,
+  publicPerson,
+} from '../lib/validators'
 import {
   assertFiniteNumber,
   definedOnly,
@@ -64,6 +69,12 @@ export const createBill = newBillMutation({
   },
   returns: createdBillValidator,
   handler: async (ctx, args) => {
+    if (
+      'currencyPrimary' in args &&
+      args.currencyPrimary != null &&
+      args.currencyPrimary !== 'LBP'
+    )
+      throw new ConvexError('Receipt amounts must be stored in LBP.')
     const hostToken = newHostToken()
     const billId = await ctx.db.insert('bills', {
       merchantName: args.merchantName ?? '',
@@ -158,19 +169,42 @@ export const createDemoBill = newBillMutation({
 
 export const saveWorking = billMutation({
   args: {
+    baseVersion: v.number(),
     lineItems: v.optional(v.array(lineItem)),
-    people: v.optional(v.array(person)),
+    people: v.optional(v.array(publicPerson)),
     meta: v.optional(metaValidator),
   },
-  returns: v.null(),
-  handler: async (ctx, { lineItems, people, meta }) => {
+  returns: v.object({ version: v.number() }),
+  handler: async (ctx, { lineItems, people, meta, baseVersion }) => {
     const { bill } = ctx
     // A finalized bill is a frozen receipt. Don't let a late flush mutate it.
-    if (bill.status === 'FINALIZED') return null
+    if (bill.status === 'FINALIZED')
+      throw new ConvexError('This split has been finalized')
+    if (bill.version !== baseVersion)
+      throw new ConvexError(
+        'This bill changed in another tab. Review those changes before saving.',
+      )
 
     const splitIsLive = bill.status === 'PUBLISHED'
     const nextItems = lineItems ?? bill.lineItems
-    const nextPeople = splitIsLive ? bill.people : (people ?? bill.people)
+    // Public editor data cannot create or replace ownership credentials/paid state.
+    const nextPeople = splitIsLive
+      ? bill.people
+      : (people ?? bill.people).map((person) => {
+          const existing = bill.people.find((p) => p.id === person.id)
+          return {
+            id: person.id,
+            name: person.name,
+            color: person.color,
+            ...(existing?.guestSessionId
+              ? { guestSessionId: existing.guestSessionId }
+              : {}),
+            ...(existing?.guestAccessVersion
+              ? { guestAccessVersion: existing.guestAccessVersion }
+              : {}),
+            ...(existing?.paidAt != null ? { paidAt: existing.paidAt } : {}),
+          }
+        })
     // Claims are never submitted by the editor (they live in their own table,
     // written only by the scoped claim mutations). The editor's job here
     // is to keep them CONSISTENT: reconcile the current rows against the next
@@ -205,9 +239,15 @@ export const saveWorking = billMutation({
       }
     }
 
+    const error = metadataError({
+      ...bill,
+      ...definedOnly(meta ?? {}),
+      ...(typeof patch.rate === 'number' ? { rate: patch.rate } : {}),
+    })
+    if (error) throw new ConvexError(error)
     await ctx.db.patch(bill._id, patch)
     await syncClaimRows(ctx, bill._id, nextClaims) // no-op unless items/people changed
-    return null
+    return { version: bill.version + 1 }
   },
 })
 
@@ -216,6 +256,13 @@ export const publish = billMutation({
   returns: v.string(),
   handler: async (ctx) => {
     const { bill } = ctx
+    const error = metadataError(bill)
+    if (error) throw new ConvexError(error)
+    validateLineItems(bill.lineItems)
+    validatePeople(bill.people)
+    if (bill.lineItems.length === 0 || bill.people.length === 0)
+      throw new ConvexError('Add items and at least one person first.')
+
     if (bill.status !== 'PUBLISHED' && bill.status !== 'FINALIZED') {
       await ctx.db.patch(bill._id, { status: 'PUBLISHED', updatedAt: now() })
     }
@@ -228,6 +275,13 @@ export const finalize = billMutation({
   returns: v.null(),
   handler: async (ctx) => {
     const { bill } = ctx
+    const error = metadataError(bill)
+    if (error) throw new ConvexError(error)
+    validateLineItems(bill.lineItems)
+    validatePeople(bill.people)
+    if (bill.lineItems.length === 0 || bill.people.length === 0)
+      throw new ConvexError('Add items and at least one person first.')
+
     if (bill.status !== 'FINALIZED') {
       await ctx.db.patch(bill._id, { status: 'FINALIZED', updatedAt: now() })
     }

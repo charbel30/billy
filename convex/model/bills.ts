@@ -1,8 +1,9 @@
+import { lineItemsError } from '../../src/lib/bill/validation'
 // Plain-TS bill helpers shared by the public mutations in convex/bills/*.
 // No Convex functions are registered here — public wrappers stay thin and
 // call into this module (see docs.convex.dev best practices).
 import { ConvexError } from 'convex/values'
- import type { MutationCtx, QueryCtx } from '../_generated/server'
+import type { MutationCtx, QueryCtx } from '../_generated/server'
 import { invariant } from '../lib/invariant'
 import { rateLimiter } from '../lib/rateLimits'
 import type { Bill, Claim, LineItem, Person } from '../schema'
@@ -32,7 +33,7 @@ export function cleanName(name: string) {
 }
 
 export function assertGuestSessionId(guestSessionId: string) {
-  if (guestSessionId.trim().length < 8) {
+  if (!guestSessionId.startsWith('v2:') || guestSessionId.length < 20) {
     throw new Error('Invalid guest session')
   }
 }
@@ -47,25 +48,13 @@ function assertUniqueIds(values: Array<{ id: string }>, label: string) {
 }
 
 export function validateLineItems(lineItems: LineItem[]) {
-  assertUniqueIds(lineItems, 'line item')
-  for (const item of lineItems) {
-    if (!item.name.trim()) throw new Error('Line item name is required')
-    assertFiniteNumber(item.qty, 'Line item quantity')
-    assertFiniteNumber(item.unitPrice, 'Line item unit price')
-    assertFiniteNumber(item.lineTotal, 'Line item total')
-    if (item.qty <= 0) throw new Error('Line item quantity must be greater than 0')
-    if (item.unitPrice < 0) throw new Error('Line item unit price cannot be negative')
-    if (item.lineTotal < 0) throw new Error('Line item total cannot be negative')
-    if (item.confidence !== undefined) {
-      assertFiniteNumber(item.confidence, 'Line item confidence')
-      if (item.confidence < 0 || item.confidence > 1) {
-        throw new Error('Line item confidence must be between 0 and 1')
-      }
-    }
-  }
+  const error = lineItemsError(lineItems)
+  if (error) throw new ConvexError(error)
 }
 
 export function validatePeople(people: Person[]) {
+  if (people.length > MAX_PEOPLE)
+    throw new ConvexError('Too many people on this bill')
   assertUniqueIds(people, 'person')
   for (const p of people) {
     if (!p.name.trim()) throw new Error('Person name is required')
@@ -81,8 +70,10 @@ export function validateClaims(
   const itemIds = new Set(lineItems.map((i) => i.id))
   const personIds = new Set(people.map((p) => p.id))
   for (const c of claims) {
-    if (!itemIds.has(c.itemId)) throw new Error('Claim references a missing item')
-    if (!personIds.has(c.personId)) throw new Error('Claim references a missing person')
+    if (!itemIds.has(c.itemId))
+      throw new Error('Claim references a missing item')
+    if (!personIds.has(c.personId))
+      throw new Error('Claim references a missing person')
     assertFiniteNumber(c.units, 'Claim units')
     if (c.units < 0) throw new Error('Claim units cannot be negative')
   }
@@ -126,16 +117,33 @@ export function assertHostToken(bill: Bill, hostToken: string) {
   }
 }
 
-/** The wire shape of a bill: the document plus its claim rows, MINUS the host
- *  capability. Every query goes through here so the secret can't leak into a
- *  response — including the guest response, which anyone with the link reads. */
+/** Every bill query includes claim rows and strips all host/guest edit credentials. */
 export function toWireBill<T extends Bill>(bill: T, claims: Claim[]) {
-  const { hostToken: _hostToken, ...rest } = bill
-  return { ...rest, claims }
+  const {
+    hostToken: _hostToken,
+    extractionBaseVersion: _baseVersion,
+    people,
+    ...rest
+  } = bill
+  return {
+    ...rest,
+    people: people.map(
+      ({ guestSessionId: _secret, guestAccessVersion: _version, ...person }) =>
+        person,
+    ),
+    claims,
+    guestAccessReset: people.some(
+      (p) => p.guestSessionId && p.guestAccessVersion !== 2,
+    ),
+  }
 }
 
 export function findGuestPerson(bill: Bill, guestSessionId: string) {
-  return bill.people.find((p) => p.guestSessionId === guestSessionId) ?? null
+  return (
+    bill.people.find(
+      (p) => p.guestAccessVersion === 2 && p.guestSessionId === guestSessionId,
+    ) ?? null
+  )
 }
 
 export function createGuestPerson(
@@ -148,6 +156,7 @@ export function createGuestPerson(
     name,
     color: nextPersonColor(bill.people.length),
     guestSessionId,
+    guestAccessVersion: 2,
   }
 }
 
@@ -162,7 +171,9 @@ export async function limitGuestJoin(ctx: MutationCtx, billId: string) {
     key: billId,
   })
   if (!ok) {
-    throw new ConvexError('Too many people joining at once — try again in a minute.')
+    throw new ConvexError(
+      'Too many people joining at once — try again in a minute.',
+    )
   }
 }
 
@@ -174,7 +185,10 @@ export function assertOwnPerson(
 ) {
   const person = bill.people.find((p) => p.id === personId)
   invariant(person, 'person not found')
-  if (person.guestSessionId !== guestSessionId) {
+  if (
+    person.guestAccessVersion !== 2 ||
+    person.guestSessionId !== guestSessionId
+  ) {
     throw new Error('You can only edit your own claims')
   }
   return person
@@ -207,7 +221,11 @@ export function assertSettleOpen(bill: Bill) {
 
 // On mark, keep an existing timestamp (idempotent under double-taps); on
 // unmark, drop the key entirely — never store `undefined` in the array.
-export function withPersonPaid(people: Person[], personId: string, paid: boolean) {
+export function withPersonPaid(
+  people: Person[],
+  personId: string,
+  paid: boolean,
+) {
   return people.map((p) => {
     if (p.id !== personId) return p
     if (paid) return { ...p, paidAt: p.paidAt ?? now() }

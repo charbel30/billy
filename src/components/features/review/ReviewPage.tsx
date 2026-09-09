@@ -1,3 +1,5 @@
+import { metadataError, lineItemsError } from '~/lib/bill/validation'
+import { Button } from '~/components/ui/button'
 import { useEffect, useState } from 'react'
 import { useNavigate } from '@tanstack/react-router'
 import { useSuspenseQuery } from '@tanstack/react-query'
@@ -18,13 +20,18 @@ import { RateField } from './components/RateField'
 import { AuditLineItems } from './components/AuditLineItems'
 import { SettlementSummary } from './components/SettlementSummary'
 import { MobileReviewAction } from './components/MobileReviewAction'
-import { ExtractingBanner, ExtractionFailedBanner } from './components/ExtractionBanners'
+import {
+  ExtractingBanner,
+  ExtractionFailedBanner,
+} from './components/ExtractionBanners'
 import { SaveStatus } from './components/SaveStatus'
 import { reviewCopy } from './content'
 
 export function ReviewPage({ billId }: { billId: Id<'bills'> }) {
   const navigate = useNavigate()
-  const canEdit = useHasHostToken(billId)
+  const hasHostAccess = useHasHostToken(billId)
+  const { data: serverBill } = useSuspenseQuery(billQueries.detail(billId))
+  const canEdit = hasHostAccess && serverBill.status !== 'FINALIZED'
   const editor = useBillEditor(billId, { readOnly: !canEdit })
   const { bill, setMeta, addLineItem, updateLineItem, removeLineItem } = editor
   const { meta } = bill
@@ -32,10 +39,14 @@ export function ReviewPage({ billId }: { billId: Id<'bills'> }) {
   // extraction failed) — the screen just has to ask for items instead of
   // asking the user to review nothing.
   const isEmpty = bill.lineItems.length === 0
-  const canContinue = !isEmpty && canPersistWorkingBill(bill)
+  const canContinue =
+    !isEmpty &&
+    canPersistWorkingBill(bill) &&
+    !editor.editedElsewhere &&
+    !editor.saving
+  const validationError = metadataError(meta) ?? lineItemsError(bill.lineItems)
   // Raw server doc (live) — carries extraction failure state the editor's
   // working copy doesn't track.
-  const { data: serverBill } = useSuspenseQuery(billQueries.detail(billId))
   const [failureDismissed, setFailureDismissed] = useState(false)
 
   useEffect(() => {
@@ -96,6 +107,40 @@ export function ReviewPage({ billId }: { billId: Id<'bills'> }) {
         </div>
       ) : null}
 
+      {validationError ? (
+        <Alert variant="warning" className="mb-4">
+          <AlertTitle>{validationError}</AlertTitle>
+        </Alert>
+      ) : null}
+      {editor.recoveryUnavailable ? (
+        <Alert variant="warning" className="mb-4">
+          <AlertTitle>
+            This browser cannot keep a recovery copy. Keep this page open until
+            changes finish saving.
+          </AlertTitle>
+        </Alert>
+      ) : null}
+      {editor.editedElsewhere ? (
+        <Alert variant="warning" className="mb-4">
+          <AlertTitle>
+            This bill changed in another tab or while scanning. Your draft has
+            been kept.
+          </AlertTitle>
+          <AlertDescription>
+            Review the latest version, or explicitly save your draft over it.
+          </AlertDescription>
+          <div className="mt-3 flex gap-2">
+            <Button variant="outline" onClick={editor.useServerVersion}>
+              Use latest version
+            </Button>
+            {canEdit ? (
+              <Button onClick={editor.keepLocalVersion}>
+                Save my draft instead
+              </Button>
+            ) : null}
+          </div>
+        </Alert>
+      ) : null}
       {editor.extracting ? <ExtractingBanner /> : null}
 
       {canEdit &&
@@ -136,7 +181,12 @@ export function ReviewPage({ billId }: { billId: Id<'bills'> }) {
                 setMeta({ rate: parseNumericInput(raw), rateSource: 'manual' })
               }
             />
-            {canEdit ? <SaveStatus saving={editor.saving} /> : null}
+            {canEdit ? (
+              <SaveStatus
+                state={editor.saveState}
+                onRetry={() => void editor.flushNow()}
+              />
+            ) : null}
           </div>
 
           <AuditLineItems

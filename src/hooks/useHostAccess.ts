@@ -1,13 +1,16 @@
 import { useSyncExternalStore } from 'react'
 import { hasHostToken } from '~/lib/session'
 
-const subscribe = () => () => undefined
+const subscribe = (onChange: () => void) => {
+  window.addEventListener('storage', onChange)
+  window.addEventListener('focus', onChange)
+  return () => {
+    window.removeEventListener('storage', onChange)
+    window.removeEventListener('focus', onChange)
+  }
+}
 
-/**
- * Browser-storage-backed host access, exposed without causing an SSR hydration
- * mismatch. Host tokens are written before navigation and do not change while
- * a bill screen is mounted, so this store intentionally needs no listener.
- */
+/** Recheck on cross-tab storage changes and return to the browser. SSR holds no credential. */
 export function useHasHostToken(billId: string): boolean {
   return useSyncExternalStore(
     subscribe,

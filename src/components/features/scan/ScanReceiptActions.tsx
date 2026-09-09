@@ -3,11 +3,19 @@ import { useNavigate } from '@tanstack/react-router'
 import { RiArrowRightLine, RiCameraLine, RiLoader4Line } from '@remixicon/react'
 import { useCreateDemoBill } from '~/api'
 import { useManualBill } from '~/hooks/useManualBill'
-import { getDeviceId, rememberHostToken } from '~/lib/session'
+import {
+  assertHostStorageAvailable,
+  getDeviceId,
+  rememberHostToken,
+} from '~/lib/session'
 import { trackFunnelMilestone } from '~/lib/observability'
 import { Button } from '~/components/ui/button'
 import {
-  Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle,
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
 } from '~/components/ui/dialog'
 import { heroCopy } from '~/components/features/landing/content'
 import { scanErrorMessage, useScanUpload } from './hooks/useScanUpload'
@@ -21,13 +29,17 @@ export function ScanReceiptActions() {
   const inputRef = useRef<HTMLInputElement>(null)
   const scanButtonRef = useRef<HTMLButtonElement>(null)
   const inFlight = useRef(false)
-  const [pending, setPending] = useState<{ file: File; url: string } | null>(null)
+  const [pending, setPending] = useState<{ file: File; url: string } | null>(
+    null,
+  )
   const [error, setError] = useState<string | null>(null)
   const busy = scan.busy || sample.isPending || manual.busy
 
   // Release previews on replacement, cancellation, successful upload, and unmount.
   useEffect(() => {
-    return () => { if (pending) URL.revokeObjectURL(pending.url) }
+    return () => {
+      if (pending) URL.revokeObjectURL(pending.url)
+    }
   }, [pending])
 
   function startScan() {
@@ -66,7 +78,10 @@ export function ScanReceiptActions() {
     inFlight.current = true
     setError(null)
     try {
-      const { billId, hostToken } = await sample.mutateAsync({ deviceId: getDeviceId() })
+      assertHostStorageAvailable()
+      const { billId, hostToken } = await sample.mutateAsync({
+        deviceId: getDeviceId(),
+      })
       rememberHostToken(billId, hostToken)
       await navigate({ to: '/review/$billId', params: { billId } })
     } catch (err) {
@@ -91,6 +106,10 @@ export function ScanReceiptActions() {
 
   return (
     <div className="landing-actions landing-enter">
+      <p className="text-xs text-muted-foreground">
+        Host access stays in this browser. Clearing site data removes it; a
+        bookmark cannot restore it.
+      </p>
       <input
         ref={inputRef}
         type="file"
@@ -101,32 +120,63 @@ export function ScanReceiptActions() {
         disabled={busy}
         onChange={handleFile}
       />
-      <button ref={scanButtonRef} type="button" className="landing-scan" disabled={busy} onClick={startScan}>
+      <button
+        ref={scanButtonRef}
+        type="button"
+        className="landing-scan"
+        disabled={busy}
+        onClick={startScan}
+      >
         <RiCameraLine size={21} aria-hidden="true" />
         {heroCopy.primaryCta}
         <RiArrowRightLine size={20} aria-hidden="true" />
       </button>
       <p className="landing-reassurance">No account. No app to download.</p>
       <div className="landing-secondary-actions">
-        <button type="button" className="landing-sample" disabled={busy} aria-busy={sample.isPending} onClick={() => void trySampleBill()}>
+        <button
+          type="button"
+          className="landing-sample"
+          disabled={busy}
+          aria-busy={sample.isPending}
+          onClick={() => void trySampleBill()}
+        >
           {sample.isPending ? 'Opening sample…' : heroCopy.secondaryCta}
-          {sample.isPending
-            ? <RiLoader4Line size={16} className="animate-spin" aria-hidden="true" />
-            : <RiArrowRightLine size={16} aria-hidden="true" />}
+          {sample.isPending ? (
+            <RiLoader4Line
+              size={16}
+              className="animate-spin"
+              aria-hidden="true"
+            />
+          ) : (
+            <RiArrowRightLine size={16} aria-hidden="true" />
+          )}
         </button>
-        <button type="button" className="landing-manual" disabled={busy} aria-busy={manual.busy} onClick={() => void enterManually()}>
+        <button
+          type="button"
+          className="landing-manual"
+          disabled={busy}
+          aria-busy={manual.busy}
+          onClick={() => void enterManually()}
+        >
           {manual.busy ? 'Opening bill…' : 'Enter manually'}
         </button>
       </div>
       <p className="landing-scan-privacy">{scanPrivacyNote}</p>
-      {error && !pending && <p role="alert" className="mt-3 text-sm text-destructive">{error}</p>}
+      {error && !pending && (
+        <p role="alert" className="mt-3 text-sm text-destructive">
+          {error}
+        </p>
+      )}
 
-      <Dialog open={pending !== null} onOpenChange={(open) => {
-        if (!open && !busy && !inFlight.current) {
-          setPending(null)
-          setError(null)
-        }
-      }}>
+      <Dialog
+        open={pending !== null}
+        onOpenChange={(open) => {
+          if (!open && !busy && !inFlight.current) {
+            setPending(null)
+            setError(null)
+          }
+        }}
+      >
         <DialogContent
           finalFocus={scanButtonRef}
           showCloseButton={!busy}
@@ -134,7 +184,9 @@ export function ScanReceiptActions() {
         >
           <DialogHeader className="pr-10">
             <DialogTitle>Looking good?</DialogTitle>
-            <DialogDescription>Make sure the whole receipt is readable.</DialogDescription>
+            <DialogDescription>
+              Make sure the whole receipt is readable.
+            </DialogDescription>
           </DialogHeader>
           {pending && (
             <img
@@ -144,15 +196,38 @@ export function ScanReceiptActions() {
             />
           )}
           <p className="text-xs text-muted-foreground">{scanPrivacyNote}</p>
-          {error && <p role="alert" className="text-sm text-destructive">{error}</p>}
+          {error && (
+            <p role="alert" className="text-sm text-destructive">
+              {error}
+            </p>
+          )}
           <div className="grid grid-cols-[1fr_auto] gap-2">
-            <Button className="h-12 active:scale-[0.96]" disabled={busy} aria-busy={scan.busy} onClick={() => void confirmPhoto()}>
-              {scan.busy && <RiLoader4Line className="animate-spin" aria-hidden="true" />}
+            <Button
+              className="h-12 active:scale-[0.96]"
+              disabled={busy}
+              aria-busy={scan.busy}
+              onClick={() => void confirmPhoto()}
+            >
+              {scan.busy && (
+                <RiLoader4Line className="animate-spin" aria-hidden="true" />
+              )}
               {scan.busy ? 'Uploading receipt…' : 'Use this photo'}
             </Button>
-            <Button variant="outline" className="h-12 px-5 active:scale-[0.96]" disabled={busy} onClick={startScan}>Retake</Button>
+            <Button
+              variant="outline"
+              className="h-12 px-5 active:scale-[0.96]"
+              disabled={busy}
+              onClick={startScan}
+            >
+              Retake
+            </Button>
           </div>
-          <button type="button" className="min-h-10 rounded-lg text-sm font-medium text-primary-strong disabled:opacity-50" disabled={busy} onClick={() => void enterManually()}>
+          <button
+            type="button"
+            className="min-h-10 rounded-lg text-sm font-medium text-primary-strong disabled:opacity-50"
+            disabled={busy}
+            onClick={() => void enterManually()}
+          >
             {manual.busy ? 'Opening bill…' : 'Enter a bill manually instead'}
           </button>
         </DialogContent>

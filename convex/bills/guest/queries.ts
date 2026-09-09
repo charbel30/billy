@@ -1,5 +1,6 @@
+import { v } from 'convex/values'
 import { claimRowsForBill, toWireClaims } from '../../model/claimRows'
-import { toWireBill } from '../../model/bills'
+import { assertGuestSessionId, toWireBill } from '../../model/bills'
 import { sharedBillQuery } from '../lib/functions'
 import { billDocValidator } from '../lib/validators'
 
@@ -16,5 +17,20 @@ export const getBillByToken = sharedBillQuery({
   handler: async (ctx) => {
     const { bill } = ctx
     return toWireBill(bill, toWireClaims(await claimRowsForBill(ctx, bill._id)))
+  },
+})
+
+// Browser-only ownership lookup. Public bill/SSR data never contains a secret.
+export const getControlledPeople = sharedBillQuery({
+  args: { guestSessionId: v.string() },
+  returns: v.array(v.string()),
+  handler: async (ctx, { guestSessionId }) => {
+    assertGuestSessionId(guestSessionId)
+    return ctx.bill.people
+      .filter(
+        (p) =>
+          p.guestAccessVersion === 2 && p.guestSessionId === guestSessionId,
+      )
+      .map((p) => p.id)
   },
 })

@@ -13,7 +13,7 @@ every caller (all frontend Convex references live in `src/api/`, per
 
 ## Layout
 
-- `bills/host/` — host-side functions, gated by bill id (`ctx.bill` injected
+- `bills/host/` — host-side functions, gated by bill id and host credential (`ctx.bill` injected
   by `billMutation`/`editableBillMutation`/`settleBillMutation`).
   - `lifecycle.ts` — `createBill`, `createDemoBill`, `saveWorking`, `publish`,
     `finalize`, `revokeShare`, `setTipPercent`.
@@ -28,7 +28,7 @@ every caller (all frontend Convex references live in `src/api/`, per
   `guestMutation`/`guestSettleMutation`).
   - `people.ts` — `joinSplit`, `addGuestPerson`, `setGuestPersonPaid`.
   - `claims.ts` — `stepGuestClaim`, `shareGuestItemEvenly`.
-  - `queries.ts` — `getBillByToken`.
+  - `queries.ts` — public `getBillByToken` and caller-scoped `getControlledPeople`.
 - `bills/extraction.ts` — internal mutations only (`applyExtraction`,
   `onExtractionComplete`); not under host/ or guest/ since nothing here is a
   public host/guest function.
@@ -91,3 +91,24 @@ Claim taps send `itemId`, `personId`, and `delta` (+1/-1); subscribed results
 remain the UI's source of truth. No person-wide claim list is sent by a tap.
 Deploy the updated backend and frontend together. Clients already open on the
 removed `saveHostClaims` / `saveGuestClaims` endpoints must reload.
+
+## Read access and editor acknowledgements
+
+`getBill` requires both `id` and `hostToken`. Host route SSR renders a loading
+shell; private receipt queries begin after browser access is available.
+`getBillByToken` requires a current published/finalized invitation. Neither
+query returns participant edit credentials. `getControlledPeople` returns only
+the participant IDs controlled by the supplied current guest credential.
+
+Guest credentials predating access version 2 are invalidated, with old names and
+claims retained for host management. The client creates fresh credentials in a
+new storage namespace. Never backfill old exposed tokens into the new version.
+
+`saveWorking` requires `baseVersion` and returns the committed `version`.
+Stale or finalized writes throw; the editor retains its recovery draft and
+requires an explicit decision on conflicts. Extraction records its starting
+version and applies only while that version and its upload are still current.
+
+See [the readiness review](../launch-readiness-review.md) for rollout and the
+remaining production acceptance checks. The full regression suite now covers
+access control, extraction, editor recovery, storage and settlement math.

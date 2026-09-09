@@ -33,10 +33,16 @@ export interface WorkingBill {
   status: BillStatus
 }
 
+export type SaveState = 'unsaved' | 'saving' | 'saved' | 'failed'
+
 export interface BillEditor {
   bill: WorkingBill
   status: BillStatus
   saving: boolean
+  saveState: SaveState
+  recoveryUnavailable: boolean
+  useServerVersion: () => void
+  keepLocalVersion: () => void
   editedElsewhere: boolean
   /** True while the vision model is still reading an attached image. */
   extracting: boolean

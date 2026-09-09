@@ -87,9 +87,13 @@ export function PortfolioReceipt({
         {lines.map((l) => {
           const emoji = itemEmoji(l.name)
           return (
-            <div key={l.itemId} className="flex justify-between gap-2 font-receipt">
+            <div
+              key={l.itemId}
+              className="flex justify-between gap-2 font-receipt"
+            >
               <span className="truncate text-muted-foreground">
-                {formatUnits(l.units)}× {emoji ? <span aria-hidden>{emoji} </span> : null}
+                {formatUnits(l.units)}×{' '}
+                {emoji ? <span aria-hidden>{emoji} </span> : null}
                 {l.name}
               </span>
               <span>{formatUsd(toUsd(l.lbp, rate))}</span>
@@ -97,7 +101,9 @@ export function PortfolioReceipt({
           )
         })}
         {lines.length === 0 && (
-          <div className="text-sm text-muted-foreground">Nothing claimed yet</div>
+          <div className="text-sm text-muted-foreground">
+            Nothing claimed yet
+          </div>
         )}
       </div>
 
@@ -123,7 +129,7 @@ export function PortfolioReceipt({
         </span>
         <div className="text-right">
           <div className="font-receipt text-2xl font-bold tracking-tight text-primary-strong">
-            {formatUsd(toUsd(portfolio.totalLbp, rate))}
+            {formatUsd(portfolio.totalUsd)}
           </div>
           <div className="font-receipt text-xs text-muted-foreground">
             {formatLbp(portfolio.totalLbp)}

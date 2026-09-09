@@ -6,10 +6,7 @@ import { invariant } from '../../lib/invariant'
 import { assertExtractionEnabled, rateLimiter } from '../../lib/rateLimits'
 import { retrier } from '../../lib/retrier'
 import { assertHostToken } from '../../model/bills'
-import {
-  assertDeviceId,
-  deviceLimitedMutation,
-} from '../lib/functions'
+import { assertDeviceId, deviceLimitedMutation } from '../lib/functions'
 
 // Scan mutations are public and unauthenticated, and extraction is the only
 // paid path — so both steps are rate limited per device (client-generated id;
@@ -52,6 +49,11 @@ export const prepareImageExtraction = internalMutation({
     const bill = await ctx.db.get(id)
     invariant(bill, `missing bill ${id}`)
     assertHostToken(bill, hostToken)
+    if (bill.status === 'PUBLISHED' || bill.status === 'FINALIZED') {
+      throw new ConvexError(
+        'Revoke sharing before scanning again. Finalized receipts cannot be rescanned.',
+      )
+    }
 
     const image = await ctx.db.system.get('_storage', imageRef)
     if (!image) {
@@ -93,7 +95,7 @@ export const prepareImageExtraction = internalMutation({
         '[spend] extractGlobalDaily exhausted — scanning paused until the window resets',
       )
       throw new ConvexError(
-        "Spolio is very busy today and scanning is paused. Try again later or enter the bill manually.",
+        'Spolio is very busy today and scanning is paused. Try again later or enter the bill manually.',
       )
     }
 
@@ -124,6 +126,7 @@ export const prepareImageExtraction = internalMutation({
       imageRef,
       extractionError: undefined,
       extractionRunId: runId,
+      extractionBaseVersion: bill.version,
       updatedAt: Date.now(),
     })
     return null
@@ -181,7 +184,9 @@ export const attachImageAndExtract = action({
         console.error('[privacy] failed to delete rejected receipt upload', {
           imageRef: args.imageRef,
           error:
-            deleteError instanceof Error ? deleteError.message : 'unknown error',
+            deleteError instanceof Error
+              ? deleteError.message
+              : 'unknown error',
         })
       }
       throw error

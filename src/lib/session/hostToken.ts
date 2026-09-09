@@ -26,7 +26,8 @@ function read(): TokenStore {
     const raw = window.localStorage.getItem(KEY)
     if (!raw) return {}
     const parsed: unknown = JSON.parse(raw)
-    if (!parsed || typeof parsed !== 'object' || Array.isArray(parsed)) return {}
+    if (!parsed || typeof parsed !== 'object' || Array.isArray(parsed))
+      return {}
     return Object.fromEntries(
       Object.entries(parsed as Record<string, unknown>).filter(
         (entry): entry is [string, string] => typeof entry[1] === 'string',
@@ -40,14 +41,22 @@ function read(): TokenStore {
 /** Store the token minted for a freshly created bill. Call this immediately
  *  after createBill — the value is never retrievable from the server again. */
 export function rememberHostToken(billId: string, hostToken: string): void {
-  if (typeof window === 'undefined' || !hostToken) return
+  if (typeof window === 'undefined' || !hostToken)
+    throw new Error('Host access could not be saved.')
   const store = read()
   delete store[billId] // re-insert so this bill counts as the most recent key
   const entries = [...Object.entries(store), [billId, hostToken]].slice(-MAX)
   try {
-    window.localStorage.setItem(KEY, JSON.stringify(Object.fromEntries(entries)))
+    window.localStorage.setItem(
+      KEY,
+      JSON.stringify(Object.fromEntries(entries)),
+    )
+    if (read()[billId] !== hostToken)
+      throw new Error('Storage verification failed')
   } catch {
-    // ignore quota / privacy-mode failures
+    throw new Error(
+      'This browser could not save your host access. Enable site storage or use another browser, then try again.',
+    )
   }
 }
 
@@ -63,4 +72,19 @@ export function getHostToken(billId: string): string {
  *  is the one that decides, on every single mutation. */
 export function hasHostToken(billId: string): boolean {
   return getHostToken(billId) !== ''
+}
+
+/** Check before creating a bill so blocked storage does not strand host access. */
+export function assertHostStorageAvailable(): void {
+  const key = `billy:storage-check:${crypto.randomUUID()}`
+  try {
+    window.localStorage.setItem(key, key)
+    if (window.localStorage.getItem(key) !== key)
+      throw new Error('Storage unavailable')
+    window.localStorage.removeItem(key)
+  } catch {
+    throw new Error(
+      'Enable site storage or use another browser before creating a bill. Host access is saved only in this browser.',
+    )
+  }
 }

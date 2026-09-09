@@ -2,6 +2,32 @@
 
 Reviewed September 9, 2026 against commit `be9c595` and read-only checks of the public site.
 
+## September 10 implementation update
+
+The confirmed code defects below have now been addressed locally. The original findings are preserved as baseline evidence; their descriptions refer to the September 9 source. This is **not yet a production launch approval**: deployment identity, real-phone acceptance, real receipt scans, monitoring delivery, and operator checks still need evidence.
+
+| Finding | Implemented behavior | Local verification |
+| --- | --- | --- |
+| Guest credential disclosure | Both bill queries strip guest credentials and credential-version markers. A separate caller-scoped query returns controlled participant IDs. Host editor payloads cannot replace ownership credentials. | Public/host JSON, own companions, other-session writes and legacy credential tests |
+| Revocation bypass | Host reads require the host credential. Guest reads require a current invitation and published/finalized state. Host routes render a public SSR shell and load receipt data only in the authorized browser. | Old invitation, learned bill ID, unpublished replacement, republishing; all three host routes return HTTP 200 loading shells without credential fields |
+| Late extraction | Scheduling rejects published/finalized bills. Completion requires the same upload, editable lifecycle and unchanged starting version. Stale results only release extraction references; invalid results become recoverable scan failures. | Edited/published/finalized/replaced scans, invalid/successful output, failed-run image deletion |
+| Rapid claims | Atomic item/person deltas; atomic guest even-sharing; finalization tracks every outstanding local write. Routine saving text/pulses removed. | Sequential intents without intermediate subscription reads, repeated taps, participant changes, capacity/ownership/finalization tests |
+| Save/recovery status | Serialized editor saves carry a base version and receive the acknowledged version. Only the matching recovery draft can be cleared. Unsaved/saving/failed states are explicit; success stays quiet. Concurrent edits require choosing the latest server version or explicitly saving the local draft over it. | Failed retry, overlapping flushes, newer draft during save, own server push, stale recovery and finalized locks |
+| Numeric metadata | Shared client/server validation for rates, amounts, item counts/quantities and receipt limits. Publish/finalize revalidate existing bills. Extraction validates normalized amounts. Invalid summaries/text exports show a correction message instead of settlement amounts. | Zero/negative/nonfinite/extreme rates and charges, unsupported storage currency, invalid extraction and existing-bill finalization gates |
+| Zero-claim service / rounding | Proportional service/tax stays unallocated without a priced claimed subtotal. Even service remains per-head. LBP components reconcile in whole lira; USD totals apportion cents to the converted grand total. Summary/export explain excluded amounts. | No people/claims, free items, partial/fractional claims, even/proportional service, tax/tip, one-dollar three-way split |
+| Browser storage | Creation preflights storage and verifies the retained host credential before navigation. Guest storage errors disable joining with a clear message. Creation/sharing explain that clearing site data removes access and bookmarks cannot restore it. | Blocked writes, retained/cleared host access, fresh guest credentials and invitation-scoped persistence |
+
+Verification: `pnpm test` passes **54 tests**; `pnpm exec tsc --noEmit`, `pnpm exec tsc --noEmit -p convex/tsconfig.json`, and `pnpm build` pass. The HTTP checks were against a local dev server, not production. No real receipt extraction, production bill mutation, support message, or announcement was performed for these checks.
+
+### Rollout and remaining evidence
+
+- Release the backend and frontend as one coordinated change. `getBill` now requires `hostToken`, `saveWorking` requires `baseVersion` and returns `{ version }`, and the old whole-person claim endpoints were removed. Existing tabs must reload; an old client fails explicitly instead of using the unsafe paths.
+- The schema additions are optional, so existing documents remain readable. Existing people without `guestAccessVersion: 2` lose guest edit authority immediately. The client uses a new storage namespace and fresh random credentials; do not migrate old exposed credentials into the new epoch. Names, claims and paid state remain intact for the host to manage. Guests receive a notice before adding themselves again.
+- In-flight extraction runs without a recorded starting version are discarded safely on completion. Their cleanup path remains active.
+- Revoke and reissue any existing invitations whose replacement tokens may have been exposed before this fix. Do not roll the backend back to the vulnerable serializer/read rules; that would expose fresh credentials again. Use a security-fixed rollback build.
+- Record the release commit, Convex deployment, Cloudflare deployment and production environment together. The example environment now requires a project-owned Convex backend. `pnpm deploy` still deploys the frontend only; verify the backend release separately before declaring rollout complete.
+- Still outstanding: throttled browser/real-phone flows, offline/reconnect and multiple tabs end to end, real receipt accuracy and latency, production Sentry/backend alert delivery, budget/rollback rehearsal, support delivery and community posting permissions. The existing production evidence and release-gate sections below remain applicable.
+
 ## Recommendation
 
 **I would not announce Spolio as production-ready on Reddit yet.** The consumer product has enough scope to launch: scanning, correction, individual and shared claims, LBP/USD amounts, live invitations, finalization, and manual entry are present. The remaining work is mostly correctness, access control, and release verification. Another design pass or a larger feature list is unlikely to move readiness as much as fixing these issues.
@@ -89,7 +115,7 @@ Evidence: [upload preparation](./convex/bills/host/uploads.ts), [applyExtraction
 
 **Implementation update (September 10):** host and guest taps now send an item/person delta, which Convex applies to the current claim rows in one transaction. The obsolete whole-person replacement endpoints were removed. Guest even-sharing is also atomic and preserves other items and other sessions' claims. The repeated “Saving split...” / “Saving claim...” text and pending pulses were removed; conflicts and failed requests still show feedback. Host finalization waits for all outstanding local claim, sharing, person, and tip writes and prevents new edits while finalizing.
 
-**Verification:** the original host and guest stale-list cases failed locally before switching to the new mutation calls. Regression tests cover both items surviving, repeated increments/decrements, changing participant, capacity conflicts, guest sharing/ownership, finalization locks, and overlapping/failed pending writes. A browser walkthrough with added network latency remains outstanding. Deploy the backend and frontend together; already-open clients using the removed endpoints must reload. This update resolves this code finding only, not the other launch blockers below.
+**Verification:** the original host and guest stale-list cases failed locally before switching to the new mutation calls. Regression tests cover both items surviving, repeated increments/decrements, changing participant, capacity conflicts, guest sharing/ownership, finalization locks, and overlapping/failed pending writes. A browser walkthrough with added network latency remains outstanding. Deploy the backend and frontend together; already-open clients using the removed endpoints must reload. See the September 10 implementation update above for the other fixes and remaining release evidence.
 
 The following describes the reviewed version before that fix:
 

@@ -138,31 +138,16 @@ export function deviceLimitedBillMutation(
 }
 
 // ---------------------------------------------------------------------------
-// Reads. Same identity seams as the mutations, so auth/visibility rules can
-// later land in one place for reads and writes alike.
-//
-// billQuery deliberately does NOT require the host token, i.e. the bill id
-// still authorizes a READ. Three reasons:
-//   1. It grants nothing the guest path doesn't. Both queries return the same
-//      document, and it carries `shareToken` — so a bill id and a share link
-//      confer the same access, and that access is read + guest-level writes
-//      only. Token-gating the read would not remove a write capability.
-//   2. /summary and /split are the host's own screens and are prefetched in
-//      route loaders during SSR, where localStorage (and therefore the token)
-//      does not exist. Gating reads would mean giving up SSR on every host
-//      screen to close nothing from (1).
-//   3. Bill ids are Convex ids, not enumerable — a read requires the URL to
-//      have actually leaked.
-// What both queries must never do is return the capability itself: they build
-// their response with toWireBill (convex/model/bills.ts), which strips
-// hostToken, and billDocValidator omits it so a regression fails loudly.
+// Host reads require the same capability as writes. Host routes render a
+// public shell during SSR; receipt data loads after browser storage is ready.
 // ---------------------------------------------------------------------------
 
 export const billQuery = customQuery(query, {
-  args: { id: v.id('bills') },
-  input: async (ctx, { id }) => {
+  args: { id: v.id('bills'), hostToken: v.string() },
+  input: async (ctx, { id, hostToken }) => {
     const bill = await ctx.db.get(id)
-    invariant(bill, `missing bill ${id}`)
+    invariant(bill, 'Bill unavailable')
+    assertHostToken(bill, hostToken)
     return { ctx: { bill }, args: {} }
   },
 })
@@ -170,6 +155,8 @@ export const billQuery = customQuery(query, {
 export const sharedBillQuery = customQuery(query, {
   args: { shareToken: v.string() },
   input: async (ctx, { shareToken }) => {
-    return { ctx: { bill: await getBillByShareToken(ctx, shareToken) }, args: {} }
+    const bill = await getBillByShareToken(ctx, shareToken)
+    assertSettleOpen(bill)
+    return { ctx: { bill }, args: {} }
   },
 })

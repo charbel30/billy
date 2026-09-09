@@ -1,3 +1,4 @@
+import { metadataError, lineItemsError } from '../../src/lib/bill/validation'
 import { runIdValidator, runResultValidator } from '@convex-dev/action-retrier'
 import { v } from 'convex/values'
 import { internalMutation, type MutationCtx } from '../_generated/server'
@@ -29,6 +30,14 @@ export const applyExtraction = internalMutation({
     // A second scan can supersede a run while its model request is in flight.
     // Never let that older result clear or overwrite the newer image/run.
     if (bill.imageRef !== imageRef) return null
+    if (!canApplyExtraction(bill)) {
+      await clearExtraction(ctx, bill)
+      return null
+    }
+    if (!['USD', 'LBP'].includes(receipt.currency_primary.toUpperCase())) {
+      await markExtractionFailed(ctx, bill)
+      return null
+    }
 
     // Normalize to LBP at the boundary. A USD-printed receipt has small dollar
     // figures ($17) that the LBP-internal split/reconcile would otherwise read as
@@ -61,6 +70,24 @@ export const applyExtraction = internalMutation({
         ? receipt.printed_total_usd * rate
         : undefined)
     const printedTotalUsd = receipt.printed_total_usd ?? undefined
+
+    const invalid =
+      lineItemsError(items) ??
+      metadataError({
+        currencyPrimary: 'LBP',
+        rate,
+        serviceCharge,
+        tax,
+        printedTotalLbp,
+        printedTotalUsd,
+        merchantName: receipt.merchant,
+        branch: receipt.branch,
+        datetime: receipt.datetime,
+      })
+    if (invalid || items.length === 0) {
+      await markExtractionFailed(ctx, bill)
+      return null
+    }
 
     const checksum = reconcile({
       lineItems: items,
@@ -103,6 +130,7 @@ export const applyExtraction = internalMutation({
       lineItems: items,
       imageRef: undefined, // delete-after-extract: clear the ref (spec §10)
       extractionError: undefined, // this extraction succeeded
+      extractionBaseVersion: undefined,
       extractionRunId: undefined, // run resolved; onComplete becomes a no-op
       status:
         checksum.ok &&
@@ -126,11 +154,33 @@ export const applyExtraction = internalMutation({
 // message user-safe (raw errors are in the action's logs) and let the review
 // screen offer scan-again / manual entry. Only items-less bills are marked — a
 // re-scan that fails must not clobber a previously successful extraction's status.
+function canApplyExtraction(bill: Doc<'bills'>) {
+  return (
+    bill.status !== 'PUBLISHED' &&
+    bill.status !== 'FINALIZED' &&
+    bill.extractionBaseVersion !== undefined &&
+    bill.version === bill.extractionBaseVersion
+  )
+}
+
+async function clearExtraction(ctx: MutationCtx, bill: Doc<'bills'>) {
+  await ctx.db.patch(bill._id, {
+    imageRef: undefined,
+    extractionRunId: undefined,
+    extractionBaseVersion: undefined,
+  })
+}
+
 async function markExtractionFailed(ctx: MutationCtx, bill: Doc<'bills'>) {
+  if (!canApplyExtraction(bill)) {
+    await clearExtraction(ctx, bill)
+    return
+  }
   await ctx.db.patch(bill._id, {
     extractionError: "We couldn't read this receipt.",
     imageRef: undefined,
     extractionRunId: undefined,
+    extractionBaseVersion: undefined,
     status: bill.lineItems.length > 0 ? bill.status : 'NEEDS_REVIEW',
     version: bill.version + 1,
     updatedAt: Date.now(),
@@ -152,7 +202,7 @@ export const onExtractionComplete = internalMutation({
     if (!bill) return null // extraction succeeded, bill purged, or run superseded
 
     if (result.type === 'success') {
-      await ctx.db.patch(bill._id, { extractionRunId: undefined })
+      await clearExtraction(ctx, bill)
       return null
     }
 

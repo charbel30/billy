@@ -2,19 +2,18 @@ import { createFileRoute } from '@tanstack/react-router'
 import type { Id } from 'convex/_generated/dataModel'
 import { ClaimListSkeleton } from '~/components/features/bill'
 import { SplitPage } from '~/components/features/split/SplitPage'
-import { billQueries } from '~/api'
+import { HostAccessBoundary } from '~/components/shared/HostAccessBoundary'
 
 export const Route = createFileRoute('/split/$billId')({
   component: Split,
   pendingComponent: () => <ClaimListSkeleton />,
-  loader: async ({ params, context: { queryClient } }) => {
-    await queryClient.ensureQueryData(
-      billQueries.detail(params.billId as Id<'bills'>),
-    )
-  },
 })
 
 function Split() {
   const billId = Route.useParams().billId as Id<'bills'>
-  return <SplitPage billId={billId} />
+  return (
+    <HostAccessBoundary billId={billId}>
+      <SplitPage billId={billId} />
+    </HostAccessBoundary>
+  )
 }

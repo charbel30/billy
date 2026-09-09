@@ -1,6 +1,14 @@
+import { metadataError, lineItemsError } from '~/lib/bill/validation'
 import { AnimatedAmount } from '~/components/ui/animated-amount'
 import { PortfolioReceipt } from '../receipt'
-import { computePortfolios, personClaimedLines, formatLbp, formatUsd, toUsd } from '~/lib/money'
+import {
+  computePortfolios,
+  unallocatedAmounts,
+  personClaimedLines,
+  formatLbp,
+  formatUsd,
+  toUsd,
+} from '~/lib/money'
 import type { Claim, LineItem, Person, ServiceSplitMode } from '~/lib/types'
 import { cn } from '~/lib/utils'
 
@@ -39,6 +47,17 @@ export function BillSummary({
   canTogglePaid?: (personId: string) => boolean
   paidPendingId?: string | null
 }) {
+  const invalid =
+    metadataError({ ...bill, currencyPrimary: 'LBP' }) ??
+    lineItemsError(bill.lineItems)
+  if (invalid)
+    return (
+      <p role="alert" className="rounded-control bg-warning-subtle p-4 text-sm">
+        Amounts need correction before settling: {invalid} Ask the host to
+        review the receipt.
+      </p>
+    )
+
   const portfolios = computePortfolios({
     lineItems: bill.lineItems,
     people: bill.people,
@@ -50,6 +69,7 @@ export function BillSummary({
     tipPercent: bill.tipPercent,
     rate: bill.rate,
   })
+  const unallocated = unallocatedAmounts(bill)
   const grandLbp = portfolios.reduce((s, p) => s + p.totalLbp, 0)
   const tipLbp = portfolios.reduce((s, p) => s + p.tipShareLbp, 0)
   const paidAtById = new Map(bill.people.map((p) => [p.id, p.paidAt]))
@@ -63,13 +83,19 @@ export function BillSummary({
         ) : null}
       </div>
 
-      {!bill.rate && (
-        <p className="rounded-control bg-warning-subtle px-4 py-3 text-sm text-warning-subtle-foreground">
-          No rate set — USD shows as $0.00. Add the venue rate on the review
-          screen.
+      {unallocated.totalLbp > 0 ? (
+        <p className="rounded-control bg-warning-subtle p-3 text-sm text-warning-subtle-foreground">
+          Unallocated: {formatLbp(unallocated.totalLbp)}. This amount is
+          excluded from everyone’s totals.
+          {unallocated.serviceLbp > 0
+            ? ' Proportional service and tax need a claimed subtotal; claim a priced item or choose even service splitting.'
+            : ''}
         </p>
-      )}
-
+      ) : null}
+      <p className="text-xs text-muted-foreground">
+        LBP totals use whole lira. USD totals share any rounding cents so
+        everyone’s amounts add up.
+      </p>
       <div className="space-y-3">
         {portfolios.map((p) => {
           const toggleable =
@@ -78,13 +104,19 @@ export function BillSummary({
             <PortfolioReceipt
               key={p.personId}
               portfolio={p}
-              lines={personClaimedLines(p.personId, bill.lineItems, bill.claims)}
+              lines={personClaimedLines(
+                p.personId,
+                bill.lineItems,
+                bill.claims,
+              )}
               rate={bill.rate}
               serviceChargeOn={bill.serviceChargeOn}
               tipPercent={bill.tipPercent}
               paidAt={paidAtById.get(p.personId)}
               onTogglePaid={
-                toggleable ? (paid) => onTogglePaid(p.personId, paid) : undefined
+                toggleable
+                  ? (paid) => onTogglePaid(p.personId, paid)
+                  : undefined
               }
               togglePending={paidPendingId === p.personId}
             />

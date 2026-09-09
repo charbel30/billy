@@ -1,15 +1,17 @@
-// Guest identity on the join page: an anonymous per-(device, bill) session id
-// kept in localStorage. Guest mutations are scoped to it server-side — a guest
-// can only edit people stamped with their own guestSessionId.
-
-const guestSessionKey = (shareToken: string) => `bill-guest:${shareToken}`
+// v2 uses fresh random credentials. Never reuse credentials exposed by older responses.
+const guestSessionKey = (shareToken: string) => `bill-guest:v2:${shareToken}`
 
 export function getOrCreateGuestSessionId(shareToken: string): string | null {
   if (typeof window === 'undefined') return null
-  const key = guestSessionKey(shareToken)
-  const existing = window.localStorage.getItem(key)
-  if (existing) return existing
-  const created = crypto.randomUUID()
-  window.localStorage.setItem(key, created)
-  return created
+  try {
+    const key = guestSessionKey(shareToken)
+    const existing = window.localStorage.getItem(key)
+    if (existing?.startsWith('v2:') && existing.length >= 20) return existing
+    const created = `v2:${crypto.randomUUID()}`
+    window.localStorage.setItem(key, created)
+    return window.localStorage.getItem(key) === created ? created : null
+  } catch {
+    // Joining stays disabled with an actionable message; the public bill still works.
+    return null
+  }
 }

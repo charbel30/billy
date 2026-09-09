@@ -6,7 +6,12 @@ import {
   useCreateBill,
   useGenerateUploadUrl,
 } from '~/api'
-import { getDeviceId, getHostToken, rememberHostToken } from '~/lib/session'
+import {
+  assertHostStorageAvailable,
+  getDeviceId,
+  getHostToken,
+  rememberHostToken,
+} from '~/lib/session'
 import {
   captureFrontendError,
   markExtractionPending,
@@ -17,7 +22,8 @@ import {
 /** Friendly message for scan failures — surfaces ConvexError data (rate
  *  limits, kill switch) which is written to be shown to users as-is. */
 export function scanErrorMessage(err: unknown, fallback: string): string {
-  if (err instanceof ConvexError && typeof err.data === 'string') return err.data
+  if (err instanceof ConvexError && typeof err.data === 'string')
+    return err.data
   if (err instanceof Error && err.message) return err.message
   return fallback
 }
@@ -32,7 +38,8 @@ export function useScanUpload() {
   const [busy, setBusy] = useState(false)
 
   async function uploadImage(file: File): Promise<Id<'_storage'>> {
-    const { default: imageCompression } = await import('browser-image-compression')
+    const { default: imageCompression } =
+      await import('browser-image-compression')
     // Shrink before upload because image tokens dominate extraction cost.
     const compressed = await imageCompression(file, {
       maxSizeMB: 0.8,
@@ -56,6 +63,7 @@ export function useScanUpload() {
     setBusy(true)
     let pendingBillId: Id<'bills'> | null = null
     try {
+      assertHostStorageAvailable()
       const deviceId = getDeviceId()
       // createBill returns the host capability once and only once — persist it
       // before anything else can fail, or this bill becomes read-only forever.

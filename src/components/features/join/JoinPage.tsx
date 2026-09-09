@@ -1,6 +1,10 @@
 import { useEffect, useMemo, useState } from 'react'
-import { useSuspenseQuery } from '@tanstack/react-query'
-import { RiDoorLockLine, RiInformationLine, RiLoader4Line } from '@remixicon/react'
+import { useQuery, useSuspenseQuery } from '@tanstack/react-query'
+import {
+  RiDoorLockLine,
+  RiInformationLine,
+  RiLoader4Line,
+} from '@remixicon/react'
 import { Button } from '~/components/ui/button'
 import { Input } from '~/components/ui/input'
 import { Alert, AlertTitle } from '~/components/ui/alert'
@@ -22,6 +26,7 @@ export function JoinPage({ shareToken }: { shareToken: string }) {
   const { data: bill } = useSuspenseQuery(billQueries.byToken(shareToken))
   const [guestSessionId, setGuestSessionId] = useState<string | null>(null)
   const [joinName, setJoinName] = useState('')
+  const [sessionReady, setSessionReady] = useState(false)
   const [activeId, setActiveId] = useState<string | null>(null)
   const [conflictMessage, setConflictMessage] = useState<string | null>(null)
 
@@ -33,14 +38,18 @@ export function JoinPage({ shareToken }: { shareToken: string }) {
 
   useEffect(() => {
     setGuestSessionId(getOrCreateGuestSessionId(shareToken))
+    setSessionReady(true)
   }, [shareToken])
 
+  const { data: controlledIds = [] } = useQuery(
+    billQueries.controlledPeople(shareToken, guestSessionId),
+  )
   const controlledPeople = useMemo(
     () =>
       guestSessionId
-        ? bill.people.filter((p) => p.guestSessionId === guestSessionId)
+        ? bill.people.filter((p) => controlledIds.includes(p.id))
         : [],
-    [bill.people, guestSessionId],
+    [bill.people, guestSessionId, controlledIds],
   )
   const ownIds = useMemo(
     () => new Set(controlledPeople.map((p) => p.id)),
@@ -81,27 +90,43 @@ export function JoinPage({ shareToken }: { shareToken: string }) {
   }
 
   function stepClaim(itemId: string, personId: string, delta: number) {
-    if (!guestSessionId || !isMine(personId) || (delta !== 1 && delta !== -1)) return
+    if (!guestSessionId || !isMine(personId) || (delta !== 1 && delta !== -1))
+      return
     setConflictMessage(null)
-    void stepGuestClaim.mutateAsync({ shareToken, guestSessionId, personId, itemId, delta })
+    void stepGuestClaim
+      .mutateAsync({ shareToken, guestSessionId, personId, itemId, delta })
       .then((result) => {
         if (result.rejectedCount > 0) {
-          setConflictMessage('Some units were already claimed, so we kept only what was still available.')
+          setConflictMessage(
+            'Some units were already claimed, so we kept only what was still available.',
+          )
         }
       })
-      .catch(() => setConflictMessage('That claim could not be saved. Please try again.'))
+      .catch(() =>
+        setConflictMessage('That claim could not be saved. Please try again.'),
+      )
   }
 
   function shareEvenly(itemId: string, personIds: string[]) {
-    if (!guestSessionId || personIds.length === 0 || personIds.some((id) => !isMine(id))) return
+    if (
+      !guestSessionId ||
+      personIds.length === 0 ||
+      personIds.some((id) => !isMine(id))
+    )
+      return
     setConflictMessage(null)
-    void shareGuestItemEvenly.mutateAsync({ shareToken, guestSessionId, itemId, personIds })
+    void shareGuestItemEvenly
+      .mutateAsync({ shareToken, guestSessionId, itemId, personIds })
       .then((result) => {
         if (result.rejectedCount > 0) {
-          setConflictMessage('Some units were already claimed, so we split only what was still available.')
+          setConflictMessage(
+            'Some units were already claimed, so we split only what was still available.',
+          )
         }
       })
-      .catch(() => setConflictMessage('That split could not be saved. Please try again.'))
+      .catch(() =>
+        setConflictMessage('That split could not be saved. Please try again.'),
+      )
   }
 
   function togglePaid(personId: string, paid: boolean) {
@@ -118,7 +143,9 @@ export function JoinPage({ shareToken }: { shareToken: string }) {
       <div className="mx-auto w-full max-w-md p-4 sm:p-6 space-y-4">
         <Alert variant="info">
           <RiInformationLine />
-          <AlertTitle>This split is finalized — the receipt is locked.</AlertTitle>
+          <AlertTitle>
+            This split is finalized — the receipt is locked.
+          </AlertTitle>
         </Alert>
         <BillSummary
           bill={bill}
@@ -143,6 +170,24 @@ export function JoinPage({ shareToken }: { shareToken: string }) {
     <BillSplitWorkspace
       bill={bill}
       description="Join the bill, claim your items, and watch the whole table update live."
+      notice={
+        sessionReady && !guestSessionId ? (
+          <Alert variant="warning">
+            <AlertTitle>
+              Enable site storage or use another browser to join. You can still
+              view this bill.
+            </AlertTitle>
+          </Alert>
+        ) : bill.guestAccessReset ? (
+          <Alert variant="info">
+            <AlertTitle>
+              Guest access was reset for security. The host can still manage
+              previous names and claims. Ask the host before adding your name
+              again.
+            </AlertTitle>
+          </Alert>
+        ) : null
+      }
       panelTitle="Everyone on the bill"
       addLabel="Add someone with you"
       addPlaceholder="Add someone"
@@ -165,7 +210,9 @@ export function JoinPage({ shareToken }: { shareToken: string }) {
               />
               <Button
                 type="button"
-                disabled={!joinName.trim() || joinSplit.isPending}
+                disabled={
+                  !guestSessionId || !joinName.trim() || joinSplit.isPending
+                }
                 onClick={() => void join()}
               >
                 {joinSplit.isPending ? (

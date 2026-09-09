@@ -4,19 +4,28 @@ import { isValidWorkingBill } from './working'
 
 const workingStorageKey = (id: Id<'bills'>) => `bill-working:${id}`
 
-export function persistWorkingBill(id: Id<'bills'>, w: WorkingBill): void {
-  if (typeof window === 'undefined') return
+export function persistWorkingBill(id: Id<'bills'>, w: WorkingBill): boolean {
+  if (typeof window === 'undefined') return false
   try {
     window.localStorage.setItem(workingStorageKey(id), JSON.stringify(w))
+    return true
   } catch {
-    // Storage full / disabled. The debounced server flush remains authoritative.
+    return false
   }
 }
 
-export function clearWorkingBill(id: Id<'bills'>): void {
+export function clearWorkingBill(
+  id: Id<'bills'>,
+  acknowledged: WorkingBill,
+): void {
   if (typeof window === 'undefined') return
   try {
-    window.localStorage.removeItem(workingStorageKey(id))
+    if (
+      window.localStorage.getItem(workingStorageKey(id)) ===
+      JSON.stringify(acknowledged)
+    ) {
+      window.localStorage.removeItem(workingStorageKey(id))
+    }
   } catch {
     // Ignore storage failures.
   }

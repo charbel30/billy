@@ -205,7 +205,7 @@ is its api namespace, so `convex/bills/host/lifecycle.ts` is
   - `lifecycle.ts`: `createBill`, `createDemoBill`, `saveWorking`, `publish`,
     `finalize`, `revokeShare`, `setTipPercent`.
   - `people.ts`: `addHostPerson`, `removeHostPerson`, `setHostPersonPaid`.
-  - `claims.ts`: `saveHostClaims`, `shareHostItemEvenly`,
+  - `claims.ts`: `stepHostClaim`, `shareHostItemEvenly`,
     `splitLeftoversEvenly`.
   - `queries.ts`: `getBill`.
   - `uploads.ts`: `generateUploadUrl` and `attachImageAndExtract` (the latter
@@ -213,7 +213,7 @@ is its api namespace, so `convex/bills/host/lifecycle.ts` is
 - `convex/bills/guest/`: guest-side functions, scoped by `shareToken` +
   `guestSessionId`.
   - `people.ts`: `joinSplit`, `addGuestPerson`, `setGuestPersonPaid`.
-  - `claims.ts`: `saveGuestClaims`.
+  - `claims.ts`: `stepGuestClaim`, `shareGuestItemEvenly`.
   - `queries.ts`: `getBillByToken`.
 - `convex/bills/extraction.ts`: internal mutations (`applyExtraction`,
   `onExtractionComplete`) that persist parsed model output into the bill

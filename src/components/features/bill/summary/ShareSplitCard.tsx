@@ -11,7 +11,12 @@ import {
 import { Button } from '~/components/ui/button'
 import { Brand } from '~/components/shared/Brand'
 import { swap } from '~/lib/ui'
-import { Dialog, DialogContent, DialogDescription, DialogTitle } from '~/components/ui/dialog'
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogTitle,
+} from '~/components/ui/dialog'
 
 // Share surface for a published split: QR for the table ("scan this"), one
 // share button for chats (native sheet → clipboard fallback), a fullscreen
@@ -84,6 +89,10 @@ export function ShareSplitCard({
 
   return (
     <div className="space-y-4">
+      <p className="text-xs text-muted-foreground">
+        Keep using the browser that created this bill. This invitation gives
+        guest access; it does not restore host access if site data is cleared.
+      </p>
       {/* Intentionally literal white (not bg-card): the QR must stay
           dark-on-light for phone cameras to scan it in dark mode too. */}
       <div className="mx-auto w-fit rounded-card bg-white p-4 shadow-card outline outline-black/10 dark:outline-white/10">
@@ -93,15 +102,40 @@ export function ShareSplitCard({
         Point a phone camera at the code, or send the link.
       </p>
 
-      <Button size="lg" className="h-12 w-full gap-2 font-bold" disabled={sharing} aria-busy={sharing} onClick={() => void share()}>
+      <Button
+        size="lg"
+        className="h-12 w-full gap-2 font-bold"
+        disabled={sharing}
+        aria-busy={sharing}
+        onClick={() => void share()}
+      >
         <AnimatePresence initial={false} mode="popLayout">
-          <motion.span key={feedback ? 'done' : 'share'} {...swap} className="grid size-5 place-items-center" aria-hidden="true">
-            {feedback ? <RiCheckLine className="size-5" /> : <RiShareLine className="size-5" />}
+          <motion.span
+            key={feedback ? 'done' : 'share'}
+            {...swap}
+            className="grid size-5 place-items-center"
+            aria-hidden="true"
+          >
+            {feedback ? (
+              <RiCheckLine className="size-5" />
+            ) : (
+              <RiShareLine className="size-5" />
+            )}
           </motion.span>
         </AnimatePresence>
-        {feedback === 'copied' ? 'Link copied' : feedback === 'shared' ? 'Link shared' : 'Share link'}
+        {feedback === 'copied'
+          ? 'Link copied'
+          : feedback === 'shared'
+            ? 'Link shared'
+            : 'Share link'}
       </Button>
-      <span role="status" className="sr-only">{feedback === 'copied' ? 'Split link copied. Paste it in your group chat.' : feedback === 'shared' ? 'Split link shared.' : ''}</span>
+      <span role="status" className="sr-only">
+        {feedback === 'copied'
+          ? 'Split link copied. Paste it in your group chat.'
+          : feedback === 'shared'
+            ? 'Split link shared.'
+            : ''}
+      </span>
 
       <div className="flex items-center justify-center gap-1">
         <button

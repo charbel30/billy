@@ -3,10 +3,16 @@ import {
   billStatus,
   claim,
   lineItem,
-  person,
   rateSource,
   serviceSplitMode,
 } from '../../schema'
+
+export const publicPerson = v.object({
+  id: v.string(),
+  name: v.string(),
+  color: v.string(),
+  paidAt: v.optional(v.number()),
+})
 
 export const billDocValidator = v.object({
   _id: v.id('bills'),
@@ -39,8 +45,9 @@ export const billDocValidator = v.object({
   version: v.number(),
   updatedAt: v.number(),
   lineItems: v.array(lineItem),
-  people: v.array(person),
+  people: v.array(publicPerson),
   claims: v.array(claim),
+  guestAccessReset: v.boolean(),
 })
 
 // What createBill/createDemoBill hand back: the id (goes in the URL) plus the

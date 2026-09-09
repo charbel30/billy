@@ -32,7 +32,13 @@ import {
 import { getHostToken, recordBill } from '~/lib/session'
 import { useHasHostToken } from '~/hooks/useHostAccess'
 import { usePendingWrites } from '~/hooks/usePendingWrites'
-import { remainingUnits, totalRemainingLbp, formatUsd, toUsd } from '~/lib/money'
+import {
+  remainingUnits,
+  totalRemainingLbp,
+  unallocatedAmounts,
+  formatUsd,
+  toUsd,
+} from '~/lib/money'
 import { joinUrl } from '~/lib/format'
 import { trackFunnelMilestone } from '~/lib/observability'
 
@@ -73,6 +79,7 @@ export function SplitPage({ billId }: { billId: Id<'bills'> }) {
   const shared = bill.status === 'PUBLISHED' || finalized
 
   const remainingLbp = totalRemainingLbp(bill.lineItems, bill.claims)
+  const unallocatedServiceLbp = unallocatedAmounts(bill).serviceLbp
   const allClaimed = remainingLbp <= 0.5
   const leftoverItemCount = bill.lineItems.filter(
     (item) => remainingUnits(item, bill.claims) > 0.0001,
@@ -100,32 +107,50 @@ export function SplitPage({ billId }: { billId: Id<'bills'> }) {
 
   async function addPerson(name: string) {
     if (finalizing.current) return
-    const result = await writes.run(() => addHostPerson.mutateAsync({ ...hostArgs(), name }))
+    const result = await writes.run(() =>
+      addHostPerson.mutateAsync({ ...hostArgs(), name }),
+    )
     setActiveId(result.personId)
   }
 
   async function removePerson(personId: string) {
     if (finalizing.current) return
-    await writes.run(() => removeHostPerson.mutateAsync({ ...hostArgs(), personId }))
+    await writes.run(() =>
+      removeHostPerson.mutateAsync({ ...hostArgs(), personId }),
+    )
   }
 
   function stepClaim(itemId: string, personId: string, delta: number) {
     if (finalizing.current || (delta !== 1 && delta !== -1)) return
     setConflictMessage(null)
-    void writes.run(async () => {
-      const result = await stepHostClaim.mutateAsync({ ...hostArgs(), personId, itemId, delta })
-      if (result.rejectedCount > 0) {
-        setConflictMessage('Some units were already claimed, so we kept only what was still available.')
-      }
-    }).catch(() => {
-      setConflictMessage('That claim could not be saved. Please try again.')
-    })
+    void writes
+      .run(async () => {
+        const result = await stepHostClaim.mutateAsync({
+          ...hostArgs(),
+          personId,
+          itemId,
+          delta,
+        })
+        if (result.rejectedCount > 0) {
+          setConflictMessage(
+            'Some units were already claimed, so we kept only what was still available.',
+          )
+        }
+      })
+      .catch(() => {
+        setConflictMessage('That claim could not be saved. Please try again.')
+      })
   }
 
   function shareEvenly(itemId: string, personIds: string[]) {
     if (finalizing.current) return
-    void writes.run(() => shareHostItemEvenly.mutateAsync({ ...hostArgs(), itemId, personIds }))
-      .catch(() => setConflictMessage('That split could not be saved. Please try again.'))
+    void writes
+      .run(() =>
+        shareHostItemEvenly.mutateAsync({ ...hostArgs(), itemId, personIds }),
+      )
+      .catch(() =>
+        setConflictMessage('That split could not be saved. Please try again.'),
+      )
   }
 
   // One button does it all: flip to PUBLISHED in the background (don't await —
@@ -147,7 +172,9 @@ export function SplitPage({ billId }: { billId: Id<'bills'> }) {
     setPreparingFinalize(true)
     try {
       if (!(await writes.wait())) {
-        setConflictMessage('An edit could not be saved. Check the split before finalizing.')
+        setConflictMessage(
+          'An edit could not be saved. Check the split before finalizing.',
+        )
         setFinalizeOpen(false)
         return
       }
@@ -164,7 +191,10 @@ export function SplitPage({ billId }: { billId: Id<'bills'> }) {
   }
 
   const finalizePending =
-    preparingFinalize || writes.pending || finalize.isPending || splitLeftoversEvenly.isPending
+    preparingFinalize ||
+    writes.pending ||
+    finalize.isPending ||
+    splitLeftoversEvenly.isPending
 
   return (
     <>
@@ -211,7 +241,13 @@ export function SplitPage({ billId }: { billId: Id<'bills'> }) {
             ? undefined
             : (pct) => {
                 if (finalizing.current) return
-                void writes.run(() => setTipPercent.mutateAsync({ ...hostArgs(), tipPercent: pct }))
+                void writes
+                  .run(() =>
+                    setTipPercent.mutateAsync({
+                      ...hostArgs(),
+                      tipPercent: pct,
+                    }),
+                  )
                   .catch(() => {}) // Shared mutation handler shows the error.
               }
         }
@@ -221,7 +257,9 @@ export function SplitPage({ billId }: { billId: Id<'bills'> }) {
             <Button
               size="lg"
               className="w-full"
-              onClick={() => navigate({ to: '/summary/$billId', params: { billId } })}
+              onClick={() =>
+                navigate({ to: '/summary/$billId', params: { billId } })
+              }
             >
               View final summary <RiArrowRightLine />
             </Button>
@@ -285,8 +323,8 @@ export function SplitPage({ billId }: { billId: Id<'bills'> }) {
                     <DialogTitle>Finalize this split?</DialogTitle>
                   </DialogHeader>
                   <p className="text-sm text-muted-foreground">
-                    This locks edits for everyone and turns the summary into
-                    a read-only receipt.
+                    This locks edits for everyone and turns the summary into a
+                    read-only receipt.
                   </p>
                   <div className="grid gap-2">
                     <Button
@@ -320,6 +358,9 @@ export function SplitPage({ billId }: { billId: Id<'bills'> }) {
                     {leftoverItemCount === 1 ? 'item' : 'items'} has no owner
                     yet. Split it evenly, or finalize with it left off
                     everyone's totals.
+                    {unallocatedServiceLbp > 0
+                      ? ` Another ${formatUsd(toUsd(unallocatedServiceLbp, bill.rate))} of service and tax stays unallocated until priced items are claimed or service is split evenly.`
+                      : ''}
                   </p>
                   <div className="grid gap-2">
                     <Button

@@ -58,7 +58,10 @@ export function remainingUnits(item: LineItem, claims: Claim[]): number {
 
 /** LBP value still unclaimed across the whole bill — drives the
  *  "remaining on the bill" running total / bar while splitting. */
-export function totalRemainingLbp(lineItems: LineItem[], claims: Claim[]): number {
+export function totalRemainingLbp(
+  lineItems: LineItem[],
+  claims: Claim[],
+): number {
   let sum = 0
   for (const item of lineItems) {
     sum += remainingUnits(item, claims) * effectiveUnitPrice(item)
@@ -149,7 +152,10 @@ export function computePortfolios(input: ComputePortfoliosInput): Portfolio[] {
       serviceShare.set(p.id, people.length ? extras / people.length : 0)
     } else {
       const sub = subtotal.get(p.id) ?? 0
-      serviceShare.set(p.id, totalSubtotal > 0 ? extras * (sub / totalSubtotal) : 0)
+      serviceShare.set(
+        p.id,
+        totalSubtotal > 0 ? extras * (sub / totalSubtotal) : 0,
+      )
     }
   }
 
@@ -164,27 +170,67 @@ export function computePortfolios(input: ComputePortfoliosInput): Portfolio[] {
   )
   const tipRounded = roundToTarget(tipRaw, tipTotal)
 
-  // Round per-person totals so they sum exactly to the claimed grand total.
-  const rawTotals = people.map(
-    (p, i) => (subtotal.get(p.id) ?? 0) + (serviceShare.get(p.id) ?? 0) + tipRaw[i],
+  // Round components independently so no person's service share becomes negative
+  // merely because a fractional subtotal rounded up. Unallocatable service stays out.
+  const allocatedExtras =
+    people.length > 0 && (serviceSplitMode === 'even' || totalSubtotal > 0)
+      ? extras
+      : 0
+  const subtotalRounded = roundToTarget(
+    people.map((p) => subtotal.get(p.id) ?? 0),
+    totalSubtotal,
   )
-  const target = totalSubtotal + extras + tipTotal
-  const roundedTotals = roundToTarget(rawTotals, target)
+  const serviceRounded = roundToTarget(
+    people.map((p) => serviceShare.get(p.id) ?? 0),
+    allocatedExtras,
+  )
+  const roundedTotals = people.map(
+    (_, i) => subtotalRounded[i] + serviceRounded[i] + tipRounded[i],
+  )
+  const grandLbp = roundedTotals.reduce((sum, total) => sum + total, 0)
+  // USD is a separate settlement option: apportion integer cents to the converted
+  // grand total, rather than independently rounding each person's conversion.
+  const usdCents = roundToTarget(
+    roundedTotals.map((total) => toUsd(total, rate) * 100),
+    toUsd(grandLbp, rate) * 100,
+  )
 
   return people.map((p, i) => {
     const totalLbp = roundedTotals[i]
-    const sub = Math.round(subtotal.get(p.id) ?? 0)
+    const sub = subtotalRounded[i]
     const tipShareLbp = tipRounded[i]
     return {
       personId: p.id,
       name: p.name,
       color: p.color,
       subtotalLbp: sub,
-      // Keep service = total - subtotal - tip so the row stays internally consistent.
-      serviceShareLbp: totalLbp - sub - tipShareLbp,
+      // Each rounded component reconciles independently.
+      serviceShareLbp: serviceRounded[i],
       tipShareLbp,
       totalLbp,
-      totalUsd: toUsd(totalLbp, rate),
+      totalUsd: usdCents[i] / 100,
     }
   })
+}
+
+/** Amount intentionally left outside participants' payable totals. */
+export function unallocatedAmounts(
+  input: Omit<ComputePortfoliosInput, 'rate' | 'tipPercent'>,
+) {
+  const validClaims = input.claims.filter((c) =>
+    input.people.some((p) => p.id === c.personId),
+  )
+  const itemsLbp = totalRemainingLbp(input.lineItems, validClaims)
+  const claimedSubtotal = input.lineItems.reduce(
+    (sum, item) =>
+      sum + claimedUnits(item, validClaims) * effectiveUnitPrice(item),
+    0,
+  )
+  const extras = input.serviceChargeOn ? input.serviceCharge + input.tax : 0
+  const serviceLbp =
+    input.people.length === 0 ||
+    (input.serviceSplitMode === 'proportional' && claimedSubtotal <= 0)
+      ? extras
+      : 0
+  return { itemsLbp, serviceLbp, totalLbp: itemsLbp + serviceLbp }
 }

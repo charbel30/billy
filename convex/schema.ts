@@ -62,8 +62,9 @@ export const person = v.object({
   // One session may own MANY people (a guest who joins via the link can add
   // himself, his girlfriend, etc.) — that's `addGuestPerson` stamping each new
   // person with the same session id. Everyone can READ the whole bill; you only
-  // WRITE your own people. Concurrent writes are last-write-wins.
+  // WRITE your own people. Version 2 invalidates credentials exposed by older responses.
   guestSessionId: v.optional(v.string()),
+  guestAccessVersion: v.optional(v.literal(2)),
   // Mark-as-paid: when this person marked (or was marked) as having paid, ms
   // timestamp. Self-reported social signal, not accounting — at most one write
   // per person per bill, so it stays embedded per the embed-vs-row rule.
@@ -140,8 +141,9 @@ const schema = defineSchema({
     // Action-retrier run id while an extraction is in flight; how the run's
     // onComplete callback finds this bill. Cleared on success or final failure.
     extractionRunId: v.optional(v.string()),
+    extractionBaseVersion: v.optional(v.number()),
     // Bumped on every saveWorking flush; lets a viewer detect "edited elsewhere"
-    // (last-write-wins otherwise).
+    // and reject a stale editor save before it replaces newer work.
     version: v.number(),
     updatedAt: v.number(),
 

@@ -1,3 +1,5 @@
+import { metadataError, lineItemsError } from './validation'
+import { MAX_PEOPLE } from './constants'
 import type { Doc } from 'convex/_generated/dataModel'
 import type { WorkingBill } from './types'
 
@@ -47,30 +49,14 @@ export function sanitizeWorkingBill(w: WorkingBill): WorkingBill {
       id: p.id,
       name: p.name,
       color: p.color,
-      ...(p.guestSessionId != null ? { guestSessionId: p.guestSessionId } : {}),
       ...(p.paidAt != null ? { paidAt: p.paidAt } : {}),
     })),
   }
 }
 
 export function canPersistWorkingBill(w: WorkingBill): boolean {
-  const itemIds = new Set<string>()
-  for (const item of w.lineItems) {
-    if (!item.id || itemIds.has(item.id)) return false
-    itemIds.add(item.id)
-    if (!item.name.trim()) return false
-    if (!Number.isFinite(item.qty) || item.qty <= 0) return false
-    if (!Number.isFinite(item.unitPrice) || item.unitPrice < 0) return false
-    if (!Number.isFinite(item.lineTotal) || item.lineTotal < 0) return false
-    if (
-      item.confidence != null &&
-      (!Number.isFinite(item.confidence) ||
-        item.confidence < 0 ||
-        item.confidence > 1)
-    ) {
-      return false
-    }
-  }
+  if (metadataError(w.meta) || lineItemsError(w.lineItems)) return false
+  if (w.people.length > MAX_PEOPLE) return false
 
   const personIds = new Set<string>()
   for (const person of w.people) {
@@ -84,18 +70,52 @@ export function canPersistWorkingBill(w: WorkingBill): boolean {
 
 /** A stored working copy is only usable if it's the current single-doc shape. */
 export function isValidWorkingBill(w: unknown): w is WorkingBill {
-  if (!w || typeof w !== 'object') return false
-  const o = w as Record<string, unknown>
-  if (typeof o.version !== 'number') return false
-  if (!Array.isArray(o.lineItems) || !Array.isArray(o.people)) {
+  const record = (value: unknown): value is Record<string, unknown> =>
+    value !== null && typeof value === 'object' && !Array.isArray(value)
+  if (!record(w) || !Number.isInteger(w.version) || Number(w.version) < 0)
     return false
+  if (
+    !['PENDING', 'NEEDS_REVIEW', 'READY', 'PUBLISHED', 'FINALIZED'].includes(
+      String(w.status),
+    )
+  )
+    return false
+  if (
+    !record(w.meta) ||
+    !Array.isArray(w.lineItems) ||
+    !Array.isArray(w.people)
+  )
+    return false
+  const meta = w.meta
+  if (
+    typeof meta.merchantName !== 'string' ||
+    typeof meta.currencyPrimary !== 'string' ||
+    typeof meta.serviceCharge !== 'number' ||
+    typeof meta.tax !== 'number' ||
+    typeof meta.serviceChargeOn !== 'boolean' ||
+    !['manual', 'market', 'receipt'].includes(String(meta.rateSource)) ||
+    !['even', 'proportional'].includes(String(meta.serviceSplitMode))
+  )
+    return false
+  for (const key of ['rate', 'printedTotalLbp', 'printedTotalUsd']) {
+    if (meta[key] !== undefined && typeof meta[key] !== 'number') return false
   }
   return (
-    o.lineItems.every(
-      (li) => li && typeof (li as { id?: unknown }).id === 'string',
+    w.lineItems.every(
+      (item) =>
+        record(item) &&
+        typeof item.id === 'string' &&
+        typeof item.name === 'string' &&
+        typeof item.qty === 'number' &&
+        typeof item.unitPrice === 'number' &&
+        typeof item.lineTotal === 'number',
     ) &&
-    o.people.every(
-      (p) => p && typeof (p as { id?: unknown }).id === 'string',
+    w.people.every(
+      (person) =>
+        record(person) &&
+        typeof person.id === 'string' &&
+        typeof person.name === 'string' &&
+        typeof person.color === 'string',
     )
   )
 }

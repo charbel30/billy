@@ -1,7 +1,8 @@
+import { metadataError, lineItemsError } from '../bill/validation'
 // WhatsApp-ready text summary of a split — one tap to paste per-person totals
 // into the group chat. Pure formatting over computePortfolios; no React/Convex.
 
-import { computePortfolios } from '../money/split'
+import { computePortfolios, unallocatedAmounts } from '../money/split'
 import { formatLbp, formatUsd } from '../money/currency'
 import type { Claim, LineItem, Person, ServiceSplitMode } from '../types'
 
@@ -28,6 +29,10 @@ export function buildTotalsMessage(
   bill: TotalsMessageBill,
   joinUrl?: string | null,
 ): string {
+  const invalid =
+    metadataError({ ...bill, currencyPrimary: 'LBP' }) ??
+    lineItemsError(bill.lineItems)
+  if (invalid) return `This bill needs correction before settling: ${invalid}`
   const portfolios = computePortfolios({
     lineItems: bill.lineItems,
     people: bill.people,
@@ -57,7 +62,15 @@ export function buildTotalsMessage(
   }
   const tipNote =
     tipLbp > 0 && bill.tipPercent ? ` (incl. ${bill.tipPercent}% tip)` : ''
-  lines.push('', `Total: ${formatUsd(grandUsd)} / ${formatLbp(grandLbp)}${tipNote}`)
+  lines.push(
+    '',
+    `Total: ${formatUsd(grandUsd)} / ${formatLbp(grandLbp)}${tipNote}`,
+  )
+  const unallocated = unallocatedAmounts(bill)
+  if (unallocated.totalLbp > 0)
+    lines.push(
+      `Unallocated (not included above): ${formatLbp(unallocated.totalLbp)}`,
+    )
   if (joinUrl) lines.push('', `Claim your items: ${joinUrl}`)
   return lines.join('\n')
 }

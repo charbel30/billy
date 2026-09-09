@@ -1,6 +1,10 @@
 import { useNavigate } from '@tanstack/react-router'
 import { useCreateBill } from '~/api'
-import { getDeviceId, rememberHostToken } from '~/lib/session'
+import {
+  assertHostStorageAvailable,
+  getDeviceId,
+  rememberHostToken,
+} from '~/lib/session'
 
 // "Enter it manually" — start a bill with no photo and land in the review
 // editor with an empty item list.
@@ -16,6 +20,7 @@ export function useManualBill() {
   const createBill = useCreateBill()
 
   async function startManualBill(): Promise<void> {
+    assertHostStorageAvailable()
     const { billId, hostToken } = await createBill.mutateAsync({
       deviceId: getDeviceId(),
     })
