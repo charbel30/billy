@@ -2,24 +2,26 @@
 <html lang="en">
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Spolio — brand kit</title>
+<title>Spolio — receipt character + custom lettering</title>
 <style>
-@font-face{font-family:Figtree;src:url('../node_modules/@fontsource-variable/figtree/files/figtree-latin-wght-normal.woff2');font-weight:300 900}*{box-sizing:border-box}body{margin:0;background:#f8f7f3;color:#202820;font-family:Figtree,system-ui,sans-serif;padding:48px}main{max-width:1150px;margin:auto}.intro{display:flex;align-items:center;justify-content:space-between;margin-bottom:32px}.intro h1{font-size:30px;letter-spacing:-1px;margin:0}.intro p{font-size:15px;color:#62695f}.row{display:grid;grid-template-columns:1fr 1fr;gap:20px}.lockup{display:flex;align-items:center;justify-content:center;min-height:210px;border-radius:24px;background:#f7c928}.lockup.dark{background:#202820}.lockup img{width:270px;height:auto}.specimens{display:flex;align-items:center;gap:28px;margin:28px 0 32px;padding:24px;border-radius:20px;background:#fff}.app-icon{width:88px;height:88px;border-radius:23px}.specimens p{font-size:14px;line-height:1.6;color:#62695f;margin-left:auto}.swatches{display:flex;gap:8px}.swatches span{width:32px;height:32px;border-radius:50%;border:1px solid #20282015}.social{width:100%;display:block;border-radius:24px;border:1px solid #20282012}.caption{font-size:14px;color:#62695f}.footer{display:flex;justify-content:space-between;margin-top:18px;color:#62695f;font-size:14px}a{color:#285647}@media(max-width:680px){body{padding:24px}.row{grid-template-columns:1fr}.intro{display:block}.specimens{flex-wrap:wrap}.specimens p{margin-left:0}.footer{display:block}.lockup{min-height:160px}}
+*{box-sizing:border-box}body{margin:0;background:#fff;color:#171717;font-family:Figtree,Arial,sans-serif;padding:44px}main{max-width:1112px;margin:auto}header{display:flex;align-items:baseline;justify-content:space-between;margin-bottom:24px}h1{font-size:19px;font-weight:600;margin:0}header p,footer{font-size:13px;color:#666}.hero{display:grid;place-items:center;height:290px;border:1px solid #e5e5e5}.hero img{width:76%;max-width:760px;height:auto}.row{display:grid;grid-template-columns:1fr 1fr;gap:18px;margin-top:18px}.panel{height:190px;display:grid;place-items:center;background:#171717}.panel img{width:75%;height:auto}.samples{display:flex;align-items:center;justify-content:center;gap:30px;background:#f8f7f3}.samples>img{width:88px;height:88px;object-fit:contain;flex-shrink:0}.tiny img{width:auto;height:auto;flex-shrink:0}.samples .tile{width:88px;height:88px;border-radius:23px}.tiny{display:flex;gap:16px;align-items:center}.caption{font-size:12px;color:#666;margin:12px 0 24px}.social{width:620px;max-width:100%;height:auto;border:1px solid #eee}.bottom{display:flex;align-items:center;gap:40px;margin-top:26px}.notes{font-size:15px;line-height:1.7;max-width:300px}.notes strong{font-weight:600}footer{display:flex;justify-content:space-between;margin-top:24px}a{color:inherit}@media(max-width:680px){body{padding:24px}header,.bottom{display:block}.row{grid-template-columns:1fr}.hero{height:200px}.hero img{width:90%}.panel{height:160px}.notes{margin-top:24px}footer{gap:20px}}
 </style>
 <main>
-  <div class="intro"><h1>One table. One Spolio.</h1><p>Made for the Lebanese table.</p></div>
+  <header><h1>SPOLIO / SETTLED</h1><p>Receipt character + playful lowercase lettering</p></header>
+  <div class="hero"><img src="spolio-logo/logo.svg" alt="Spolio: a smiling receipt beside custom rounded lowercase lettering"></div>
   <div class="row">
-    <div class="lockup"><img src="../public/brand-wordmark.svg" alt="Spolio split-circle logo in ink on gold"></div>
-    <div class="lockup dark"><img src="../public/brand-wordmark-light.svg" alt="Spolio logo in white on ink"></div>
+    <div class="panel"><img src="spolio-logo/logo-white.svg" alt="Spolio logo reversed in white"></div>
+    <div class="panel samples">
+      <img src="spolio-logo/logo-icon.svg" width="88" height="88" alt="Standalone receipt character">
+      <img class="tile" src="../public/android-chrome-192x192.png" alt="Spolio app icon in the existing gold palette">
+      <div class="tiny"><img src="../public/favicon-32x32.png" width="32" height="32" alt="32-pixel favicon"><img src="../public/favicon-16x16.png" width="16" height="16" alt="16-pixel favicon"></div>
+    </div>
   </div>
-  <div class="specimens">
-    <img class="app-icon" src="../public/android-chrome-192x192.png" alt="Spolio home-screen icon">
-    <img src="../public/favicon-32x32.png" width="32" height="32" alt="32-pixel favicon">
-    <img src="../public/favicon-16x16.png" width="16" height="16" alt="16-pixel favicon">
-    <div class="swatches" aria-label="Brand colors"><span style="background:#f7c928"></span><span style="background:#202820"></span><span style="background:#285647"></span><span style="background:#f8f7f3"></span></div>
-    <p>A clear mark, down to 16px.<br>Gold. Ink. Table green. Paper.</p>
+  <p class="caption">One-color vector originals · reversed lockup · app icon · actual 32px and 16px favicons</p>
+  <div class="bottom">
+    <img class="social" src="../public/og-image.png" alt="Social preview with the new Spolio logo and a sample receipt">
+    <div class="notes"><strong>A happy end to dinner.</strong><br>A relaxed receipt character, round counters, a curved p, and the small opening in the final o.<br><br>Custom vector lettering.<br>Transparent facial cutouts.<br>Existing app colors.</div>
   </div>
-  <img class="social" src="../public/og-image.png" alt="Social preview: Good food. Fair split. Receipt with totals in dollars and lira.">
-  <div class="footer"><span>One identity from browser tab to group chat.</span><a href="README.md">Usage and export guide</a></div>
+  <footer><span>Spolio / identity v1</span><a href="README.md">Usage and export guide</a></footer>
 </main>
 </html>

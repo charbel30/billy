@@ -16,15 +16,10 @@
     50% { transform: translateY(36px); opacity: 1; }
   }
 
-  .brand-loading .brand-half-first { animation: split-breathe-first 1.8s ease-in-out infinite; }
-  .brand-loading .brand-half-second { animation: split-breathe-second 1.8s ease-in-out infinite; }
-  @keyframes split-breathe-first {
-    0%, 100% { transform: translateY(0); opacity: 1; }
-    50% { transform: translateY(-3px); opacity: .55; }
-  }
-  @keyframes split-breathe-second {
-    0%, 100% { transform: translateY(0); opacity: 1; }
-    50% { transform: translateY(3px); opacity: .55; }
+  .brand-loading { animation: receipt-breathe 1.8s ease-in-out infinite; }
+  @keyframes receipt-breathe {
+    0%, 100% { translate: 0 0; opacity: 1; }
+    50% { translate: 0 -2px; opacity: .6; }
   }
 }
 

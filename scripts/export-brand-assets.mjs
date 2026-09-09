@@ -61,12 +61,13 @@ try {
   const { sessionId } = await send('Target.attachToTarget', { targetId, flatten: true })
   const page = (method, params) => send(method, params, sessionId)
   await page('Page.enable')
+  await page('Emulation.setDefaultBackgroundColorOverride', { color: { r: 0, g: 0, b: 0, a: 0 } })
   const screenshot = async (html, width, height, filename) => {
     await page('Emulation.setDeviceMetricsOverride', { width, height, deviceScaleFactor: 1, mobile: false })
     const { frameTree } = await page('Page.getFrameTree')
     await page('Page.setDocumentContent', { frameId: frameTree.frame.id, html })
     await page('Runtime.evaluate', {
-      expression: 'document.fonts.ready.then(() => new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(resolve))))',
+      expression: 'Promise.all([document.fonts.ready, ...Array.from(document.images, img => img.decode())]).then(() => new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(resolve))))',
       awaitPromise: true,
     })
     const { data } = await page('Page.captureScreenshot', { format: 'png', captureBeyondViewport: false })
@@ -76,12 +77,14 @@ try {
   }
 
   await mkdir(source, { recursive: true })
-  const geometry = `<g transform="rotate(-45 32 32)"><path d="${brand.topHalf}"/><path d="${brand.bottomHalf}"/></g>`
-  const symbol = (color) => `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" fill="${color}">${geometry}</svg>`
-  const icon = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 192 192"><rect width="192" height="192" fill="${brand.gold}"/><g transform="translate(24 24) scale(2.25)" fill="${brand.ink}">${geometry}</g></svg>`
-  const favicon = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64"><rect width="64" height="64" rx="16" fill="${brand.gold}"/><g fill="${brand.ink}">${geometry}</g></svg>`
+  const geometry = `<g transform="${brand.markTransform}"><path fill-rule="evenodd" d="${brand.receipt}"/></g>`
+  const lettering = brand.wordmark.map(d => `<path fill-rule="evenodd" d="${d}"/>`).join('')
+  const symbol = (color) => `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" fill="${color}"><title>Spolio receipt character</title>${geometry}</svg>`
+  const lockup = (color) => `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 516 160" fill="${color}"><title>Spolio</title><g transform="translate(0 12) scale(2)">${geometry}</g><g transform="translate(160 9)">${lettering}</g></svg>`
+  const icon = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 192 192"><title>Spolio app icon</title><rect width="192" height="192" fill="${brand.gold}"/><g transform="translate(24 24) scale(2.25)" fill="${brand.ink}">${geometry}</g></svg>`
+  const favicon = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64"><title>Spolio</title><rect width="64" height="64" rx="16" fill="${brand.gold}"/><g fill="${brand.ink}">${geometry}</g></svg>`
   await writeFile(join(output, 'brand-mark.svg'), symbol(brand.ink))
-  await writeFile(join(output, 'brand-mark-light.svg'), symbol(brand.gold))
+  await writeFile(join(output, 'brand-mark-light.svg'), symbol('#ffffff'))
   await writeFile(join(output, 'favicon.svg'), favicon)
   await writeFile(join(source, 'app-icon.svg'), icon)
   const wrapper = (svg) => `<style>*{box-sizing:border-box}html,body{margin:0;width:100%;height:100%;overflow:hidden}svg{display:block;width:100%;height:100%}</style>${svg}`
@@ -117,13 +120,34 @@ try {
   const fontStyle = `@font-face{font-family:Figtree;src:url(data:font/woff2;base64,${font.toString('base64')});font-weight:300 900}`
   const card = (await readFile(join(source, 'social-card.html'), 'utf8'))
     .replace('/* EMBED_FONT */', fontStyle)
-    .replaceAll('<!-- BRAND_SYMBOL -->', symbol(brand.ink))
+    .replaceAll('<!-- BRAND_LOCKUP -->', lockup(brand.ink))
   await screenshot(card, 1200, 630, join(output, 'og-image.png'))
   for (const [filename, color] of [['brand-wordmark.svg', brand.ink], ['brand-wordmark-light.svg', '#ffffff']]) {
-    const wordmark = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 250 64" fill="${color}"><style>${fontStyle}</style>${geometry}<text x="76" y="48" font-family="Figtree, sans-serif" font-size="52" font-weight="800" letter-spacing="-3">Spolio</text></svg>`
-    await writeFile(join(output, filename), wordmark)
+    await writeFile(join(output, filename), lockup(color))
   }
-  console.log(`Exported Spolio icons and social card to ${resolve(output)}`)
+  const kit = join(source, 'spolio-logo')
+  await mkdir(kit, { recursive: true })
+  for (const [name, svg, width, height] of [
+    ['logo', lockup('#171717'), 1600, 496],
+    ['logo-white', lockup('#ffffff'), 1600, 496],
+    ['logo-icon', symbol('#171717'), 1024, 1024],
+    ['logo-icon-white', symbol('#ffffff'), 1024, 1024],
+  ]) {
+    await writeFile(join(kit, `${name}.svg`), svg)
+    await screenshot(wrapper(svg), width, height, join(kit, `${name}.png`))
+  }
+  const board = await readFile(join(source, 'review.html'), 'utf8')
+  // Embed local images so the exported preview works without a file server.
+  let embeddedBoard = board
+  for (const match of board.matchAll(/src="(\.\.\/public\/[^\"]+|spolio-logo\/[^\"]+)"/g)) {
+    const path = match[1]
+    const bytes = await readFile(resolve(source, path))
+    const mime = path.endsWith('.svg') ? 'image/svg+xml' : 'image/png'
+    embeddedBoard = embeddedBoard.replaceAll(`src="${path}"`, `src="data:${mime};base64,${bytes.toString('base64')}"`)
+  }
+  embeddedBoard = embeddedBoard.replace('<style>', `<style>${fontStyle}`)
+  await screenshot(embeddedBoard, 1200, 1080, join(source, 'preview.png'))
+  console.log(`Exported Spolio logo kit, icons and social card to ${resolve(output)} and ${resolve(source)}`)
 } finally {
   if (socket) socket.close()
   browser.kill()

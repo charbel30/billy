@@ -1,5 +1,10 @@
 # Spolio branding before Reddit
 
+Update 2026-09-09: the user selected concept 03’s playful receipt character with
+concept 02’s custom lowercase lettering. This supersedes the split-circle identity
+decisions below. The current implementation and export instructions are in
+`brand/README.md`; the original branding pass is retained below as history.
+
 Status: local implementation complete and verified. Direction approved by the user on 2026-09-08. Not deployed.
 Date: 2026-09-08. Complements `launch-plan.md`; does not mark its readiness gates complete.
 

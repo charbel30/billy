@@ -1,10 +1,25 @@
-/** Canonical split-circle geometry, also consumed by the asset exporter. */
+/** Canonical receipt character and custom lowercase lettering, shared with the exporter.
+ * All counters are transparent cutouts; lettering requires no installed font.
+ */
 export const brand = {
   name: 'Spolio',
   gold: '#F7C928',
   ink: '#202820',
   green: '#285647',
   paper: '#F8F7F3',
-  topHalf: 'M7.32 28a25 25 0 0 1 49.36 0Z',
-  bottomHalf: 'M7.32 36a25 25 0 0 0 49.36 0Z',
+  markTransform: 'rotate(-10 32 32)',
+  receipt: 'M20 8H44Q51 8 51 15V50Q51 58 44 55L40 52Q35 60 30 54L28 52Q20 60 15 55Q13 53 13 49V15Q13 8 20 8Z M25.7 28A2.7 2.7 0 1 1 20.3 28A2.7 2.7 0 1 1 25.7 28Z M43.7 28A2.7 2.7 0 1 1 38.3 28A2.7 2.7 0 1 1 43.7 28Z M23 36Q32 43 41 36Q43 34.5 44 37Q44.5 38.5 42.5 40Q32 48 21.5 40Q19.5 38.5 20 37Q21 34.5 23 36Z',
+  wordmarkViewBox: '0 0 335 132',
+  wordmark: [
+    // A soft s with open, rounded terminals.
+    'M51 43C43 38 35 36 26 36C10 36 1 44 1 56C1 68 10 73 24 77L33 80C38 82 38 86 32 87C26 88 20 86 13 82C5 78 -2 90 5 97C12 103 23 106 33 105C50 104 59 96 59 84C59 72 49 67 36 63L25 60C20 58 21 54 27 54C32 54 37 56 42 58C52 62 59 49 51 43Z',
+    // Circular p bowl and its curved descender are separate filled paths.
+    'M130 71A34 34 0 1 1 62 71A34 34 0 1 1 130 71Z M109 71A13 13 0 1 1 83 71A13 13 0 1 1 109 71Z',
+    'M62 71H83V100C83 116 74 128 59 131C46 134 42 116 54 111C60 108 62 104 62 99Z',
+    'M202 71A34 34 0 1 1 134 71A34 34 0 1 1 202 71Z M181 71A13 13 0 1 1 155 71A13 13 0 1 1 181 71Z',
+    'M219.5 10Q230 10 230 20.5V94.5Q230 105 219.5 105Q209 105 209 94.5V20.5Q209 10 219.5 10Z',
+    'M260 21A11 11 0 1 1 238 21A11 11 0 1 1 260 21Z M249 37Q259.5 37 259.5 47.5V94.5Q259.5 105 249 105Q238.5 105 238.5 94.5V47.5Q238.5 37 249 37Z',
+    // The final o keeps direction 02's small diagonal opening.
+    'M321.46 43.05A34 34 0 1 0 328.95 50.54L311.68 63.18A13 13 0 1 1 308.82 60.32Z',
+  ],
 } as const
