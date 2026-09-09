@@ -1,19 +1,21 @@
 # Spolio identity
 
 Spolio is the bill splitter for the Lebanese table. Its visual identity pairs
-a smiling receipt character with custom, rounded lowercase lettering. This is the
-approved combination of concept 03’s character and concept 02’s lettering.
+a curled receipt with custom, rounded lowercase lettering. The approved direction
+is **02 / Soft Scoop** from the shared-curves exploration: the symbol and letters
+share a soft curve style, with the receipt contour balanced independently.
 
 ## Identity rules
 
-- Use the receipt character from `src/lib/ui/brand.ts`. Keep its gentle lean,
-  three rounded paper tips, and transparent facial cutouts intact. Do not stretch it.
+- Use the curled receipt from `src/lib/ui/brand.ts`. Keep its gentle lean,
+  broad scoop, and curved slit intact. Do not stretch it.
 - Use `Brand` for interface lockups and `BrandSymbol` for decorative symbols.
   The home link needs the accessible name “Spolio — home”.
 - Keep clear space of at least one quarter of the symbol's width around an
   isolated mark. The app tile and favicon use their own size-specific padding.
-- The symbol uses one high-contrast color. The eyes and smile are transparent,
-  so the same geometry works on light, dark, and gold backgrounds.
+- The symbol uses one high-contrast color. The space between its paper and curl is open vector geometry. Its curved slit
+  uses a transparent luminance-mask cutout, so it works on light, dark, and gold backgrounds.
+  Masks use unique IDs in React to support several logos on one page.
 - The wordmark is custom vector geometry, including its curved p and open final o.
   It needs no installed or embedded font. Figtree carries headings and interface copy. Cascadia Mono
   carries bill amounts. The landing receipt uses a small serif heading as a
@@ -27,6 +29,27 @@ approved combination of concept 03’s character and concept 02’s lettering.
 | Paper | `#F8F7F3` | Light canvas |
 | Night | `#100F0C` | Dark canvas |
 | Soft green | `#B5CFAC` | Readable accent in dark mode |
+
+## Curve relationships
+
+The receipt is drawn as two finished contours: the paper body and a full rounded
+curl. Their spacing creates a narrow, smooth channel. The p descender retains
+its approved rounded contour. These curves relate visually but are intentionally
+not one-to-one copies: subtracting the full p tail made the receipt look unfinished.
+
+The short curved slit still connects the receipt to the final o:
+
+| Detail | Placement |
+| --- | --- |
+| Receipt slit | `translate(21 15) scale(.85)`, within the symbol’s −14° lean |
+| Final o opening | `translate(305 55) rotate(-25) scale(.98)` |
+| Rounded p tail | `translate(62 100)` |
+
+`src/lib/ui/brand.ts` holds the receipt contour, lettering, p tail, and shared slit.
+The React components and exporter consume this source. `spolio-logo/construction.svg`
+and its PNG show the related shapes; they do not claim identical receipt/p paths.
+The editable SVGs retain vector masks for the slit; use a vector editor’s boolean
+subtraction if a print workflow requires fully flattened paths.
 
 ## Voice
 
@@ -77,6 +100,8 @@ The script writes:
 - `brand/spolio-logo/`: black and white SVG/transparent PNG lockups at 1600px
   wide, plus standalone symbols at 1024px. Monochrome colors: `#171717` and `#FFFFFF`.
 - `brand/preview.png`: rendered asset review board.
+- `brand/spolio-logo/logo-preview.svg` and `.png`: logo on an opaque white canvas.
+- `brand/spolio-logo/construction.svg` and `.png`: contour and lettering study.
 
 `brand/spolio-logo.zip` packages the logo kit and production icons. Rebuild it
 after exporting assets with:
@@ -98,6 +123,6 @@ PY
 Figtree is licensed under the SIL Open Font License; its license is provided
 by `@fontsource-variable/figtree/LICENSE`. Core runtime assets add no dependency.
 
-When changing assets after release, update the `spolio-receipt-1` version in
+When changing assets after release, update the `spolio-scoop-1` version in
 metadata and manifest URLs to help clients request the new files. Existing
 installed home-screen icons and social crawler caches can require a refresh.

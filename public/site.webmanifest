@@ -7,17 +7,17 @@
   "description": "Split the bill in dollars and lira. Made for the Lebanese table.",
   "icons": [
     {
-      "src": "/android-chrome-192x192.png?v=spolio-receipt-1",
+      "src": "/android-chrome-192x192.png?v=spolio-scoop-1",
       "sizes": "192x192",
       "type": "image/png"
     },
     {
-      "src": "/android-chrome-512x512.png?v=spolio-receipt-1",
+      "src": "/android-chrome-512x512.png?v=spolio-scoop-1",
       "sizes": "512x512",
       "type": "image/png"
     },
     {
-      "src": "/maskable-icon-512x512.png?v=spolio-receipt-1",
+      "src": "/maskable-icon-512x512.png?v=spolio-scoop-1",
       "sizes": "512x512",
       "type": "image/png",
       "purpose": "maskable"

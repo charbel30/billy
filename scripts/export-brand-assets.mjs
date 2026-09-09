@@ -77,9 +77,9 @@ try {
   }
 
   await mkdir(source, { recursive: true })
-  const geometry = `<g transform="${brand.markTransform}"><path fill-rule="evenodd" d="${brand.receipt}"/></g>`
-  const lettering = brand.wordmark.map(d => `<path fill-rule="evenodd" d="${d}"/>`).join('')
-  const symbol = (color) => `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" fill="${color}"><title>Spolio receipt character</title>${geometry}</svg>`
+  const geometry = `<defs><mask id="receipt-cut" maskUnits="userSpaceOnUse" x="0" y="0" width="64" height="64" style="mask-type:luminance"><rect width="64" height="64" fill="white"/><path d="${brand.slit}" transform="${brand.slitInReceipt}" fill="black"/></mask></defs><g transform="${brand.markTransform}"><path d="${brand.receipt}" mask="url(#receipt-cut)"/></g>`
+  const lettering = `<defs><mask id="letter-cut" maskUnits="userSpaceOnUse" x="0" y="0" width="335" height="132" style="mask-type:luminance"><rect width="335" height="132" fill="white"/><path d="${brand.slit}" transform="${brand.slitInO}" fill="black"/></mask></defs><g mask="url(#letter-cut)">${brand.wordmark.map(d => `<path fill-rule="evenodd" d="${d}"/>`).join('')}<path d="${brand.pTail}" transform="${brand.pTailTransform}"/></g>`
+  const symbol = (color) => `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" fill="${color}"><title>Spolio curled receipt</title>${geometry}</svg>`
   const lockup = (color) => `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 516 160" fill="${color}"><title>Spolio</title><g transform="translate(0 12) scale(2)">${geometry}</g><g transform="translate(160 9)">${lettering}</g></svg>`
   const icon = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 192 192"><title>Spolio app icon</title><rect width="192" height="192" fill="${brand.gold}"/><g transform="translate(24 24) scale(2.25)" fill="${brand.ink}">${geometry}</g></svg>`
   const favicon = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64"><title>Spolio</title><rect width="64" height="64" rx="16" fill="${brand.gold}"/><g fill="${brand.ink}">${geometry}</g></svg>`
@@ -129,6 +129,7 @@ try {
   await mkdir(kit, { recursive: true })
   for (const [name, svg, width, height] of [
     ['logo', lockup('#171717'), 1600, 496],
+    ['logo-preview', lockup('#171717').replace('<title>', '<rect width="516" height="160" fill="white"/><title>'), 1600, 496],
     ['logo-white', lockup('#ffffff'), 1600, 496],
     ['logo-icon', symbol('#171717'), 1024, 1024],
     ['logo-icon-white', symbol('#ffffff'), 1024, 1024],
@@ -136,6 +137,10 @@ try {
     await writeFile(join(kit, `${name}.svg`), svg)
     await screenshot(wrapper(svg), width, height, join(kit, `${name}.png`))
   }
+  // Show the independent receipt contour alongside the preserved lettering details.
+  const construction = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 740"><title>Spolio refined receipt contour</title><rect width="1200" height="740" fill="white"/><g fill="#171717"><g transform="translate(230 45) scale(1.45)"><g transform="translate(0 12) scale(2)">${geometry}</g><g transform="translate(160 9)">${lettering}</g></g><path d="M60 325H1140" stroke="#ddd"/><g transform="translate(90 345) scale(2.4)"><path d="${brand.receipt}"/></g><g transform="translate(450 400) scale(3)"><path d="${brand.pTail}"/></g><g transform="translate(720 382) scale(4)"><path d="${brand.slit}"/></g><g transform="translate(970 382) scale(4)"><path d="${brand.slit}"/></g></g><g font-family="Arial, sans-serif" font-size="17" fill="#171717"><text x="60" y="35" letter-spacing="3">SPOLIO / SOFT SCOOP</text><text x="90" y="525">Receipt contour</text><text x="380" y="525">Rounded p tail</text><text x="700" y="525">Receipt slit</text><text x="950" y="525">Final o opening</text><text x="90" y="580" fill="#666">Related curves, balanced independently.</text><text x="700" y="580" fill="#666">One curved slit, scaled and rotated.</text><text x="90" y="665" font-size="15" fill="#666">The receipt curl has its own smooth contours. The lettering retains its approved rounded shape.</text></g></svg>`
+  await writeFile(join(kit, 'construction.svg'), construction)
+  await screenshot(wrapper(construction), 1200, 740, join(kit, 'construction.png'))
   const board = await readFile(join(source, 'review.html'), 'utf8')
   // Embed local images so the exported preview works without a file server.
   let embeddedBoard = board

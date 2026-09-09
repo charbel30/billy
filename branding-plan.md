@@ -1,5 +1,10 @@
 # Spolio branding before Reddit
 
+Latest identity: **02 / Soft Scoop**, with the original rounded p tail retained.
+The user explicitly relaxed the one-to-one curve requirement: the receipt now has
+independently balanced paper and curl contours. Its short curved slit still relates
+to the final o. See `brand/README.md` for the current construction and assets.
+
 Update 2026-09-09: the user selected concept 03’s playful receipt character with
 concept 02’s custom lowercase lettering. This supersedes the split-circle identity
 decisions below. The current implementation and export instructions are in

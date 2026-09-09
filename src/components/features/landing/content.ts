@@ -4,7 +4,7 @@ export const landingSeo = {
     'Scan a Lebanese receipt, split it item-by-item, and share a live link on WhatsApp. Spolio reads both the LL and $ totals and uses the venue’s real rate. No install, no account.',
   keywords:
     'bill splitter, receipt scanner, split the bill, Lebanon, LBP, USD, lira rate, restaurant bill',
-  image: 'https://spolio.net/og-image.png?v=spolio-receipt-1',
+  image: 'https://spolio.net/og-image.png?v=spolio-scoop-1',
   imageAlt: 'Spolio — split the bill in dollars and lira. Made for the Lebanese table.',
   url: 'https://spolio.net/',
 }
