@@ -80,9 +80,9 @@ export function useSetGuestPersonPaid() {
 
 // --- Host claims (convex/bills/host/claims.ts) ---
 
-export function useSaveHostClaims() {
+export function useStepHostClaim() {
   return useMutation({
-    mutationFn: useConvexMutation(api.bills.host.claims.saveHostClaims),
+    mutationFn: useConvexMutation(api.bills.host.claims.stepHostClaim),
   })
 }
 
@@ -112,8 +112,14 @@ export function useAddGuestPerson() {
   })
 }
 
-export function useSaveGuestClaims() {
+export function useStepGuestClaim() {
   return useMutation({
-    mutationFn: useConvexMutation(api.bills.guest.claims.saveGuestClaims),
+    mutationFn: useConvexMutation(api.bills.guest.claims.stepGuestClaim),
+  })
+}
+
+export function useShareGuestItemEvenly() {
+  return useMutation({
+    mutationFn: useConvexMutation(api.bills.guest.claims.shareGuestItemEvenly),
   })
 }

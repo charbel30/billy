@@ -18,7 +18,7 @@ every caller (all frontend Convex references live in `src/api/`, per
   - `lifecycle.ts` — `createBill`, `createDemoBill`, `saveWorking`, `publish`,
     `finalize`, `revokeShare`, `setTipPercent`.
   - `people.ts` — `addHostPerson`, `removeHostPerson`, `setHostPersonPaid`.
-  - `claims.ts` — `saveHostClaims`, `shareHostItemEvenly`,
+  - `claims.ts` — `stepHostClaim`, `shareHostItemEvenly`,
     `splitLeftoversEvenly`.
   - `queries.ts` — `getBill`.
   - `uploads.ts` — `generateUploadUrl`, `attachImageAndExtract` (schedules the
@@ -27,7 +27,7 @@ every caller (all frontend Convex references live in `src/api/`, per
   `guestSessionId` (`ctx.bill` + `ctx.guestSessionId` injected by
   `guestMutation`/`guestSettleMutation`).
   - `people.ts` — `joinSplit`, `addGuestPerson`, `setGuestPersonPaid`.
-  - `claims.ts` — `saveGuestClaims`.
+  - `claims.ts` — `stepGuestClaim`, `shareGuestItemEvenly`.
   - `queries.ts` — `getBillByToken`.
 - `bills/extraction.ts` — internal mutations only (`applyExtraction`,
   `onExtractionComplete`); not under host/ or guest/ since nothing here is a
@@ -43,6 +43,7 @@ every caller (all frontend Convex references live in `src/api/`, per
   thin wrappers that call into here (the official Convex pattern).
   - `bills.ts` — gates/validation (`assertEditableSplit`, `assertSettleOpen`,
     `assertSharedForGuestWrites`, …) and claim math (`saveClaimsForPerson`).
+  - `claimChanges.ts` — applies item/person add/remove intent to current claims.
   - `claimRows.ts` — the claims-table seam: reads, wire mapping, and keyed
     row-diff sync. All claim-row access goes through here; claim mutations do
     not touch the bill document.
@@ -78,3 +79,15 @@ path**, never through a barrel (so backend code can't accidentally pull in
 React): `src/lib/money/currency.ts`, `src/lib/money/reconcile.ts`,
 `src/lib/bill/constants.ts`, `src/lib/types.ts`. These are the modules kept
 framework-free specifically so both sides can share them.
+
+## Claim regression tests
+
+Run `pnpm test` for Convex mutation tests and pending-write coordination tests.
+The Convex tests use `convex-test` in Vitest's edge runtime and synthetic bills;
+they do not contact a deployed backend. Convex was updated to 1.45.0 to satisfy
+the current `convex-test` peer requirement (at least 1.43.0).
+
+Claim taps send `itemId`, `personId`, and `delta` (+1/-1); subscribed results
+remain the UI's source of truth. No person-wide claim list is sent by a tap.
+Deploy the updated backend and frontend together. Clients already open on the
+removed `saveHostClaims` / `saveGuestClaims` endpoints must reload.

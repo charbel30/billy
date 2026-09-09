@@ -2,45 +2,14 @@
 // table — no bill patch, no version bump (see convex/model/bills.ts). The
 // editableBillMutation builder resolves ctx.bill and gates on not-FINALIZED.
 import { v } from 'convex/values'
+import { stepPersonClaim } from '../../model/claimChanges'
 import { invariant } from '../../lib/invariant'
-import { claim } from '../../schema'
 import {
   claimRowsForBill,
   syncClaimRows,
   toWireClaims,
 } from '../../model/claimRows'
 import { editableBillMutation } from '../lib/functions'
-import { claimInputValidator } from '../lib/validators'
-import { saveClaimsForPerson } from '../../model/bills'
-
-export const saveHostClaims = editableBillMutation({
-  args: {
-    personId: v.string(),
-    claims: v.array(claimInputValidator),
-  },
-  returns: v.object({
-    acceptedClaims: v.array(claim),
-    rejectedCount: v.number(),
-  }),
-  handler: async (ctx, { personId, claims }) => {
-    const { bill } = ctx
-    const person = bill.people.find((p) => p.id === personId)
-    invariant(person, 'person not found')
-
-    const currentClaims = toWireClaims(await claimRowsForBill(ctx, bill._id))
-    const result = saveClaimsForPerson(
-      bill.lineItems,
-      currentClaims,
-      personId,
-      claims,
-    )
-    await syncClaimRows(ctx, bill._id, result.nextClaims)
-    return {
-      acceptedClaims: result.acceptedClaims,
-      rejectedCount: result.rejectedCount,
-    }
-  },
-})
 
 export const shareHostItemEvenly = editableBillMutation({
   args: {
@@ -102,5 +71,23 @@ export const splitLeftoversEvenly = editableBillMutation({
 
     await syncClaimRows(ctx, bill._id, [...byKey.values()])
     return null
+  },
+})
+
+// Each tap carries intent; Convex applies it atomically to current claim rows.
+export const stepHostClaim = editableBillMutation({
+  args: {
+    personId: v.string(),
+    itemId: v.string(),
+    delta: v.union(v.literal(1), v.literal(-1)),
+  },
+  returns: v.object({ rejectedCount: v.number() }),
+  handler: async (ctx, { personId, itemId, delta }) => {
+    const { bill } = ctx
+    invariant(bill.people.some((p) => p.id === personId), 'person not found')
+    const current = toWireClaims(await claimRowsForBill(ctx, bill._id))
+    const result = stepPersonClaim(bill.lineItems, current, personId, itemId, delta)
+    await syncClaimRows(ctx, bill._id, result.nextClaims)
+    return { rejectedCount: result.rejectedCount }
   },
 })

@@ -10,10 +10,10 @@ import {
   billQueries,
   useAddGuestPerson,
   useJoinSplit,
-  useSaveGuestClaims,
+  useStepGuestClaim,
+  useShareGuestItemEvenly,
   useSetGuestPersonPaid,
 } from '~/api'
-import { claimsForPerson, unitsFor } from '~/lib/bill'
 import { getOrCreateGuestSessionId } from '~/lib/session'
 import { LegalFooter } from '~/components/shared/LegalFooter'
 import { trackFunnelMilestone } from '~/lib/observability'
@@ -24,12 +24,11 @@ export function JoinPage({ shareToken }: { shareToken: string }) {
   const [joinName, setJoinName] = useState('')
   const [activeId, setActiveId] = useState<string | null>(null)
   const [conflictMessage, setConflictMessage] = useState<string | null>(null)
-  // The item whose claim write is round-tripping — drives the pending pulse.
-  const [stepPendingItemId, setStepPendingItemId] = useState<string | null>(null)
 
   const joinSplit = useJoinSplit()
   const addGuestPerson = useAddGuestPerson()
-  const saveGuestClaims = useSaveGuestClaims()
+  const stepGuestClaim = useStepGuestClaim()
+  const shareGuestItemEvenly = useShareGuestItemEvenly()
   const setGuestPersonPaid = useSetGuestPersonPaid()
 
   useEffect(() => {
@@ -81,47 +80,28 @@ export function JoinPage({ shareToken }: { shareToken: string }) {
     setActiveId(result.personId)
   }
 
-  async function savePersonClaims(
-    personId: string,
-    nextClaims: Array<{ itemId: string; units: number }>,
-  ) {
-    if (!guestSessionId || !isMine(personId)) return
-    const result = await saveGuestClaims.mutateAsync({
-      shareToken,
-      guestSessionId,
-      personId,
-      claims: nextClaims,
-    })
-    setConflictMessage(
-      result.rejectedCount > 0
-        ? 'Some units were already claimed, so we kept only what was still available.'
-        : null,
-    )
-  }
-
   function stepClaim(itemId: string, personId: string, delta: number) {
-    const current = unitsFor(bill.claims, itemId, personId)
-    const nextUnits = Math.max(0, current + delta)
-    const nextClaims = claimsForPerson(bill.claims, personId).filter(
-      (c) => c.itemId !== itemId,
-    )
-    if (nextUnits > 0) nextClaims.push({ itemId, units: nextUnits })
-    setStepPendingItemId(itemId)
-    void savePersonClaims(personId, nextClaims).finally(() => {
-      setStepPendingItemId((cur) => (cur === itemId ? null : cur))
-    })
+    if (!guestSessionId || !isMine(personId) || (delta !== 1 && delta !== -1)) return
+    setConflictMessage(null)
+    void stepGuestClaim.mutateAsync({ shareToken, guestSessionId, personId, itemId, delta })
+      .then((result) => {
+        if (result.rejectedCount > 0) {
+          setConflictMessage('Some units were already claimed, so we kept only what was still available.')
+        }
+      })
+      .catch(() => setConflictMessage('That claim could not be saved. Please try again.'))
   }
 
   function shareEvenly(itemId: string, personIds: string[]) {
-    const item = bill.lineItems.find((li) => li.id === itemId)
-    if (!item || personIds.length === 0) return
-    for (const personId of personIds) {
-      const nextClaims = claimsForPerson(bill.claims, personId).filter(
-        (c) => c.itemId !== itemId,
-      )
-      nextClaims.push({ itemId, units: item.qty / personIds.length })
-      void savePersonClaims(personId, nextClaims)
-    }
+    if (!guestSessionId || personIds.length === 0 || personIds.some((id) => !isMine(id))) return
+    setConflictMessage(null)
+    void shareGuestItemEvenly.mutateAsync({ shareToken, guestSessionId, itemId, personIds })
+      .then((result) => {
+        if (result.rejectedCount > 0) {
+          setConflictMessage('Some units were already claimed, so we split only what was still available.')
+        }
+      })
+      .catch(() => setConflictMessage('That split could not be saved. Please try again.'))
   }
 
   function togglePaid(personId: string, paid: boolean) {
@@ -213,8 +193,6 @@ export function JoinPage({ shareToken }: { shareToken: string }) {
       sharePeople={controlledPeople}
       showClaims={joined}
       conflictMessage={conflictMessage}
-      savingMessage={saveGuestClaims.isPending ? 'Saving claim...' : null}
-      pendingItemId={stepPendingItemId}
       ownIds={ownIds}
     />
   )

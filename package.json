@@ -11,7 +11,8 @@
     "preview": "vite preview",
     "brand:export": "node scripts/export-brand-assets.mjs",
     "deploy": "pnpm build && pnpm exec wrangler deploy --config dist/server/wrangler.json --keep-vars",
-    "cf-typegen": "pnpm exec wrangler types"
+    "cf-typegen": "pnpm exec wrangler types",
+    "test": "vitest run"
   },
   "dependencies": {
     "@base-ui/react": "^1.5.0",
@@ -32,7 +33,7 @@
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",
     "concurrently": "^8.2.2",
-    "convex": "^1.19.0",
+    "convex": "^1.45.0",
     "convex-helpers": "^0.1.120",
     "ky": "^1.7.4",
     "motion": "^12.40.0",
@@ -49,14 +50,17 @@
   },
   "devDependencies": {
     "@cloudflare/vite-plugin": "^1.40.2",
+    "@edge-runtime/vm": "^5.0.0",
     "@tailwindcss/vite": "^4.2.2",
     "@types/node": "^22.12.0",
     "@types/react": "^19.0.8",
     "@types/react-dom": "^19.0.3",
     "@vitejs/plugin-react": "^6.0.1",
+    "convex-test": "^0.0.56",
     "tailwindcss": "^4.2.2",
     "typescript": "^6.0.2",
     "vite": "^8.0.14",
+    "vitest": "^5.0.0",
     "wrangler": "^4.100.0"
   }
 }

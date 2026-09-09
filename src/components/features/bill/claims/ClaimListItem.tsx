@@ -35,7 +35,6 @@ export function ClaimListItem({
   onShareEvenly,
   canShareEvenly,
   sharePeople,
-  pending,
 }: {
   item: LineItem
   claims: Claim[]
@@ -47,8 +46,6 @@ export function ClaimListItem({
   onShareEvenly: (itemId: string, personIds: string[]) => void
   canShareEvenly: boolean
   sharePeople: Person[]
-  /** A claim write for this item is in flight — pulse the unit count. */
-  pending: boolean
 }) {
   const { display } = useCurrencyDisplay()
   const remaining = remainingUnits(item, claims)
@@ -248,12 +245,7 @@ export function ClaimListItem({
                       animate={{ y: 0, opacity: 1 }}
                       exit={{ y: 8, opacity: 0 }}
                       transition={{ duration: 0.15 }}
-                      className={cn(
-                        'inline-block font-bold tabular-nums',
-                        // Saving round-trip: pulse the count but keep the
-                        // buttons live — rapid multi-taps must keep working.
-                        pending && 'animate-pulse text-muted-foreground',
-                      )}
+                      className="inline-block font-bold tabular-nums"
                     >
                       {formatUnits(mine)}
                     </motion.span>
@@ -266,10 +258,7 @@ export function ClaimListItem({
                   onClick={() =>
                     activePerson && onStep(item.id, activePerson.id, +1)
                   }
-                  className={cn(
-                    'grid size-10 place-items-center rounded-full border border-border transition-[scale,background-color,opacity] hover:bg-muted active:scale-[0.96] disabled:opacity-30',
-                    pending && 'opacity-60',
-                  )}
+                  className="grid size-10 place-items-center rounded-full border border-border transition-[scale,background-color,opacity] hover:bg-muted active:scale-[0.96] disabled:opacity-30"
                   style={
                     activePerson && remaining > 0.0001
                       ? {

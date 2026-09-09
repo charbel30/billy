@@ -44,11 +44,9 @@ export function BillSplitWorkspace({
   sharePeople,
   showClaims = true,
   conflictMessage,
-  savingMessage,
   summaryDescription = 'Updates live as people claim items.',
   onTipChange,
   tipPending = false,
-  pendingItemId,
   ownIds,
 }: {
   bill: WorkspaceBill
@@ -70,13 +68,10 @@ export function BillSplitWorkspace({
   sharePeople?: Person[]
   showClaims?: boolean
   conflictMessage?: string | null
-  savingMessage?: string | null
   summaryDescription?: string
   /** Host-only: makes the tip control render (expanded sheet + desktop aside). */
   onTipChange?: (pct: number) => void
   tipPending?: boolean
-  /** Item currently round-tripping a claim write — gets a pending pulse. */
-  pendingItemId?: string | null
   /** Ids the viewer controls (e.g. a guest's own people) — sorts those pills
    * first in the person rail/panel. Omit for the host, who controls everyone. */
   ownIds?: ReadonlySet<string>
@@ -221,12 +216,8 @@ export function BillSplitWorkspace({
             onShareEvenly={onShareEvenly}
             canShareEvenly={canShareEvenly}
             sharePeople={sharePeople}
-            pendingItemId={pendingItemId}
           />
 
-          {savingMessage ? (
-            <p className="text-xs text-muted-foreground">{savingMessage}</p>
-          ) : null}
         </div>
 
         {/* Desktop: sticky person panel + actions */}

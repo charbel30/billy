@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { useNavigate } from '@tanstack/react-router'
 import { useSuspenseQuery } from '@tanstack/react-query'
 import {
@@ -24,14 +24,14 @@ import {
   usePublish,
   useRemoveHostPerson,
   useRevokeShare,
-  useSaveHostClaims,
+  useStepHostClaim,
   useSetTipPercent,
   useShareHostItemEvenly,
   useSplitLeftoversEvenly,
 } from '~/api'
 import { getHostToken, recordBill } from '~/lib/session'
 import { useHasHostToken } from '~/hooks/useHostAccess'
-import { claimsForPerson, unitsFor } from '~/lib/bill'
+import { usePendingWrites } from '~/hooks/usePendingWrites'
 import { remainingUnits, totalRemainingLbp, formatUsd, toUsd } from '~/lib/money'
 import { joinUrl } from '~/lib/format'
 import { trackFunnelMilestone } from '~/lib/observability'
@@ -52,15 +52,16 @@ export function SplitPage({ billId }: { billId: Id<'bills'> }) {
   const [finalizeOpen, setFinalizeOpen] = useState(false)
   const addHostPerson = useAddHostPerson()
   const removeHostPerson = useRemoveHostPerson()
-  const saveHostClaims = useSaveHostClaims()
+  const stepHostClaim = useStepHostClaim()
   const shareHostItemEvenly = useShareHostItemEvenly()
 
   const [activeId, setActiveId] = useState<string | null>(
     bill.people[0]?.id ?? null,
   )
   const [conflictMessage, setConflictMessage] = useState<string | null>(null)
-  // The item whose claim write is round-tripping — drives the pending pulse.
-  const [stepPendingItemId, setStepPendingItemId] = useState<string | null>(null)
+  const writes = usePendingWrites()
+  const finalizing = useRef(false)
+  const [preparingFinalize, setPreparingFinalize] = useState(false)
   // Keep an active person selected as people are added/removed.
   useEffect(() => {
     if (!bill.people.some((p) => p.id === activeId)) {
@@ -98,53 +99,34 @@ export function SplitPage({ billId }: { billId: Id<'bills'> }) {
   }
 
   async function addPerson(name: string) {
-    const result = await addHostPerson.mutateAsync({ ...hostArgs(), name })
+    if (finalizing.current) return
+    const result = await writes.run(() => addHostPerson.mutateAsync({ ...hostArgs(), name }))
     setActiveId(result.personId)
   }
 
   async function removePerson(personId: string) {
-    await removeHostPerson.mutateAsync({ ...hostArgs(), personId })
-  }
-
-  async function savePersonClaims(
-    personId: string,
-    nextClaims: Array<{ itemId: string; units: number }>,
-  ) {
-    const result = await saveHostClaims.mutateAsync({
-      ...hostArgs(),
-      personId,
-      claims: nextClaims,
-    })
-    setConflictMessage(
-      result.rejectedCount > 0
-        ? 'Some units were already claimed, so we kept only what was still available.'
-        : null,
-    )
+    if (finalizing.current) return
+    await writes.run(() => removeHostPerson.mutateAsync({ ...hostArgs(), personId }))
   }
 
   function stepClaim(itemId: string, personId: string, delta: number) {
-    const current = unitsFor(bill.claims, itemId, personId)
-    const nextUnits = Math.max(0, current + delta)
-    const nextClaims = claimsForPerson(bill.claims, personId).filter(
-      (c) => c.itemId !== itemId,
-    )
-    if (nextUnits > 0) nextClaims.push({ itemId, units: nextUnits })
-    setStepPendingItemId(itemId)
-    void savePersonClaims(personId, nextClaims).finally(() => {
-      // Only clear if a later tap hasn't moved the pending marker elsewhere.
-      setStepPendingItemId((cur) => (cur === itemId ? null : cur))
+    if (finalizing.current || (delta !== 1 && delta !== -1)) return
+    setConflictMessage(null)
+    void writes.run(async () => {
+      const result = await stepHostClaim.mutateAsync({ ...hostArgs(), personId, itemId, delta })
+      if (result.rejectedCount > 0) {
+        setConflictMessage('Some units were already claimed, so we kept only what was still available.')
+      }
+    }).catch(() => {
+      setConflictMessage('That claim could not be saved. Please try again.')
     })
   }
 
   function shareEvenly(itemId: string, personIds: string[]) {
-    void shareHostItemEvenly.mutateAsync({ ...hostArgs(), itemId, personIds })
+    if (finalizing.current) return
+    void writes.run(() => shareHostItemEvenly.mutateAsync({ ...hostArgs(), itemId, personIds }))
+      .catch(() => setConflictMessage('That split could not be saved. Please try again.'))
   }
-
-  const pendingItemId =
-    stepPendingItemId ??
-    (shareHostItemEvenly.isPending
-      ? (shareHostItemEvenly.variables?.itemId ?? null)
-      : null)
 
   // One button does it all: flip to PUBLISHED in the background (don't await —
   // the dialog should open on the same tap) and show the QR + share link.
@@ -160,15 +142,29 @@ export function SplitPage({ billId }: { billId: Id<'bills'> }) {
   }
 
   async function finalizeSplit(splitLeftovers: boolean) {
-    if (splitLeftovers) {
-      await splitLeftoversEvenly.mutateAsync(hostArgs())
+    if (finalizing.current) return
+    finalizing.current = true
+    setPreparingFinalize(true)
+    try {
+      if (!(await writes.wait())) {
+        setConflictMessage('An edit could not be saved. Check the split before finalizing.')
+        setFinalizeOpen(false)
+        return
+      }
+      if (splitLeftovers) await splitLeftoversEvenly.mutateAsync(hostArgs())
+      await finalize.mutateAsync(hostArgs())
+      setFinalizeOpen(false)
+      void navigate({ to: '/summary/$billId', params: { billId } })
+    } catch {
+      // Mutation errors are displayed by the shared mutation error handler.
+    } finally {
+      finalizing.current = false
+      setPreparingFinalize(false)
     }
-    await finalize.mutateAsync(hostArgs())
-    setFinalizeOpen(false)
-    navigate({ to: '/summary/$billId', params: { billId } })
   }
 
-  const finalizePending = finalize.isPending || splitLeftoversEvenly.isPending
+  const finalizePending =
+    preparingFinalize || writes.pending || finalize.isPending || splitLeftoversEvenly.isPending
 
   return (
     <>
@@ -210,18 +206,16 @@ export function SplitPage({ billId }: { billId: Id<'bills'> }) {
               : 'View only. The split can still change on the host device.'
         }
         conflictMessage={conflictMessage}
-        savingMessage={
-          saveHostClaims.isPending || shareHostItemEvenly.isPending
-            ? 'Saving split...'
-            : null
-        }
         onTipChange={
           finalized || !canEdit
             ? undefined
-            : (pct) => setTipPercent.mutate({ ...hostArgs(), tipPercent: pct })
+            : (pct) => {
+                if (finalizing.current) return
+                void writes.run(() => setTipPercent.mutateAsync({ ...hostArgs(), tipPercent: pct }))
+                  .catch(() => {}) // Shared mutation handler shows the error.
+              }
         }
         tipPending={setTipPercent.isPending}
-        pendingItemId={pendingItemId}
         actionSlot={
           !canEdit ? null : finalized ? (
             <Button

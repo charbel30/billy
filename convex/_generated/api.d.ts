@@ -28,6 +28,7 @@ import type * as lib_invariant from "../lib/invariant.js";
 import type * as lib_rateLimits from "../lib/rateLimits.js";
 import type * as lib_retrier from "../lib/retrier.js";
 import type * as model_bills from "../model/bills.js";
+import type * as model_claimChanges from "../model/claimChanges.js";
 import type * as model_claimRows from "../model/claimRows.js";
 
 import type {
@@ -57,6 +58,7 @@ declare const fullApi: ApiFromModules<{
   "lib/rateLimits": typeof lib_rateLimits;
   "lib/retrier": typeof lib_retrier;
   "model/bills": typeof model_bills;
+  "model/claimChanges": typeof model_claimChanges;
   "model/claimRows": typeof model_claimRows;
 }>;
 

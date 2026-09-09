@@ -18,7 +18,6 @@ export function ClaimList({
   onShareEvenly,
   canShareEvenly = true,
   sharePeople = people,
-  pendingItemId,
 }: {
   lineItems: LineItem[]
   people: Person[]
@@ -29,8 +28,6 @@ export function ClaimList({
   onShareEvenly: (itemId: string, personIds: string[]) => void
   canShareEvenly?: boolean
   sharePeople?: Person[]
-  /** Item with a claim write in flight — its unit count pulses while saving. */
-  pendingItemId?: string | null
 }) {
   const personById = new Map(people.map((p) => [p.id, p]))
 
@@ -63,7 +60,6 @@ export function ClaimList({
             onShareEvenly={onShareEvenly}
             canShareEvenly={canShareEvenly}
             sharePeople={sharePeople}
-            pending={pendingItemId === item.id}
           />
         ))}
       </AnimatePresence>
