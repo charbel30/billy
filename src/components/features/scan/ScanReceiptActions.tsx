@@ -106,7 +106,7 @@ export function ScanReceiptActions() {
 
   return (
     <div className="landing-actions landing-enter">
-      <p className="text-xs text-muted-foreground">
+      <p className="mb-3 text-xs text-muted-foreground">
         Host access stays in this browser. Clearing site data removes it; a
         bookmark cannot restore it.
       </p>

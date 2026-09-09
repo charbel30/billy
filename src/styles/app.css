@@ -259,3 +259,20 @@
   --sidebar-border: oklch(1 0 0 / 10%);
   --sidebar-ring: oklch(0.556 0 0);
 }
+
+/* Keep compact desktop controls comfortable on phones and touch tablets.
+   Real layout space avoids overlapping invisible touch targets. */
+@media (pointer: coarse) {
+  [data-slot="button"],
+  [data-slot="select-trigger"],
+  [data-slot="select-item"] {
+    min-height: 44px;
+    min-width: 44px;
+  }
+
+  input:not([type="file"]):not([type="checkbox"]):not([type="radio"]),
+  textarea {
+    font-size: max(1rem, 16px);
+    min-height: 44px;
+  }
+}

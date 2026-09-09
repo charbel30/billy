@@ -27,11 +27,11 @@ export function TipControl({
     : [...TIP_PRESETS, value].sort((a, b) => a - b)
 
   return (
-    <div className="flex items-center gap-2">
+    <div className="flex flex-wrap items-center gap-2">
       <span className="shrink-0 text-xs font-bold text-muted-foreground">
         Tip
       </span>
-      <div className="flex min-w-0 flex-1 items-center gap-1 overflow-x-auto py-0.5 [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+      <div className="flex min-w-0 basis-48 flex-1 items-center gap-1 overflow-x-auto py-0.5 [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
         {options.map((pct) => {
           const selected = pct === value
           return (
@@ -42,7 +42,7 @@ export function TipControl({
               onClick={() => !selected && onChange(pct)}
               aria-pressed={selected}
               className={cn(
-                'shrink-0 rounded-full px-2.5 py-1 text-xs font-bold tabular-nums transition-[background-color,color,scale] active:scale-[0.96] disabled:opacity-60',
+                'min-h-11 min-w-11 shrink-0 rounded-full focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring px-2.5 py-1 text-xs font-bold tabular-nums transition-[background-color,color,scale] active:scale-[0.96] disabled:opacity-60',
                 selected
                   ? 'bg-primary text-primary-foreground'
                   : 'bg-background text-muted-foreground ring-1 ring-border/50 hover:bg-muted hover:text-foreground',

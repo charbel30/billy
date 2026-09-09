@@ -137,7 +137,7 @@ export function ShareSplitCard({
             : ''}
       </span>
 
-      <div className="flex items-center justify-center gap-1">
+      <div className="flex flex-wrap items-center justify-center gap-1">
         <button
           type="button"
           ref={presentButtonRef}
@@ -163,7 +163,7 @@ export function ShareSplitCard({
       <Dialog open={presenting} onOpenChange={setPresenting}>
         <DialogContent
           finalFocus={presentButtonRef}
-          className="share-present inset-0 start-0 top-0 z-[60] flex h-dvh w-screen max-w-none translate-x-0 translate-y-0 flex-col items-center justify-center gap-5 overflow-y-auto rounded-none bg-white px-6 py-16 text-center text-[#202820] sm:max-w-none data-open:zoom-in-100 data-closed:zoom-out-100 [&_[data-slot=dialog-close]]:size-11 [&_[data-slot=dialog-close]]:bg-neutral-100 [&_[data-slot=dialog-close]]:text-neutral-700"
+          className="share-present inset-0 start-0 top-0 z-[60] flex h-dvh max-h-none w-screen max-w-none translate-x-0 translate-y-0 flex-col items-center justify-center gap-5 overflow-y-auto rounded-none bg-white px-6 py-16 text-center text-[#202820] sm:max-w-none data-open:zoom-in-100 data-closed:zoom-out-100 [&_[data-slot=dialog-close]]:size-11 [&_[data-slot=dialog-close]]:bg-neutral-100 [&_[data-slot=dialog-close]]:text-neutral-700"
         >
           <Brand className="text-[#202820]" />
           <DialogTitle className="text-2xl font-extrabold tracking-tight">

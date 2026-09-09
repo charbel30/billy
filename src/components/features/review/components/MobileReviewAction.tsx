@@ -17,7 +17,7 @@ export function MobileReviewAction({
   onContinue: () => Promise<void>
 }) {
   return (
-    <div className="sticky bottom-0 z-20 -mx-4 mt-6 bg-gradient-to-t from-background via-background/95 to-background/0 px-4 pb-4 pt-8 lg:hidden">
+    <div className="sticky bottom-0 z-20 -mx-4 mt-6 bg-gradient-to-t from-background via-background/95 to-background/0 px-4 pb-[max(1rem,env(safe-area-inset-bottom))] pt-8 lg:hidden">
       <div className="rounded-card bg-muted/95 p-3 shadow-dock ring-1 ring-border/60 backdrop-blur-xl">
         <div className="mb-3 flex items-center justify-between rounded-control bg-background/75 px-4 py-3">
           <span className="text-sm font-black text-muted-foreground">Total</span>

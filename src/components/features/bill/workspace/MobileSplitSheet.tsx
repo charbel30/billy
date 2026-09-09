@@ -129,7 +129,7 @@ export function MobileSplitSheet({
               className="overflow-hidden"
             >
               {/* Fade masks stand in for hidden scrollbars as the scroll affordance. */}
-              <div className="max-h-[52vh] space-y-3 overflow-y-auto overscroll-contain px-4 pb-2 [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden [mask-image:linear-gradient(to_bottom,transparent,black_12px,black_calc(100%-16px),transparent)]">
+              <div className="max-h-[52dvh] space-y-3 overflow-y-auto overscroll-contain px-4 pb-2 [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden [mask-image:linear-gradient(to_bottom,transparent,black_12px,black_calc(100%-16px),transparent)]">
                 {orderedBreakdownPeople.map((p) => {
                   const portfolio = portfolioByPerson.get(p.id)
                   if (!portfolio) return null
@@ -198,7 +198,7 @@ export function MobileSplitSheet({
                   type="button"
                   whileTap={{ scale: 0.96 }}
                   onClick={() => setExpanded(true)}
-                  className="flex shrink-0 items-center gap-1.5 rounded-full bg-background px-3 py-2 text-xs font-semibold text-muted-foreground ring-1 ring-border/40 transition-colors hover:text-foreground"
+                  className="flex min-h-11 shrink-0 items-center gap-1.5 rounded-full bg-background px-3 py-2 text-xs font-semibold text-muted-foreground ring-1 ring-border/40 transition-colors hover:text-foreground"
                 >
                   {`+${otherPeople.length} other${otherPeople.length === 1 ? '' : 's'} · `}
                   {done ? (

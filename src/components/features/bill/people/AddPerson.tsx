@@ -34,7 +34,7 @@ export function AddPerson({
           type="button"
           aria-label={label}
           onClick={() => setOpen(true)}
-          className="grid size-10 shrink-0 place-items-center rounded-full border-2 border-dashed border-primary/30 text-primary-strong transition-[scale,background-color] hover:bg-primary/10 active:scale-[0.96]"
+          className="grid size-11 shrink-0 place-items-center rounded-full border-2 border-dashed border-primary/30 text-primary-strong transition-[scale,background-color] hover:bg-primary/10 active:scale-[0.96]"
         >
           <RiUserAddLine className="size-5" />
         </button>
@@ -59,6 +59,9 @@ export function AddPerson({
       )}
     >
       <input
+        aria-label={placeholder}
+        autoComplete="off"
+        enterKeyHint="done"
         autoFocus
         value={name}
         onChange={(e) => setName(e.target.value)}
@@ -68,13 +71,14 @@ export function AddPerson({
         }}
         onBlur={() => (name.trim() ? submit() : setOpen(false))}
         placeholder={placeholder}
-        className="w-28 bg-transparent text-sm outline-none"
+        className="w-28 bg-transparent text-base outline-none"
       />
       <button
         type="button"
+        onPointerDown={(event) => event.preventDefault()}
         onClick={submit}
         aria-label={label}
-        className="grid size-9 shrink-0 place-items-center rounded-full text-primary-strong transition-[scale,color] hover:text-foreground active:scale-[0.96]"
+        className="grid size-11 shrink-0 place-items-center rounded-full text-primary-strong transition-[scale,color] hover:text-foreground active:scale-[0.96]"
       >
         {variant === 'bar' ? (
           <RiAddLine className="size-4" />

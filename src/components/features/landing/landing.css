@@ -602,8 +602,12 @@
   .landing-actions {
     margin-top: 24px;
   }
+  .landing-secondary-actions {
+    justify-content: center;
+  }
   .landing-scan {
-    min-width: 235px;
+    width: 100%;
+    min-width: 0;
   }
   .landing-sample {
     margin-top: 9px;

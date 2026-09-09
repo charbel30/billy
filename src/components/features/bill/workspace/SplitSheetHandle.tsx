@@ -30,7 +30,9 @@ export function SplitSheetHandle({
   const draggedRef = useRef(false)
 
   return (
-    <motion.div
+    <motion.button
+      type="button"
+      aria-expanded={expanded}
       drag="y"
       dragDirectionLock
       dragConstraints={{ top: 0, bottom: 0 }}
@@ -51,9 +53,8 @@ export function SplitSheetHandle({
           draggedRef.current = false
         }, 0)
       }}
-      role="button"
       aria-label={expanded ? 'Hide breakdown' : "Show everyone's split"}
-      className="flex touch-none cursor-grab flex-col items-center gap-1.5 px-4 pt-3 pb-2 active:cursor-grabbing"
+      className="flex w-full min-h-11 touch-none rounded-t-card focus-visible:outline-2 focus-visible:outline-offset-[-4px] focus-visible:outline-ring cursor-grab flex-col items-center gap-1.5 px-4 pt-3 pb-2 active:cursor-grabbing"
     >
       <span className="h-1.5 w-10 rounded-full bg-foreground/15" />
       <span
@@ -85,18 +86,18 @@ export function SplitSheetHandle({
           </span>
         )}
       </span>
-      <div className="h-1 w-full max-w-48 overflow-hidden rounded-full bg-primary/10">
+      <span className="block h-1 w-full max-w-48 overflow-hidden rounded-full bg-primary/10">
         {/* scaleX, not width — width springs re-layout on every frame. */}
-        <motion.div
+        <motion.span
           className={
             done
-              ? 'h-full w-full origin-left rounded-full bg-success rtl:origin-right'
-              : 'h-full w-full origin-left rounded-full bg-primary rtl:origin-right'
+              ? 'block h-full w-full origin-left rounded-full bg-success rtl:origin-right'
+              : 'block h-full w-full origin-left rounded-full bg-primary rtl:origin-right'
           }
           animate={{ scaleX: claimedPct / 100 }}
           transition={{ type: 'spring', stiffness: 120, damping: 20 }}
         />
-      </div>
-    </motion.div>
+      </span>
+    </motion.button>
   )
 }

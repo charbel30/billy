@@ -247,7 +247,7 @@ function AuditLineItem({
               <button
                 type="button"
                 onClick={() => onRemove(item.id)}
-                className="ml-1 inline-flex size-9 items-center justify-center rounded-full text-muted-foreground opacity-0 transition-[scale,color,opacity] hover:text-destructive active:scale-[0.96] group-hover:opacity-100 focus-visible:opacity-100"
+                className="ml-1 inline-flex size-9 items-center justify-center rounded-full text-muted-foreground opacity-0 transition-[scale,color,opacity] hover:text-destructive active:scale-[0.96] group-hover:opacity-100 focus-visible:opacity-100 [@media(hover:none)]:opacity-100"
                 aria-label="Remove item"
               >
                 <RiDeleteBin6Line className="size-4" />
