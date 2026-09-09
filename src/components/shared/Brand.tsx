@@ -32,7 +32,7 @@ export function Brand({ className }: { className?: string }) {
         <defs>
           <mask id={cutoutId} maskUnits="userSpaceOnUse" x="0" y="0" width="335" height="132" style={{ maskType: 'luminance' }}>
             <rect width="335" height="132" fill="white" />
-            <path d={brand.slit} transform={brand.slitInO} fill="black" />
+            <path d={brand.slit} transform={brand.slitInO} fill="black" stroke="black" strokeWidth={brand.oGapStrokeWidth} strokeLinejoin="round" />
           </mask>
         </defs>
         <g mask={`url(#${cutoutId})`}>

@@ -17,6 +17,7 @@ export const brand = {
   slitInReceipt: 'translate(21 15) scale(.85)',
   pTailTransform: 'translate(62 100)',
   slitInO: 'translate(305 55) rotate(-25) scale(.98)',
+  oGapStrokeWidth: 2,
   receipt: 'M20 7H44Q50 7 50 13V34C41 34 36 39 32 45C28 51 24 57 19 57C15 57 13 54 13 49V14Q13 7 20 7Z M25 59C36 57 40 48 44 42C47 38 51 36 55 37C61 39 59 46 55 51C48 58 36 61 25 59Z',
   wordmarkViewBox: '0 0 335 132',
   wordmark: [

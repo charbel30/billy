@@ -37,7 +37,9 @@ curl. Their spacing creates a narrow, smooth channel. The p descender retains
 its approved rounded contour. These curves relate visually but are intentionally
 not one-to-one copies: subtracting the full p tail made the receipt look unfinished.
 
-The short curved slit still connects the receipt to the final o:
+The short curved slit still connects the receipt to the final o. The o’s mask
+adds a 2-unit stroke around that slit (1 unit on each side before the transform),
+widening the opening while preserving its curve and leaving the receipt unchanged:
 
 | Detail | Placement |
 | --- | --- |
