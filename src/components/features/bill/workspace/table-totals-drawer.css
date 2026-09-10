@@ -1,0 +1,51 @@
+.table-totals-viewport {
+  pointer-events: none;
+  padding-bottom: 1rem;
+}
+
+.table-totals-viewport[data-overview='true'] {
+  pointer-events: auto;
+}
+
+.table-totals-popup {
+  pointer-events: auto;
+  height: 85dvh;
+  transform: translateY(calc(var(--drawer-snap-point-offset, 0px) + var(--drawer-swipe-movement-y, 0px)));
+  transition: transform 260ms cubic-bezier(0.2, 0, 0, 1);
+}
+
+.table-totals-popup[data-swiping] {
+  transition: none;
+}
+
+.table-totals-compact { opacity: calc(1 - var(--sheet-progress, 0)); }
+.table-totals-overview { opacity: var(--sheet-progress, 0); pointer-events: none; }
+.table-totals-popup[data-overview='true'] .table-totals-compact { pointer-events: none; }
+.table-totals-popup[data-overview='true'] .table-totals-overview { pointer-events: auto; }
+
+.table-totals-backdrop {
+  pointer-events: none;
+  opacity: 0;
+  transition: opacity 260ms ease-out;
+}
+
+.table-totals-backdrop[data-overview='true'] {
+  pointer-events: auto;
+  opacity: calc(1 - var(--drawer-swipe-progress, 0));
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .table-totals-popup,
+  .table-totals-backdrop,
+  .table-totals-compact,
+  .table-totals-overview {
+    transition-duration: 0ms;
+  }
+}
+
+/* Snap offsets are measured after the portal mounts. Never paint that
+   intermediate full-height position when returning to the page. */
+.table-totals-popup[data-position-ready='false'] {
+  visibility: hidden;
+  transition: none;
+}

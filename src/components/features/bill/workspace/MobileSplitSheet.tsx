@@ -1,16 +1,20 @@
-import { useEffect, useRef, useState } from 'react'
+import { useCallback, useEffect, useLayoutEffect, useRef, useState, useMemo } from 'react'
 import type { ReactNode } from 'react'
-import { AnimatePresence, motion } from 'motion/react'
+import { Drawer } from '@base-ui/react/drawer'
 import type { Claim, LineItem, Person } from '~/lib/types'
 import type { Portfolio } from '~/lib/money'
 import { personClaimedLines, formatLbp, formatUsd, toUsd } from '~/lib/money'
-import { sheetSpring } from '~/lib/ui'
 import { MobilePersonPicker } from '../people/MobilePersonPicker'
-import { PortfolioReceipt } from '../receipt'
+import { Accordion } from '@base-ui/react/accordion'
+import { RiArrowDownSLine, RiCloseLine } from '@remixicon/react'
+import { PersonAvatar } from '../people/PersonAvatar'
+import { formatUnits } from '~/lib/format'
 import { SplitSheetHandle } from './SplitSheetHandle'
+import './table-totals-drawer.css'
 
-// Compact mobile dock: assignment picker and actions stay visible; expand
-// the progress handle to see everyone's breakdown and the tip control.
+const useIsomorphicLayoutEffect = typeof document !== 'undefined' ? useLayoutEffect : useEffect
+
+// One persistent sheet with a compact snap point and an expanded overview.
 export function MobileSplitSheet({
   people,
   breakdownPeople,
@@ -26,7 +30,6 @@ export function MobileSplitSheet({
   tipPercent,
   grandLbp,
   remainingLbp = 0,
-  billTotalLbp = 0,
   itemsClaimed = 0,
   itemsTotal = 0,
   panelExtra,
@@ -49,7 +52,6 @@ export function MobileSplitSheet({
   tipPercent?: number | null
   grandLbp: number
   remainingLbp?: number
-  billTotalLbp?: number
   itemsClaimed?: number
   itemsTotal?: number
   panelExtra?: ReactNode
@@ -61,135 +63,228 @@ export function MobileSplitSheet({
   ownIds?: ReadonlySet<string>
 }) {
   const [expanded, setExpanded] = useState(false)
+  const [positionReady, setPositionReady] = useState(false)
+  const [mobile, setMobile] = useState(false)
+  const [compactHeight, setCompactHeight] = useState(200)
+  const [popupElement, setPopupElement] = useState<HTMLDivElement | null>(null)
+  const [viewportElement, setViewportElement] = useState<HTMLDivElement | null>(null)
+  const [compactElement, setCompactElement] = useState<HTMLDivElement | null>(null)
+  const attachPopup = useCallback((element: HTMLDivElement | null) => {
+    setPositionReady(false)
+    setPopupElement(element)
+  }, [])
+  const expandRef = useRef<HTMLButtonElement>(null)
+  const collapseRef = useRef<HTMLButtonElement>(null)
+  const collapsedPoint = `${compactHeight}px`
+  const snapPoints = useMemo(() => [collapsedPoint, 0.85], [collapsedPoint])
 
-  const done = remainingLbp <= 0.5
-  const claimedPct =
-    billTotalLbp > 0
-      ? Math.min(100, ((billTotalLbp - remainingLbp) / billTotalLbp) * 100)
-      : 0
+  // Mount and measure the mobile dock before the receipt's first paint.
+  useIsomorphicLayoutEffect(() => {
+    const media = window.matchMedia('(max-width: 1023px)')
+    const sync = () => {
+      setMobile(media.matches)
+      if (!media.matches) setExpanded(false)
+    }
+    sync()
+    media.addEventListener('change', sync)
+    return () => media.removeEventListener('change', sync)
+  }, [])
 
-  // Report the collapsed dock height so the item list can pad past it. The
-  // expanded sheet must never inflate the page padding, so measurements taken
-  // while expanded are dropped (the last collapsed value stays in force).
-  const wrapperRef = useRef<HTMLDivElement>(null)
-  const expandedRef = useRef(expanded)
-  expandedRef.current = expanded
-  useEffect(() => {
-    const el = wrapperRef.current
-    if (!el || !onCollapsedHeightChange) return
+  useIsomorphicLayoutEffect(() => {
+    const el = compactElement
+    if (!el) return
     const report = () => {
-      if (!expandedRef.current) {
-        onCollapsedHeightChange(el.getBoundingClientRect().height)
-      }
+      const height = Math.ceil(el.getBoundingClientRect().height)
+      if (height === 0) return
+      setCompactHeight(height)
+      onCollapsedHeightChange?.(height + 16)
     }
     report()
     const observer = new ResizeObserver(report)
     observer.observe(el)
     return () => observer.disconnect()
-  }, [onCollapsedHeightChange])
+  }, [compactElement, onCollapsedHeightChange])
 
-  // Expanded sheet: your own people's breakdown cards first, everyone else after.
-  const orderedBreakdownPeople = ownIds
-    ? [
-        ...breakdownPeople.filter((p) => ownIds.has(p.id)),
-        ...breakdownPeople.filter((p) => !ownIds.has(p.id)),
-      ]
-    : breakdownPeople
+  // Follow the library's actual sheet position, including touch movement and
+  // snap settling, so the two views crossfade throughout the same gesture.
+  useIsomorphicLayoutEffect(() => {
+    const popup = popupElement
+    const viewport = viewportElement
+    if (!popup || !viewport || !compactElement) return
+    let frame = 0
+    let settleUntil = 0
+    const paint = () => {
+      const matrix = new DOMMatrixReadOnly(getComputedStyle(popup).transform)
+      // Read the measured height, not the initial snap-point estimate: accepting
+      // that estimate would reveal the dock before the real offset is applied.
+      const travel = popup.clientHeight - Math.ceil(compactElement.getBoundingClientRect().height)
+      if (travel > 0 && Math.abs(matrix.m42 - travel) < 2) setPositionReady(true)
+      const progress = travel > 0 ? Math.max(0, Math.min(1, 1 - matrix.m42 / travel)) : 0
+      viewport.style.setProperty('--sheet-progress', String(progress))
+      frame = performance.now() < settleUntil ? requestAnimationFrame(paint) : 0
+    }
+    const follow = () => {
+      settleUntil = performance.now() + 300
+      if (!frame) paint()
+    }
+    const observer = new MutationObserver(follow)
+    observer.observe(popup, { attributes: true, attributeFilter: ['style', 'data-swiping', 'data-overview'] })
+    follow()
+    window.addEventListener('resize', follow)
+    return () => {
+      observer.disconnect()
+      window.removeEventListener('resize', follow)
+      cancelAnimationFrame(frame)
+    }
+  }, [popupElement, viewportElement, compactElement, compactHeight])
+
+  useEffect(() => {
+    if (expanded) collapseRef.current?.focus({ preventScroll: true })
+  }, [expanded])
+
+  function collapse() {
+    if (!expanded) return
+    setExpanded(false)
+    requestAnimationFrame(() => expandRef.current?.focus({ preventScroll: true }))
+  }
+
+  const orderedBreakdownPeople = [
+    ...breakdownPeople.filter((person) => person.id === selfId),
+    ...breakdownPeople.filter((person) => person.id !== selfId && (!ownIds || ownIds.has(person.id))),
+    ...breakdownPeople.filter((person) => person.id !== selfId && ownIds && !ownIds.has(person.id)),
+  ]
 
   return (
-    <div
-      ref={wrapperRef}
-      className="fixed inset-x-0 bottom-0 z-30 bg-gradient-to-t from-background via-background/95 to-background/0 px-4 pb-[max(1rem,env(safe-area-inset-bottom))] pt-8 lg:hidden"
+    <Drawer.Root
+      open={mobile}
+      modal={expanded}
+      snapPoints={snapPoints}
+      snapPoint={expanded ? 0.85 : collapsedPoint}
+      snapToSequentialPoints
+      onSnapPointChange={(point) => {
+        if (point === 0.85) setExpanded(true)
+        else collapse()
+      }}
+      onOpenChange={(open, details) => {
+        if (!open) {
+          details.cancel()
+          collapse()
+        }
+      }}
+      swipeDirection="down"
     >
-      <div className="mx-auto max-w-md overflow-hidden rounded-card bg-muted/95 shadow-dock ring-1 ring-border/60 backdrop-blur-xl">
-        <SplitSheetHandle
-          expanded={expanded}
-          onExpandedChange={setExpanded}
-          done={done}
-          claimedPct={claimedPct}
-          remainingLbp={remainingLbp}
-          rate={rate}
-          itemsClaimed={itemsClaimed}
-          itemsTotal={itemsTotal}
+      <Drawer.Portal>
+        <Drawer.Backdrop
+          data-overview={expanded}
+          className="table-totals-backdrop fixed inset-0 z-40 bg-black/50"
         />
-
-        <AnimatePresence initial={false}>
-          {expanded ? (
-            <motion.div
-              key="sheet"
-              initial={{ height: 0, opacity: 0 }}
-              animate={{ height: 'auto', opacity: 1 }}
-              exit={{ height: 0, opacity: 0 }}
-              transition={sheetSpring}
-              className="overflow-hidden"
-            >
-              {/* Fade masks stand in for hidden scrollbars as the scroll affordance. */}
-              <div className="max-h-[52dvh] space-y-3 overflow-y-auto overscroll-contain px-4 pb-2 [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden [mask-image:linear-gradient(to_bottom,transparent,black_12px,black_calc(100%-16px),transparent)]">
-                {orderedBreakdownPeople.map((p) => {
-                  const portfolio = portfolioByPerson.get(p.id)
-                  if (!portfolio) return null
-                  return (
-                    <PortfolioReceipt
-                      key={p.id}
-                      portfolio={portfolio}
-                      lines={personClaimedLines(p.id, lineItems, claims)}
-                      rate={rate}
-                      serviceChargeOn={serviceChargeOn}
-                      tipPercent={tipPercent}
-                    />
-                  )
-                })}
-
-                <div className="flex items-center justify-between rounded-control bg-background/70 px-4 py-3 ring-1 ring-border/40">
+        <Drawer.Viewport
+          ref={setViewportElement}
+          data-overview={expanded}
+          className="table-totals-viewport fixed inset-0 z-40 flex items-end justify-center"
+        >
+          <Drawer.Popup
+            ref={attachPopup}
+            initialFocus={false}
+            data-position-ready={positionReady}
+            data-overview={expanded}
+            className="table-totals-popup relative w-[calc(100%-2rem)] max-w-md overflow-hidden rounded-[1.5rem] bg-muted text-foreground shadow-dock outline-none"
+          >
+            <div ref={setCompactElement} inert={expanded} aria-hidden={expanded} className="table-totals-compact">
+              <SplitSheetHandle ref={expandRef} onExpand={() => setExpanded(true)} itemsClaimed={itemsClaimed} itemsTotal={itemsTotal} remainingLbp={remainingLbp} rate={rate} />
+              <div className="space-y-2.5 p-3 pt-2 pb-[max(0.75rem,env(safe-area-inset-bottom))]">
+                {panelExtra ? <div>{panelExtra}</div> : null}
+                <MobilePersonPicker
+                  people={people}
+                  activeId={activeId}
+                  selfId={selfId}
+                  onSelect={onSelect}
+                  onAdd={onAdd}
+                  portfolioByPerson={portfolioByPerson}
+                  ownIds={ownIds}
+                  lineItems={lineItems}
+                  claims={claims}
+                  rate={rate}
+                  serviceChargeOn={serviceChargeOn}
+                  tipPercent={tipPercent}
+                />
+                {actionSlot ? <div className="space-y-2">{actionSlot}</div> : null}
+              </div>
+            </div>
+            <div inert={!expanded} aria-hidden={!expanded} className="table-totals-overview absolute inset-0 flex flex-col">
+              <div className="shrink-0 px-5 pb-4 pt-3">
+                <div aria-hidden className="mx-auto mb-4 h-1 w-10 rounded-full bg-foreground/20" />
+                <div className="flex items-center justify-between gap-3">
+                  <Drawer.Title className="text-xl font-extrabold tracking-tight">Table totals</Drawer.Title>
+                  <button type="button" ref={collapseRef} onClick={collapse} aria-label="Collapse table totals" className="grid size-11 shrink-0 place-items-center rounded-full bg-background/70 transition-colors hover:bg-accent focus-visible:outline-2 focus-visible:outline-ring">
+                    <RiCloseLine className="size-5" aria-hidden />
+                  </button>
+                </div>
+                <Drawer.Description className="text-sm text-muted-foreground">Tap a person to see their items.</Drawer.Description>
+                <div className="mt-4 grid grid-cols-2 gap-4">
                   <div>
-                    <span className="block font-bold text-muted-foreground">
-                      Grand total
-                    </span>
-                    {tipPercent && grandLbp > 0 ? (
-                      <span className="block text-[11px] font-semibold text-muted-foreground/80">
-                        incl. {tipPercent}% tip
-                      </span>
-                    ) : null}
+                    <p className="text-xs text-muted-foreground">Assigned total</p>
+                    <p className="mt-1 font-receipt text-xl font-bold text-primary-strong">{formatUsd(toUsd(grandLbp, rate))}</p>
                   </div>
                   <div className="text-right">
-                    <span className="block font-receipt text-lg font-bold tracking-tight text-primary-strong">
-                      {formatUsd(toUsd(grandLbp, rate))}
-                    </span>
-                    <span className="block font-receipt text-xs font-semibold text-muted-foreground">
-                      {formatLbp(grandLbp)}
-                    </span>
+                    <p className="text-xs text-muted-foreground">Unclaimed items</p>
+                    <p className="mt-1 font-receipt text-xl font-semibold">{formatUsd(toUsd(remainingLbp, rate))}</p>
                   </div>
                 </div>
+              </div>
+              <Drawer.Content className="min-h-0 overflow-y-auto overscroll-contain px-3 pb-[max(1.5rem,env(safe-area-inset-bottom))]">
+                <Accordion.Root className="space-y-1">
+                  {orderedBreakdownPeople.map((person) => {
+                    const portfolio = portfolioByPerson.get(person.id)
+                    if (!portfolio) return null
+                    const lines = personClaimedLines(person.id, lineItems, claims)
+                    return (
+                      <Accordion.Item key={person.id} value={person.id} className="rounded-control bg-background/70">
+                        <Accordion.Header>
+                          <Accordion.Trigger className="group flex min-h-16 w-full items-center gap-3 rounded-control px-3 py-3 text-left transition-colors hover:bg-accent focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-ring">
+                            <PersonAvatar name={person.name} color={person.color} className="shrink-0" />
+                            <span className="min-w-0 flex-1">
+                              <span className="block truncate text-sm font-bold">{person.name}</span>
+                              <span className="block text-xs text-muted-foreground">{lines.length === 0 ? 'Nothing claimed yet' : `${lines.length} ${lines.length === 1 ? 'item' : 'items'}`}</span>
+                            </span>
+                            <span className="shrink-0 font-receipt text-sm font-semibold">{formatUsd(portfolio.totalUsd)}</span>
+                            <RiArrowDownSLine aria-hidden className="size-5 shrink-0 text-muted-foreground transition-transform duration-150 group-data-panel-open:rotate-180 motion-reduce:transition-none" />
+                          </Accordion.Trigger>
+                        </Accordion.Header>
+                        <Accordion.Panel className="overflow-hidden">
+                          <div className="space-y-3 px-3 pb-4 pt-1">
+                            {lines.length === 0 ? (
+                              <p className="text-sm text-muted-foreground">Claim items from the receipt to see them here.</p>
+                            ) : lines.map((line) => (
+                              <div key={line.itemId} className="flex items-start justify-between gap-3 text-sm">
+                                <span className="min-w-0 break-words text-muted-foreground">{formatUnits(line.units)} × {line.name}</span>
+                                <span className="shrink-0 font-receipt">{formatUsd(toUsd(line.lbp, rate))}</span>
+                              </div>
+                            ))}
+                            {serviceChargeOn && portfolio.serviceShareLbp !== 0 ? (
+                              <div className="flex justify-between gap-3 text-xs text-muted-foreground"><span>Service &amp; tax</span><span className="font-receipt">{formatUsd(toUsd(portfolio.serviceShareLbp, rate))}</span></div>
+                            ) : null}
+                            {portfolio.tipShareLbp !== 0 ? (
+                              <div className="flex justify-between gap-3 text-xs text-muted-foreground"><span>Tip{tipPercent ? ` (${tipPercent}%)` : ''}</span><span className="font-receipt">{formatUsd(toUsd(portfolio.tipShareLbp, rate))}</span></div>
+                            ) : null}
+                            <p className="border-t border-border/50 pt-2 text-right font-receipt text-xs text-muted-foreground">Total {formatLbp(portfolio.totalLbp)}</p>
+                          </div>
+                        </Accordion.Panel>
+                      </Accordion.Item>
+                    )
+                  })}
+                </Accordion.Root>
 
                 {expandedExtra ? (
-                  <div className="rounded-control bg-background/70 px-4 py-3 ring-1 ring-border/40">
+                  <div className="mt-4 rounded-control bg-background/70 px-4 py-3">
                     {expandedExtra}
                   </div>
                 ) : null}
-              </div>
-            </motion.div>
-          ) : null}
-        </AnimatePresence>
-
-        <div className="space-y-2.5 p-3 pt-2">
-          {panelExtra ? <div>{panelExtra}</div> : null}
-          <MobilePersonPicker
-            people={people}
-            activeId={activeId}
-            selfId={selfId}
-            onSelect={onSelect}
-            onAdd={onAdd}
-            portfolioByPerson={portfolioByPerson}
-            ownIds={ownIds}
-            lineItems={lineItems}
-            claims={claims}
-            rate={rate}
-            serviceChargeOn={serviceChargeOn}
-            tipPercent={tipPercent}
-          />
-          {actionSlot ? <div className="space-y-2">{actionSlot}</div> : null}
-        </div>
-      </div>
-    </div>
+              </Drawer.Content>
+            </div>
+          </Drawer.Popup>
+        </Drawer.Viewport>
+      </Drawer.Portal>
+    </Drawer.Root>
   )
 }

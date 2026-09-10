@@ -1,103 +1,29 @@
-import { useRef } from 'react'
-import { motion } from 'motion/react'
-import { RiArrowUpSLine, RiCheckboxCircleFill } from '@remixicon/react'
+import type { Ref } from 'react'
+import { RiArrowUpSLine } from '@remixicon/react'
 import { formatUsd, toUsd } from '~/lib/money'
-import { AnimatedAmount } from '~/components/ui/animated-amount'
 
-// The mobile dock's grab handle — drag up/down to snap, or tap to toggle.
-// Carries the live progress readout so status is glanceable without expanding.
-export function SplitSheetHandle({
-  expanded,
-  onExpandedChange,
-  done,
-  claimedPct,
-  remainingLbp,
-  rate,
-  itemsClaimed,
-  itemsTotal,
-}: {
-  expanded: boolean
-  onExpandedChange: (expanded: boolean) => void
-  done: boolean
-  claimedPct: number
-  remainingLbp: number
-  rate?: number | null
+// Drawer.Viewport handles swipes on the persistent sheet; this button expands it.
+export function SplitSheetHandle({ ref, onExpand, itemsClaimed, itemsTotal, remainingLbp, rate }: {
+  ref?: Ref<HTMLButtonElement>
+  onExpand: () => void
   itemsClaimed: number
   itemsTotal: number
+  remainingLbp: number
+  rate?: number | null
 }) {
-  // Motion fires a synthetic click after a drag; this guard keeps a drag-release
-  // from also toggling via onClick.
-  const draggedRef = useRef(false)
-
   return (
-    <motion.button
-      type="button"
-      aria-expanded={expanded}
-      drag="y"
-      dragDirectionLock
-      dragConstraints={{ top: 0, bottom: 0 }}
-      dragElastic={0.35}
-      onClick={() => {
-        if (draggedRef.current) return
-        onExpandedChange(!expanded)
-      }}
-      onDragStart={() => {
-        draggedRef.current = true
-      }}
-      onDragEnd={(_, info) => {
-        if (info.offset.y < -40 || info.velocity.y < -300) onExpandedChange(true)
-        else if (info.offset.y > 40 || info.velocity.y > 300)
-          onExpandedChange(false)
-        // Reset after the synthetic click has been swallowed.
-        setTimeout(() => {
-          draggedRef.current = false
-        }, 0)
-      }}
-      aria-label={expanded ? 'Hide breakdown' : "Show everyone's split"}
-      className="flex w-full min-h-11 touch-none rounded-t-card focus-visible:outline-2 focus-visible:outline-offset-[-4px] focus-visible:outline-ring cursor-grab flex-col items-center gap-1.5 px-4 pt-3 pb-2 active:cursor-grabbing"
-    >
-      <span className="h-1.5 w-10 rounded-full bg-foreground/15" />
-      <span
-        className={
-          done
-            ? 'flex items-center gap-1 text-[11px] font-semibold text-success-subtle-foreground'
-            : 'flex items-center gap-1 text-[11px] font-semibold text-muted-foreground'
-        }
+      <button type="button" ref={ref} onClick={onExpand}
+        aria-label={`View table totals, ${itemsClaimed} of ${itemsTotal} items assigned`}
+        className="flex min-h-16 w-full flex-col items-center gap-2 rounded-t-card px-4 pb-2 pt-3 text-left transition-colors hover:bg-background/30 focus-visible:outline-2 focus-visible:-outline-offset-4 focus-visible:outline-ring"
       >
-        <motion.span
-          animate={{ rotate: expanded ? 180 : 0 }}
-          transition={{ type: 'spring', duration: 0.3, bounce: 0 }}
-          className="inline-flex"
-        >
-          <RiArrowUpSLine className="size-3.5" />
-        </motion.span>
-        {done ? (
-          <>
-            Everyone's covered
-            <RiCheckboxCircleFill className="size-3.5 text-success" />
-          </>
-        ) : (
-          <span className="font-receipt">
-            <AnimatedAmount
-              value={toUsd(remainingLbp, rate)}
-              format={formatUsd}
-            />{' '}
-            left · {itemsClaimed} of {itemsTotal} items
+        <span aria-hidden className="h-1 w-10 rounded-full bg-foreground/20" />
+        <span className="flex w-full items-center justify-between gap-3">
+          <span className="text-sm font-semibold">View table totals</span>
+          <span className="flex items-center gap-1 text-xs text-muted-foreground">
+            {remainingLbp > 0.5 ? `${formatUsd(toUsd(remainingLbp, rate))} left` : 'All assigned'}
+            <RiArrowUpSLine className="size-4" aria-hidden />
           </span>
-        )}
-      </span>
-      <span className="block h-1 w-full max-w-48 overflow-hidden rounded-full bg-primary/10">
-        {/* scaleX, not width — width springs re-layout on every frame. */}
-        <motion.span
-          className={
-            done
-              ? 'block h-full w-full origin-left rounded-full bg-success rtl:origin-right'
-              : 'block h-full w-full origin-left rounded-full bg-primary rtl:origin-right'
-          }
-          animate={{ scaleX: claimedPct / 100 }}
-          transition={{ type: 'spring', stiffness: 120, damping: 20 }}
-        />
-      </span>
-    </motion.button>
+        </span>
+      </button>
   )
 }

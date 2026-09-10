@@ -11,7 +11,6 @@ import { WorkspaceHeader } from './WorkspaceHeader'
 import { BillSummary, type BillSummaryBill } from '../summary'
 import {
   computePortfolios,
-  effectiveUnitPrice,
   remainingUnits,
   totalRemainingLbp,
 } from '~/lib/money'
@@ -101,13 +100,8 @@ export function BillSplitWorkspace({
   const grandLbp = portfolios.reduce((s, p) => s + p.totalLbp, 0)
   const tipLbp = portfolios.reduce((s, p) => s + p.tipShareLbp, 0)
 
-  // Live claim progress for the mobile dock's handle (SplitHero keeps its own
-  // identical math — both are cheap pure loops).
+  // Claim status for the compact mobile overview trigger.
   const remainingLbp = totalRemainingLbp(bill.lineItems, bill.claims)
-  const billTotalLbp = bill.lineItems.reduce(
-    (s, item) => s + item.qty * effectiveUnitPrice(item),
-    0,
-  )
   const itemsTotal = bill.lineItems.length
   const itemsClaimed = bill.lineItems.filter(
     (item) => remainingUnits(item, bill.claims) <= 0.0001,
@@ -253,7 +247,6 @@ export function BillSplitWorkspace({
         tipPercent={bill.tipPercent}
         grandLbp={grandLbp}
         remainingLbp={remainingLbp}
-        billTotalLbp={billTotalLbp}
         itemsClaimed={itemsClaimed}
         itemsTotal={itemsTotal}
         panelExtra={panelExtra}
