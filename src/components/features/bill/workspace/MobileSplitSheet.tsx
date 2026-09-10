@@ -181,6 +181,11 @@ export function MobileSplitSheet({
             onAdd={onAdd}
             portfolioByPerson={portfolioByPerson}
             ownIds={ownIds}
+            lineItems={lineItems}
+            claims={claims}
+            rate={rate}
+            serviceChargeOn={serviceChargeOn}
+            tipPercent={tipPercent}
           />
           {actionSlot ? <div className="space-y-2">{actionSlot}</div> : null}
         </div>

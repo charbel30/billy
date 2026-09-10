@@ -41,7 +41,7 @@ export function PortfolioReceipt({
   return (
     <motion.div
       layout
-      initial={{ opacity: 0, y: 8 }}
+      initial={bare ? false : { opacity: 0, y: 8 }}
       animate={{ opacity: 1, y: 0 }}
       className={cn(
         !bare && cn('p-4 transition-colors', ELEVATED_CARD),
