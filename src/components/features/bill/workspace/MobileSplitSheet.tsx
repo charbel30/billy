@@ -5,19 +5,17 @@ import type { Claim, LineItem, Person } from '~/lib/types'
 import type { Portfolio } from '~/lib/money'
 import { personClaimedLines, formatLbp, formatUsd, toUsd } from '~/lib/money'
 import { sheetSpring } from '~/lib/ui'
-import { PersonRail } from '../people'
+import { MobilePersonPicker } from '../people/MobilePersonPicker'
 import { PortfolioReceipt } from '../receipt'
 import { SplitSheetHandle } from './SplitSheetHandle'
 
-// The mobile bottom dock. Collapsed: live claim progress (drag handle) + the
-// participant bar — your own pills first, then Add, then a "+N others" pill
-// for everyone else, which opens the same expanded sheet. Drag the handle up
-// (or tap it) to expand into a sheet with every person's claimed-item
-// breakdown, the grand total, and the tip control.
+// Compact mobile dock: assignment picker and actions stay visible; expand
+// the progress handle to see everyone's breakdown and the tip control.
 export function MobileSplitSheet({
   people,
   breakdownPeople,
   activeId,
+  selfId,
   onSelect,
   onAdd,
   portfolioByPerson,
@@ -34,15 +32,15 @@ export function MobileSplitSheet({
   panelExtra,
   expandedExtra,
   actionSlot,
-  addPlaceholder,
   onCollapsedHeightChange,
   ownIds,
 }: {
   people: Person[]
   breakdownPeople: Person[]
   activeId: string | null
+  selfId?: string
   onSelect: (id: string) => void
-  onAdd?: (name: string) => void
+  onAdd?: (name: string) => void | Promise<void>
   portfolioByPerson: Map<string, Portfolio>
   lineItems: LineItem[]
   claims: Claim[]
@@ -57,11 +55,9 @@ export function MobileSplitSheet({
   panelExtra?: ReactNode
   expandedExtra?: ReactNode
   actionSlot?: ReactNode
-  addPlaceholder?: string
   /** Reports the dock's COLLAPSED height so the page can pad the list past it. */
   onCollapsedHeightChange?: (px: number) => void
-  /** Ids the viewer controls — these sort first in the rail; everyone else
-   * collapses behind the trailing "+N others" pill. */
+  /** Only these people can be selected; all breakdowns remain visible. */
   ownIds?: ReadonlySet<string>
 }) {
   const [expanded, setExpanded] = useState(false)
@@ -92,7 +88,6 @@ export function MobileSplitSheet({
     return () => observer.disconnect()
   }, [onCollapsedHeightChange])
 
-  const otherPeople = ownIds ? people.filter((p) => !ownIds.has(p.id)) : []
   // Expanded sheet: your own people's breakdown cards first, everyone else after.
   const orderedBreakdownPeople = ownIds
     ? [
@@ -178,39 +173,14 @@ export function MobileSplitSheet({
 
         <div className="space-y-2.5 p-3 pt-2">
           {panelExtra ? <div>{panelExtra}</div> : null}
-          <PersonRail
-            variant="bar"
+          <MobilePersonPicker
             people={people}
             activeId={activeId}
+            selfId={selfId}
             onSelect={onSelect}
             onAdd={onAdd}
             portfolioByPerson={portfolioByPerson}
-            lineItems={lineItems}
-            claims={claims}
-            rate={rate}
-            serviceChargeOn={serviceChargeOn}
-            tipPercent={tipPercent}
-            addPlaceholder={addPlaceholder}
             ownIds={ownIds}
-            trailing={
-              otherPeople.length > 0 ? (
-                <motion.button
-                  type="button"
-                  whileTap={{ scale: 0.96 }}
-                  onClick={() => setExpanded(true)}
-                  className="flex min-h-11 shrink-0 items-center gap-1.5 rounded-full bg-background px-3 py-2 text-xs font-semibold text-muted-foreground ring-1 ring-border/40 transition-colors hover:text-foreground"
-                >
-                  {`+${otherPeople.length} other${otherPeople.length === 1 ? '' : 's'} · `}
-                  {done ? (
-                    'all covered'
-                  ) : (
-                    <span className="font-receipt">
-                      {formatUsd(toUsd(remainingLbp, rate))} left
-                    </span>
-                  )}
-                </motion.button>
-              ) : undefined
-            }
           />
           {actionSlot ? <div className="space-y-2">{actionSlot}</div> : null}
         </div>

@@ -1,91 +1,32 @@
 import { useState } from 'react'
-import { RiAddLine, RiCheckLine, RiUserAddLine } from '@remixicon/react'
-import { cn } from '~/lib/utils'
+import { RiUserAddLine } from '@remixicon/react'
+import { Button } from '~/components/ui/button'
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from '~/components/ui/dialog'
+import { NameEntryForm } from './NameEntryForm'
 
-// Inline add-person control: a dashed button that expands into a name input
-// (Enter/blur commits, Escape cancels). Bar = compact round pill for the
-// mobile dock; panel = full-width row for the desktop aside.
-export function AddPerson({
-  onAdd,
-  variant,
-  label = 'Add person',
-  placeholder = 'Add person',
-}: {
-  onAdd: (name: string) => void
+export function AddPerson({ onAdd, variant, label = 'Add person' }: {
+  onAdd: (name: string) => void | Promise<void>
   variant: 'panel' | 'bar'
   label?: string
   placeholder?: string
 }) {
   const [open, setOpen] = useState(false)
-  const [name, setName] = useState('')
-
-  function submit() {
-    const trimmed = name.trim()
-    if (!trimmed) return
-    onAdd(trimmed)
-    setName('')
-    setOpen(false)
-  }
-
-  if (!open) {
-    if (variant === 'bar') {
-      return (
-        <button
-          type="button"
-          aria-label={label}
-          onClick={() => setOpen(true)}
-          className="grid size-11 shrink-0 place-items-center rounded-full border-2 border-dashed border-primary/30 text-primary-strong transition-[scale,background-color] hover:bg-primary/10 active:scale-[0.96]"
-        >
-          <RiUserAddLine className="size-5" />
-        </button>
-      )
-    }
-    return (
-      <button
-        type="button"
-        onClick={() => setOpen(true)}
-        className="flex w-full items-center justify-center gap-2 rounded-control border-2 border-dashed border-primary/30 px-4 py-3 text-sm font-bold text-primary-strong transition-[scale,background-color] hover:bg-primary/10 active:scale-[0.96]"
-      >
-        <RiUserAddLine className="size-5" /> {label}
-      </button>
-    )
-  }
-
+  const [pending, setPending] = useState(false)
   return (
-    <div
-      className={cn(
-        'flex items-center gap-1 rounded-full border border-border bg-background px-2 py-1',
-        variant === 'bar' ? 'shrink-0' : 'rounded-control px-3 py-2',
-      )}
-    >
-      <input
-        aria-label={placeholder}
-        autoComplete="off"
-        enterKeyHint="done"
-        autoFocus
-        value={name}
-        onChange={(e) => setName(e.target.value)}
-        onKeyDown={(e) => {
-          if (e.key === 'Enter') submit()
-          if (e.key === 'Escape') setOpen(false)
-        }}
-        onBlur={() => (name.trim() ? submit() : setOpen(false))}
-        placeholder={placeholder}
-        className="w-28 bg-transparent text-base outline-none"
-      />
-      <button
-        type="button"
-        onPointerDown={(event) => event.preventDefault()}
-        onClick={submit}
-        aria-label={label}
-        className="grid size-11 shrink-0 place-items-center rounded-full text-primary-strong transition-[scale,color] hover:text-foreground active:scale-[0.96]"
-      >
-        {variant === 'bar' ? (
-          <RiAddLine className="size-4" />
-        ) : (
-          <RiCheckLine className="size-4" />
-        )}
-      </button>
-    </div>
+    <Dialog open={open} onOpenChange={(next) => { if (!pending) setOpen(next) }}>
+      <DialogTrigger render={<Button variant="outline" className={variant === 'bar' ? 'min-h-11 shrink-0 rounded-full' : 'min-h-11 w-full'} />}>
+        <RiUserAddLine aria-hidden />{label}
+      </DialogTrigger>
+      <DialogContent showCloseButton={!pending} className="max-sm:top-auto max-sm:bottom-0 max-sm:start-0 max-sm:max-w-full max-sm:translate-x-0 max-sm:translate-y-0 max-sm:rounded-b-none max-sm:pb-[max(1.5rem,env(safe-area-inset-bottom))]">
+        <DialogHeader>
+          <DialogTitle>Add someone to the table</DialogTitle>
+          <DialogDescription>Pick their items from this phone.</DialogDescription>
+        </DialogHeader>
+        <NameEntryForm submitLabel="Add person" pendingLabel="Adding…" onCancel={() => setOpen(false)} onSubmit={async (name) => {
+          setPending(true)
+          try { await onAdd(name); setOpen(false) } finally { setPending(false) }
+        }} />
+      </DialogContent>
+    </Dialog>
   )
 }

@@ -221,6 +221,7 @@ export function SplitPage({ billId }: { billId: Id<'bills'> }) {
           ) : null
         }
         people={bill.people}
+        selfId={bill.people.find((p) => p.name === 'self')?.id}
         activeId={activeId}
         onSelect={setActiveId}
         onAdd={finalized || !canEdit ? undefined : addPerson}

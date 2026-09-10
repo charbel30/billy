@@ -90,8 +90,9 @@ export function PersonPanelRow({
       {/* Tapping the body makes this person active */}
       <button
         type="button"
+        aria-pressed={active}
         onClick={() => onSelect(person.id)}
-        className="min-w-0 flex-1 text-left"
+        className="min-h-11 min-w-0 flex-1 rounded-control text-left focus-visible:outline-2 focus-visible:outline-ring"
       >
         <p className="truncate font-bold">{person.name}</p>
         <p className="text-xs font-semibold text-muted-foreground tabular-nums">

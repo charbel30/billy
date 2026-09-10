@@ -30,6 +30,7 @@ export function BillSplitWorkspace({
   // people selector (subset of bill.people the viewer controls)
   people,
   activeId,
+  selfId,
   onSelect,
   onAdd,
   onRemove,
@@ -54,9 +55,10 @@ export function BillSplitWorkspace({
   actionSlot?: ReactNode
   notice?: ReactNode
   people: Person[]
+  selfId?: string
   activeId: string | null
   onSelect: (id: string) => void
-  onAdd?: (name: string) => void
+  onAdd?: (name: string) => void | Promise<void>
   onRemove?: (id: string) => void
   panelTitle?: string
   panelExtra?: ReactNode
@@ -76,11 +78,17 @@ export function BillSplitWorkspace({
    * first in the person rail/panel. Omit for the host, who controls everyone. */
   ownIds?: ReadonlySet<string>
 }) {
+  const displayPerson = (person: Person) =>
+    person.id === selfId ? { ...person, name: 'You' } : person
+  const displayPeople = people.map(displayPerson)
+  const displayBillPeople = bill.people.map(displayPerson)
+  const activePerson = displayPeople.find((person) => person.id === activeId)
+
   // Per-person portfolios power the panel totals + the tap-to-reveal breakdowns;
   // computed once over the whole bill.
   const portfolios = computePortfolios({
     lineItems: bill.lineItems,
-    people: bill.people,
+    people: displayBillPeople,
     claims: bill.claims,
     serviceCharge: bill.serviceCharge,
     tax: bill.tax,
@@ -161,7 +169,7 @@ export function BillSplitWorkspace({
         </h2>
         <PersonRail
           variant="panel"
-          people={people}
+          people={displayPeople}
           activeId={activeId}
           onSelect={onSelect}
           onAdd={onAdd}
@@ -208,9 +216,9 @@ export function BillSplitWorkspace({
 
           <ClaimList
             lineItems={bill.lineItems}
-            people={bill.people}
+            people={displayBillPeople}
             claims={bill.claims}
-            activePerson={people.find((p) => p.id === activeId) ?? null}
+            activePerson={activePerson ?? null}
             rate={bill.rate}
             onStep={onStep}
             onShareEvenly={onShareEvenly}
@@ -231,9 +239,10 @@ export function BillSplitWorkspace({
 
       {/* Mobile: expandable bottom sheet (bar + breakdowns) */}
       <MobileSplitSheet
-        people={people}
-        breakdownPeople={bill.people}
+        people={displayPeople}
+        breakdownPeople={displayBillPeople}
         activeId={activeId}
+        selfId={selfId}
         onSelect={onSelect}
         onAdd={onAdd}
         portfolioByPerson={portfolioByPerson}
@@ -250,7 +259,6 @@ export function BillSplitWorkspace({
         panelExtra={panelExtra}
         expandedExtra={tipControl}
         actionSlot={actionSlot}
-        addPlaceholder={addPlaceholder}
         onCollapsedHeightChange={setDockHeight}
         ownIds={ownIds}
       />

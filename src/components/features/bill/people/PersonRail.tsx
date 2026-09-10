@@ -31,7 +31,7 @@ export function PersonRail({
   people: Person[]
   activeId: string | null
   onSelect: (id: string) => void
-  onAdd?: (name: string) => void
+  onAdd?: (name: string) => void | Promise<void>
   onRemove?: (id: string) => void
   portfolioByPerson?: Map<string, Portfolio>
   lineItems?: LineItem[]
@@ -46,34 +46,36 @@ export function PersonRail({
    * these render as individual pills/rows; everyone else is left to the
    * caller (in the bar variant, via `trailing`). */
   ownIds?: ReadonlySet<string>
-  /** Bar variant only: rendered after the Add pill, inside the same
+  /** Bar variant only: rendered after the people, inside the
    * scrollable row — e.g. an "others" summary pill for people not in `ownIds`. */
   trailing?: ReactNode
 }) {
   if (variant === 'bar') {
     const ownPeople = ownIds ? people.filter((p) => ownIds.has(p.id)) : people
     return (
-      <div className="flex items-center gap-2 overflow-x-auto py-0.5 [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
-        <AnimatePresence initial={false}>
-          {ownPeople.map((p) => (
-            <PersonBarPill
-              key={p.id}
-              person={p}
-              active={p.id === activeId}
-              portfolio={portfolioByPerson?.get(p.id)}
-              lineItems={lineItems}
-              claims={claims}
-              rate={rate}
-              serviceChargeOn={serviceChargeOn}
-              tipPercent={tipPercent}
-              onSelect={onSelect}
-            />
-          ))}
-        </AnimatePresence>
+      <div className="flex items-center gap-2">
+        <div className="flex min-w-0 flex-1 items-center gap-2 overflow-x-auto py-0.5 [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+          <AnimatePresence initial={false}>
+            {ownPeople.map((p) => (
+              <PersonBarPill
+                key={p.id}
+                person={p}
+                active={p.id === activeId}
+                portfolio={portfolioByPerson?.get(p.id)}
+                lineItems={lineItems}
+                claims={claims}
+                rate={rate}
+                serviceChargeOn={serviceChargeOn}
+                tipPercent={tipPercent}
+                onSelect={onSelect}
+              />
+            ))}
+          </AnimatePresence>
+          {trailing}
+        </div>
         {onAdd ? (
-          <AddPerson onAdd={onAdd} variant="bar" placeholder={addPlaceholder} />
+          <AddPerson onAdd={onAdd} variant="bar" label="Add person" />
         ) : null}
-        {trailing}
       </div>
     )
   }

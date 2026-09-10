@@ -3,13 +3,11 @@ import { useQuery, useSuspenseQuery } from '@tanstack/react-query'
 import {
   RiDoorLockLine,
   RiInformationLine,
-  RiLoader4Line,
+  RiUserSmileLine,
 } from '@remixicon/react'
-import { Button } from '~/components/ui/button'
-import { Input } from '~/components/ui/input'
 import { Alert, AlertTitle } from '~/components/ui/alert'
 import { EmptyState } from '~/components/shared/EmptyState'
-import { BillSplitWorkspace, BillSummary } from '~/components/features/bill'
+import { BillSplitWorkspace, BillSummary, NameEntryForm } from '~/components/features/bill'
 import {
   billQueries,
   useAddGuestPerson,
@@ -25,9 +23,9 @@ import { trackFunnelMilestone } from '~/lib/observability'
 export function JoinPage({ shareToken }: { shareToken: string }) {
   const { data: bill } = useSuspenseQuery(billQueries.byToken(shareToken))
   const [guestSessionId, setGuestSessionId] = useState<string | null>(null)
-  const [joinName, setJoinName] = useState('')
   const [sessionReady, setSessionReady] = useState(false)
   const [activeId, setActiveId] = useState<string | null>(null)
+  const [selfIdentity, setSelfIdentity] = useState<{ key: string; id: string } | null>(null)
   const [conflictMessage, setConflictMessage] = useState<string | null>(null)
 
   const joinSplit = useJoinSplit()
@@ -56,6 +54,20 @@ export function JoinPage({ shareToken }: { shareToken: string }) {
     [controlledPeople],
   )
 
+  // Keep the joining person separate from companions, even if the host
+  // removes that person. Never silently relabel a companion as “You”.
+  const selfStorageKey = `spolio:self:${shareToken}:${guestSessionId}`
+  const selfId = selfIdentity?.key === selfStorageKey ? selfIdentity.id : null
+  useEffect(() => {
+    if (!guestSessionId || selfId) return
+    let remembered: string | null = null
+    try { remembered = localStorage.getItem(selfStorageKey) } catch { /* Storage is optional. */ }
+    const initialId = remembered || controlledPeople[0]?.id
+    if (!initialId) return
+    setSelfIdentity({ key: selfStorageKey, id: initialId })
+    try { localStorage.setItem(selfStorageKey, initialId) } catch { /* Keep identity in memory. */ }
+  }, [guestSessionId, selfId, selfStorageKey, controlledPeople])
+
   const isMine = (personId: string) =>
     controlledPeople.some((p) => p.id === personId)
 
@@ -65,17 +77,17 @@ export function JoinPage({ shareToken }: { shareToken: string }) {
     }
   }, [controlledPeople, activeId])
 
-  async function join() {
-    const name = joinName.trim()
+  async function join(name: string) {
     if (!name || !guestSessionId) return
     const result = await joinSplit.mutateAsync({
       shareToken,
       guestSessionId,
       name,
     })
+    setSelfIdentity({ key: selfStorageKey, id: result.personId })
+    try { localStorage.setItem(selfStorageKey, result.personId) } catch { /* Keep identity in memory. */ }
     trackFunnelMilestone('guest_joined')
     setActiveId(result.personId)
-    setJoinName('')
   }
 
   async function addPerson(rawName: string) {
@@ -193,35 +205,16 @@ export function JoinPage({ shareToken }: { shareToken: string }) {
       addPlaceholder="Add someone"
       panelExtra={
         joined ? null : (
-          <div className="space-y-3 rounded-card bg-background/85 p-4 shadow-card ring-1 ring-border/35">
-            <div>
-              <h2 className="font-black">Join the split</h2>
-              <p className="text-sm text-muted-foreground">
-                Add your name, then claim the items that are yours.
-              </p>
+          <section className="space-y-5 rounded-card bg-card p-5 shadow-card sm:p-6">
+            <div className="flex size-12 items-center justify-center rounded-2xl bg-primary/20 text-primary-strong">
+              <RiUserSmileLine className="size-7" aria-hidden />
             </div>
-            <div className="flex gap-2">
-              <Input
-                value={joinName}
-                onChange={(e) => setJoinName(e.target.value)}
-                onKeyDown={(e) => e.key === 'Enter' && void join()}
-                placeholder="Your name"
-                className="focus-visible:ring-2 focus-visible:ring-ring/50"
-              />
-              <Button
-                type="button"
-                disabled={
-                  !guestSessionId || !joinName.trim() || joinSplit.isPending
-                }
-                onClick={() => void join()}
-              >
-                {joinSplit.isPending ? (
-                  <RiLoader4Line className="animate-spin" />
-                ) : null}
-                Join
-              </Button>
+            <div className="space-y-2">
+              <h2 className="text-2xl font-extrabold tracking-tight">What’s your name?</h2>
+              <p className="text-sm text-muted-foreground">Join the table, then tap to pick what you had.</p>
             </div>
-          </div>
+            <NameEntryForm joining submitLabel="Join the table" pendingLabel="Joining…" disabled={!guestSessionId} onSubmit={join} />
+          </section>
         )
       }
       // The whole table is visible (same view as the host's split screen) but
@@ -229,6 +222,7 @@ export function JoinPage({ shareToken }: { shareToken: string }) {
       // steppers, and paid toggles are all gated on `isMine`. No onRemove —
       // guests never remove anyone.
       people={bill.people}
+      selfId={selfId ?? undefined}
       activeId={activeId}
       onSelect={(id) => {
         if (isMine(id)) setActiveId(id)

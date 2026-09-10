@@ -79,8 +79,9 @@ export function PersonBarPill({
       <motion.button
         whileTap={{ scale: 0.96 }}
         type="button"
+        aria-pressed={active}
         onClick={() => onSelect(person.id)}
-        className="whitespace-nowrap text-left leading-none"
+        className="min-h-11 whitespace-nowrap rounded-full text-left leading-none focus-visible:outline-2 focus-visible:outline-ring"
       >
         {person.name}
         <span
