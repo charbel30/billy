@@ -56,7 +56,9 @@ export function AppHeader() {
               </DropdownMenuContent>
             </DropdownMenu>
           </nav>
-        ) : <p className="hidden text-xs text-muted-foreground sm:block">A little less bill drama.</p>}
+        ) : onLanding ? null : (
+          <p className="hidden text-xs text-muted-foreground sm:block">A little less bill drama.</p>
+        )}
         <ThemeToggle />
       </div>
     </header>

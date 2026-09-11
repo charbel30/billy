@@ -106,10 +106,6 @@ export function ScanReceiptActions() {
 
   return (
     <div className="landing-actions landing-enter">
-      <p className="mb-3 text-xs text-muted-foreground">
-        Host access stays in this browser. Clearing site data removes it; a
-        bookmark cannot restore it.
-      </p>
       <input
         ref={inputRef}
         type="file"
@@ -131,7 +127,7 @@ export function ScanReceiptActions() {
         {heroCopy.primaryCta}
         <RiArrowRightLine size={20} aria-hidden="true" />
       </button>
-      <p className="landing-reassurance">No account. No app to download.</p>
+      <p className="landing-reassurance">{heroCopy.reassurance}</p>
       <div className="landing-secondary-actions">
         <button
           type="button"
@@ -161,7 +157,6 @@ export function ScanReceiptActions() {
           {manual.busy ? 'Opening bill…' : 'Enter manually'}
         </button>
       </div>
-      <p className="landing-scan-privacy">{scanPrivacyNote}</p>
       {error && !pending && (
         <p role="alert" className="mt-3 text-sm text-destructive">
           {error}

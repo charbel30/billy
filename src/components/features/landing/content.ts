@@ -12,26 +12,19 @@ export const landingSeo = {
 export const heroCopy = {
   badge: 'Made for the Lebanese table.',
   headline: ['Good food.', 'Fair split.'],
-  subhead:
-    'Scan your receipt. Pick what you had. Share the bill in dollars and lira, at your table’s rate.',
   primaryCta: 'Scan a receipt', // → native photo picker
   secondaryCta: 'Try a sample bill', // → demo mutation → /review/$billId
+  reassurance: 'No account. No app.',
 }
 
-export const howItWorksCopy = {
-  title: 'Less calculating. More hanging out.',
-  steps: [
-    {
-      title: 'Scan',
-      body: 'Take a photo. Check the items.',
-    },
-    {
-      title: 'Pick',
-      body: 'Claim your food. Share the sides.',
-    },
-    {
-      title: 'Share',
-      body: 'Drop the link in the group chat.',
-    },
-  ],
+export const playgroundCopy = {
+  venue: 'Tawlet',
+  place: 'Mar Mikhael',
+  prompt: 'What did you have?',
+  share: 'Show a QR, or send the link.',
+  invitation: 'Go on, tap your order.',
+  emptyShare: 'Pick something above',
+  pickedShare: 'Just what you picked.',
+  yourShare: 'Your share',
+  demoUrl: 'https://spolio.net/',
 }

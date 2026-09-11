@@ -1,4 +1,5 @@
 import { ScanReceiptActions } from '~/components/features/scan/ScanReceiptActions'
+import { RecentBills } from '~/components/features/scan/components/RecentBills'
 import { heroCopy } from '../content'
 import { ReceiptPlayground } from './ReceiptPlayground'
 
@@ -11,8 +12,8 @@ export function HeroSection() {
           {heroCopy.headline[0]}<br />
           <span>{heroCopy.headline[1]}</span>
         </h1>
-        <p className="landing-description landing-enter">{heroCopy.subhead}</p>
         <ScanReceiptActions />
+        <RecentBills />
       </div>
       <ReceiptPlayground />
     </section>

@@ -8,7 +8,9 @@ export const scanHubCopy = {
   // The no-camera escape hatch: always available, even when extraction is
   // rate-limited or paused (see src/hooks/useManualBill.ts).
   manualAction: 'Enter a bill manually',
-  recentTitle: 'Recent bill scans',
+  recentTitle: 'Continue',
+  clearRecent: 'Clear',
+  showLess: 'Show less',
   emptyRecent: 'No scans yet',
   emptyRecentHint: 'Your scanned receipts will appear here.',
   uploadError: 'Upload failed',

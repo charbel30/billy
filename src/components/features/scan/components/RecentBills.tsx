@@ -20,11 +20,9 @@ export function RecentBills() {
   }
 
   return (
-    <div className="mb-10">
-      <RecentScanPanel entries={history} onOpen={openBill} onClear={() => {
-        clearBillHistory()
-        setHistory([])
-      }} />
-    </div>
+    <RecentScanPanel entries={history} onOpen={openBill} onClear={() => {
+      clearBillHistory()
+      setHistory([])
+    }} />
   )
 }

@@ -1,6 +1,9 @@
 import { useState } from 'react'
+import { QRCodeSVG } from 'qrcode.react'
 import { RiArrowLeftDownLine, RiCheckLine } from '@remixicon/react'
+import { AnimatedAmount } from '~/components/ui/animated-amount'
 import { BrandSymbol } from '~/components/shared/Brand'
+import { playgroundCopy } from '../content'
 
 const ITEMS = [
   { id: 'taouk', name: 'Chicken taouk', price: 900, emoji: '🥙' },
@@ -33,13 +36,12 @@ export function ReceiptPlayground() {
       <div className="receipt-sticker" aria-hidden="true"><BrandSymbol /><span>Dollars & lira</span></div>
       <div className="receipt-paper">
         <div className="receipt-heading">
-          <span className="receipt-overline">A taste of Spolio</span>
-          <h2>A good night out.</h2>
-          <p>3 friends · 1 bill · zero mental math</p>
+          <span className="receipt-overline">{playgroundCopy.place}</span>
+          <h2>{playgroundCopy.venue}</h2>
         </div>
 
         <div className="receipt-toolbar">
-          <span>What did you have?</span>
+          <span>{playgroundCopy.prompt}</span>
           <div className="receipt-currencies" role="group" aria-label="Demo currency">
             {(['USD', 'LBP'] as const).map((value) => (
               <button
@@ -79,23 +81,33 @@ export function ReceiptPlayground() {
 
         <div className="receipt-total" role="status" aria-live="polite" aria-atomic="true">
           <div>
-            <span>Your share</span>
-            <small>{selected.length === 0 ? 'Pick something above' : 'Just what you picked.'}</small>
+            <span>{playgroundCopy.yourShare}</span>
+            <small>{selected.length === 0 ? playgroundCopy.emptyShare : playgroundCopy.pickedShare}</small>
           </div>
           <div className="receipt-total-values">
-            <strong key={`${currency}-${total}`} className="receipt-total-number">{formatAmount(total)}</strong>
+            <strong className="receipt-total-number">
+              <AnimatedAmount
+                key={currency}
+                value={currency === 'USD' ? total / 100 : Math.round(total / 100 * EXAMPLE_RATE)}
+                format={(n) => currency === 'USD'
+                  ? `$${n.toFixed(2)}`
+                  : `${Math.round(n).toLocaleString('en-US')} LL`}
+              />
+            </strong>
             <span className="receipt-total-converted">{currency === 'USD'
               ? `${Math.round(total / 100 * EXAMPLE_RATE).toLocaleString('en-US')} LL`
               : `$${(total / 100).toFixed(2)}`}</span>
           </div>
         </div>
-        <div className="receipt-signoff">
-          <span className="receipt-diners" aria-hidden="true"><i>Y</i><i>N</i><i>R</i></span>
-          <span>A table for you, Nour & Rami.</span>
+        <div className="receipt-pass">
+          <span className="receipt-pass-qr" aria-hidden="true">
+            <QRCodeSVG value={playgroundCopy.demoUrl} size={44} marginSize={0} />
+          </span>
+          <p>{playgroundCopy.share}</p>
         </div>
-        <p className="receipt-example-rate">Example bill · $1 = 89,500 LL</p>
+        <p className="receipt-example-rate">$1 = 89,500 LL · venue rate</p>
       </div>
-      <p className="receipt-invitation"><RiArrowLeftDownLine size={24} aria-hidden="true" /> Go on, tap your order.</p>
+      <p className="receipt-invitation"><RiArrowLeftDownLine size={24} aria-hidden="true" /> {playgroundCopy.invitation}</p>
     </div>
   )
 }
