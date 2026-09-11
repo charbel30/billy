@@ -16,7 +16,11 @@ Root docs, in reading order:
   Its §7 tech-stack table is outdated: it says Supabase + React/Vite; the real stack is
   **Convex + TanStack Start + Tailwind v4 + shadcn/ui**, deployed to Cloudflare.
 - `architecture-decision.md` — bill storage model: stable parts embedded in one document,
-  high-churn `claims` in their own table (see §Revisited 2026-07-06 for the cost math).
+ high-churn `claims` in their own table (see §Revisited 2026-07-06 for the cost math).
+- `ux-flow-and-motion-plan.md` — decided (2026-09-11), not yet implemented: the shared dock
+ shell + header across bill screens, the full-screen scan processing state owned by review,
+ view-transition step navigation + gating, and the summary→settlement redesign. Phased A–E;
+ pick up a phase from there rather than re-deciding it.
 
 ## Commands
 
