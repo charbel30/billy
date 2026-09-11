@@ -20,15 +20,15 @@ export function BrandSymbol({ className }: { className?: string }) {
 }
 
 /** Keep the visible custom lettering and a readable name for assistive technology. */
-export function Brand({ className }: { className?: string }) {
+export function Brand({ className, compact = false }: { className?: string; compact?: boolean }) {
   const cutoutId = useId()
   return (
-    <span className={cn('inline-flex items-center gap-2.5', className)}>
-      <span className="brand-tile grid size-10 shrink-0 place-items-center rounded-[13px]">
-        <BrandSymbol className="size-9" />
+    <span className={cn('inline-flex items-center', compact ? 'gap-1.5' : 'gap-2.5', className)}>
+      <span className={cn('brand-tile grid shrink-0 place-items-center', compact ? 'size-8 rounded-[10px]' : 'size-10 rounded-[13px]')}>
+        <BrandSymbol className={compact ? 'size-7' : 'size-9'} />
       </span>
       <span className="sr-only">{brand.name}</span>
-      <svg viewBox={brand.wordmarkViewBox} fill="currentColor" aria-hidden="true" className="h-10 w-[102px] shrink-0">
+      <svg viewBox={brand.wordmarkViewBox} fill="currentColor" aria-hidden="true" className={cn('shrink-0', compact ? 'h-8 w-[76px]' : 'h-10 w-[102px]')}>
         <defs>
           <mask id={cutoutId} maskUnits="userSpaceOnUse" x="0" y="0" width="335" height="132" style={{ maskType: 'luminance' }}>
             <rect width="335" height="132" fill="white" />

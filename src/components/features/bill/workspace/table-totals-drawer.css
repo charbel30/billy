@@ -1,6 +1,6 @@
 .table-totals-viewport {
   pointer-events: none;
-  padding-bottom: 1rem;
+  padding-bottom: calc(1rem + var(--keyboard-inset, 0px));
 }
 
 .table-totals-viewport[data-overview='true'] {

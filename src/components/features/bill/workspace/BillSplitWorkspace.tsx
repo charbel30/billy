@@ -25,6 +25,7 @@ export function BillSplitWorkspace({
   bill,
   description,
   actionSlot,
+  inviteAction,
   notice,
   // people selector (subset of bill.people the viewer controls)
   people,
@@ -52,6 +53,7 @@ export function BillSplitWorkspace({
   bill: WorkspaceBill
   description: string
   actionSlot?: ReactNode
+  inviteAction?: ReactNode
   notice?: ReactNode
   people: Person[]
   selfId?: string
@@ -110,6 +112,7 @@ export function BillSplitWorkspace({
   // Bottom padding tracks the dock's measured collapsed height so the last
   // item cards never hide under it (the old fixed pb-60 was too short).
   const [dockHeight, setDockHeight] = useState(240)
+  const [totalsExpanded, setTotalsExpanded] = useState(false)
 
   const tipControl =
     onTipChange && bill.status !== 'FINALIZED' ? (
@@ -128,6 +131,7 @@ export function BillSplitWorkspace({
       status={bill.status}
       rate={bill.rate}
       description={description}
+      compactMobile={showClaims}
     />
   )
 
@@ -187,19 +191,15 @@ export function BillSplitWorkspace({
 
   return (
     <div
-      className="mx-auto w-full max-w-7xl px-4 pb-[calc(var(--dock-h)+1.5rem)] pt-4 sm:px-6 lg:px-10 lg:pb-10"
+      className="mx-auto w-full max-w-7xl px-4 pb-[calc(var(--dock-h)+1.5rem)] pt-2 sm:px-6 lg:px-10 lg:pt-4 lg:pb-10"
       style={{ '--dock-h': `${dockHeight}px` } as CSSProperties}
     >
-      <div className="mb-5">{header}</div>
+      <div className="mb-3 lg:mb-5">{header}</div>
 
       <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_22rem] lg:items-start">
         <div className="min-w-0 space-y-4">
           {notice}
-          <SplitHero
-            lineItems={bill.lineItems}
-            claims={bill.claims}
-            rate={bill.rate}
-          />
+          <SplitHero lineItems={bill.lineItems} claims={bill.claims} rate={bill.rate} inviteAction={inviteAction} />
 
           {conflictMessage ? (
             <Alert variant="warning">
@@ -254,6 +254,8 @@ export function BillSplitWorkspace({
         actionSlot={actionSlot}
         onCollapsedHeightChange={setDockHeight}
         ownIds={ownIds}
+        expanded={totalsExpanded}
+        onExpandedChange={setTotalsExpanded}
       />
     </div>
   )

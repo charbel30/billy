@@ -5,6 +5,7 @@ import type { Claim, LineItem, Person } from '~/lib/types'
 import type { Portfolio } from '~/lib/money'
 import { personClaimedLines, formatLbp, formatUsd, toUsd } from '~/lib/money'
 import { MobilePersonPicker } from '../people/MobilePersonPicker'
+import { MobileAddPerson } from '../people/MobileAddPerson'
 import { Accordion } from '@base-ui/react/accordion'
 import { RiArrowDownSLine, RiCloseLine } from '@remixicon/react'
 import { PersonAvatar } from '../people/PersonAvatar'
@@ -37,6 +38,8 @@ export function MobileSplitSheet({
   actionSlot,
   onCollapsedHeightChange,
   ownIds,
+  expanded,
+  onExpandedChange: setExpanded,
 }: {
   people: Person[]
   breakdownPeople: Person[]
@@ -61,8 +64,10 @@ export function MobileSplitSheet({
   onCollapsedHeightChange?: (px: number) => void
   /** Only these people can be selected; all breakdowns remain visible. */
   ownIds?: ReadonlySet<string>
+  expanded: boolean
+  onExpandedChange: (expanded: boolean) => void
 }) {
-  const [expanded, setExpanded] = useState(false)
+  const [editingPerson, setEditingPerson] = useState(false)
   const [positionReady, setPositionReady] = useState(false)
   const [mobile, setMobile] = useState(false)
   const [compactHeight, setCompactHeight] = useState(200)
@@ -73,6 +78,22 @@ export function MobileSplitSheet({
     setPositionReady(false)
     setPopupElement(element)
   }, [])
+
+  // On mobile the keyboard can shrink only the visual viewport. Lift the
+  // collapsed dock by that inset so the inline name form stays above it.
+  useEffect(() => {
+    const viewport = window.visualViewport
+    if (!viewport || !viewportElement || !editingPerson || expanded) return
+    const sync = () => viewportElement.style.setProperty('--keyboard-inset', `${Math.max(0, window.innerHeight - viewport.height - viewport.offsetTop)}px`)
+    sync()
+    viewport.addEventListener('resize', sync)
+    viewport.addEventListener('scroll', sync)
+    return () => {
+      viewport.removeEventListener('resize', sync)
+      viewport.removeEventListener('scroll', sync)
+      viewportElement.style.removeProperty('--keyboard-inset')
+    }
+  }, [editingPerson, expanded, viewportElement])
   const expandRef = useRef<HTMLButtonElement>(null)
   const collapseRef = useRef<HTMLButtonElement>(null)
   const collapsedPoint = `${compactHeight}px`
@@ -88,7 +109,7 @@ export function MobileSplitSheet({
     sync()
     media.addEventListener('change', sync)
     return () => media.removeEventListener('change', sync)
-  }, [])
+  }, [setExpanded])
 
   useIsomorphicLayoutEffect(() => {
     const el = compactElement
@@ -199,7 +220,6 @@ export function MobileSplitSheet({
                   activeId={activeId}
                   selfId={selfId}
                   onSelect={onSelect}
-                  onAdd={onAdd}
                   portfolioByPerson={portfolioByPerson}
                   ownIds={ownIds}
                   lineItems={lineItems}
@@ -208,7 +228,9 @@ export function MobileSplitSheet({
                   serviceChargeOn={serviceChargeOn}
                   tipPercent={tipPercent}
                 />
-                {actionSlot ? <div className="space-y-2">{actionSlot}</div> : null}
+                {onAdd ? (
+                  <MobileAddPerson onAdd={onAdd} actionSlot={actionSlot} editing={editingPerson} onEditingChange={setEditingPerson} />
+                ) : actionSlot ? <div className="space-y-2">{actionSlot}</div> : null}
               </div>
             </div>
             <div inert={!expanded} aria-hidden={!expanded} className="table-totals-overview absolute inset-0 flex flex-col">
@@ -233,6 +255,7 @@ export function MobileSplitSheet({
                 </div>
               </div>
               <Drawer.Content className="min-h-0 overflow-y-auto overscroll-contain px-3 pb-[max(1.5rem,env(safe-area-inset-bottom))]">
+                {rate ? <p className="mb-3 px-2 text-xs text-muted-foreground">Exchange rate <span className="font-receipt tabular-nums">$1 = {formatLbp(rate)}</span></p> : null}
                 <Accordion.Root className="space-y-1">
                   {orderedBreakdownPeople.map((person) => {
                     const portfolio = portfolioByPerson.get(person.id)

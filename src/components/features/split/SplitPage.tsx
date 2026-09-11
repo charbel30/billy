@@ -200,6 +200,16 @@ export function SplitPage({ billId }: { billId: Id<'bills'> }) {
     <>
       <BillSplitWorkspace
         bill={workspaceBill}
+        inviteAction={canEdit && !finalized ? (
+          <Button className="h-auto min-h-16 w-full justify-start gap-3 rounded-2xl px-4 py-3 text-left whitespace-normal" onClick={openInvite} disabled={publish.isPending}>
+            <RiQrCodeLine aria-hidden className="size-6!" />
+            <span className="min-w-0 flex-1">
+              <span className="block text-sm font-extrabold">Invite people to join</span>
+              <span className="mt-0.5 block text-xs font-normal">Share a link or QR code so everyone can pick their items.</span>
+            </span>
+            <RiArrowRightLine aria-hidden className="size-5!" />
+          </Button>
+        ) : undefined}
         description={
           canEdit
             ? 'Pick a person, claim their items, and invite everyone from this same screen.'
@@ -265,30 +275,15 @@ export function SplitPage({ billId }: { billId: Id<'bills'> }) {
               View final summary <RiArrowRightLine />
             </Button>
           ) : (
-            <>
-              {/* Two actions side by side keeps the mobile dock short. When
-                  everything is claimed, Finalize takes over as the primary. */}
-              <div className="grid grid-cols-2 gap-2">
-                <Button
-                  size="lg"
-                  variant={allClaimed ? 'outline' : 'default'}
-                  onClick={openInvite}
-                  disabled={publish.isPending}
-                >
-                  <RiQrCodeLine />
-                  Invite
-                </Button>
-                <Button
-                  size="lg"
-                  variant={allClaimed ? 'default' : 'destructive'}
-                  onClick={() => setFinalizeOpen(true)}
-                  disabled={finalizePending}
-                >
-                  <RiLockLine />
-                  Finalize
-                </Button>
-              </div>
-            </>
+            <Button
+              size="lg"
+              className="min-h-12 w-full"
+              variant={allClaimed ? 'default' : 'destructive'}
+              onClick={() => setFinalizeOpen(true)}
+              disabled={finalizePending}
+            >
+              <RiLockLine />Finalize
+            </Button>
           )
         }
       />
