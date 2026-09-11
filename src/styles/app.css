@@ -52,6 +52,23 @@
   letter-spacing: -0.01em;
 }
 
+/* Named surfaces — every bill screen composes from these four, so a radius or
+   shadow decision is made once here instead of being retyped per screen.
+   Concentric radii: children of a `surface-dock` use `rounded-control`. */
+@utility surface-card {
+  @apply rounded-card bg-card shadow-card ring-1 ring-border/50;
+}
+@utility surface-panel {
+  @apply rounded-card bg-muted/60 ring-1 ring-border/40;
+}
+@utility surface-inset {
+  @apply rounded-control bg-background/70;
+}
+@utility surface-dock {
+  border-radius: var(--radius-dock);
+  @apply bg-muted shadow-dock;
+}
+
 @theme inline {
   --font-sans: 'Figtree Variable', system-ui, sans-serif;
   --font-heading: var(--font-sans);
@@ -123,6 +140,9 @@
   --radius-4xl: calc(var(--radius) * 2.6);
   --radius-card: var(--radius-card);
   --radius-control: var(--radius-control);
+  --radius-dock: var(--radius-dock);
+  --dock-inset: var(--dock-inset);
+  --dock-max-width: var(--dock-max-width);
 }
 
 :root {
@@ -170,6 +190,10 @@
   --radius: 0.625rem;
   --radius-card: 1.25rem;
   --radius-control: 0.75rem;
+  /* The floating dock / modal sheet: corner, edge inset, and column width. */
+  --radius-dock: 1.5rem;
+  --dock-inset: 1rem;
+  --dock-max-width: 28rem;
   /* Tight contact shadows keep white cards crisp against the sage canvas. */
   --shadow-card: 0 1px 2px rgb(32 40 32 / 0.05), 0 4px 14px rgb(32 40 32 / 0.04);
   --shadow-card-hover: 0 2px 4px rgb(32 40 32 / 0.06), 0 10px 24px rgb(32 40 32 / 0.07);

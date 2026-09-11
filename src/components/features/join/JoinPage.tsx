@@ -205,7 +205,7 @@ export function JoinPage({ shareToken }: { shareToken: string }) {
       addPlaceholder="Add someone"
       panelExtra={
         joined ? null : (
-          <section className="space-y-5 rounded-card bg-card p-5 shadow-card sm:p-6">
+          <section className="surface-card space-y-5 p-5 sm:p-6">
             <div className="flex size-12 items-center justify-center rounded-2xl bg-primary/20 text-primary-strong">
               <RiUserSmileLine className="size-7" aria-hidden />
             </div>

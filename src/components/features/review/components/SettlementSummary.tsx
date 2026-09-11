@@ -2,26 +2,35 @@ import { RiArrowRightLine, RiReceiptLine } from '@remixicon/react'
 import { Button } from '~/components/ui/button'
 import { AnimatedAmount } from '~/components/ui/animated-amount'
 import { formatUsd, toUsd } from '~/lib/money'
+import type { ReconcileResult } from '~/lib/money'
 import { formatLbpCompact } from '~/lib/format'
+import type { SaveState } from '~/lib/bill/editorSession'
 import type { WorkingMeta } from '~/lib/bill/types'
-import { CompactServiceTaxControl } from './CompactServiceTaxControl'
+import { ReviewSettlementPanel } from './ReviewSettlementPanel'
+import { reviewCopy } from '../content'
 
+// Desktop aside: the same content as the mobile dock (collapsed total + the
+// settlement panel), laid out as a sticky column.
 export function SettlementSummary({
   total,
-  rate,
+  recon,
   meta,
   onMetaChange,
   canContinue,
   onContinue,
   readOnly = false,
+  saveState,
+  onRetrySave,
 }: {
   total: number
-  rate: number | null | undefined
+  recon: ReconcileResult
   meta: WorkingMeta
   onMetaChange: (patch: Partial<WorkingMeta>) => void
   canContinue: boolean
-  onContinue: () => Promise<void>
+  onContinue: () => void
   readOnly?: boolean
+  saveState?: SaveState
+  onRetrySave?: () => void
 }) {
   return (
     <aside className="hidden lg:sticky lg:top-24 lg:block">
@@ -31,11 +40,13 @@ export function SettlementSummary({
           Settlement summary
         </h2>
 
-        <div className="flex items-end justify-between">
-          <span className="text-3xl font-black tracking-tight">Total</span>
+        <div className="mb-5 flex items-end justify-between">
+          <span className="text-3xl font-black tracking-tight">
+            {reviewCopy.dock.totalLabel}
+          </span>
           <div className="text-right">
             <AnimatedAmount
-              value={toUsd(total, rate)}
+              value={toUsd(total, meta.rate)}
               format={formatUsd}
               className="block text-4xl font-black tracking-tight text-primary-strong"
             />
@@ -47,10 +58,13 @@ export function SettlementSummary({
           </div>
         </div>
 
-        <CompactServiceTaxControl
+        <ReviewSettlementPanel
           meta={meta}
-          onChange={onMetaChange}
+          onMetaChange={onMetaChange}
+          recon={recon}
           readOnly={readOnly}
+          saveState={readOnly ? undefined : saveState}
+          onRetrySave={readOnly ? undefined : onRetrySave}
         />
 
         {readOnly ? null : (
@@ -58,9 +72,9 @@ export function SettlementSummary({
             size="lg"
             className="mt-6 h-14 w-full text-base shadow-raised"
             disabled={!canContinue}
-            onClick={() => void onContinue()}
+            onClick={onContinue}
           >
-            Proceed to split
+            {reviewCopy.dock.proceed}
             <RiArrowRightLine />
           </Button>
         )}

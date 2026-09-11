@@ -3,7 +3,7 @@ import { RiGroupLine, RiCheckLine } from '@remixicon/react'
 import type { Claim, LineItem, Person } from '~/lib/types'
 import type { Portfolio } from '~/lib/money'
 import { formatUsd } from '~/lib/money'
-import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from '~/components/ui/dialog'
+import { BottomSheet } from '~/components/ui/bottom-sheet'
 import { cn } from '~/lib/utils'
 import { tapHaptic } from '~/lib/ui'
 import { PersonAvatar } from './PersonAvatar'
@@ -51,7 +51,7 @@ export function MobilePersonPicker({ people, activeId, selfId, onSelect, portfol
   }
 
   return (
-    <Dialog open={open} onOpenChange={setOpen}>
+    <>
       <div className="flex min-w-0 items-center gap-2">
         <div ref={railRef} role="group" aria-label="Pick items for a person" className="flex min-w-0 flex-1 gap-1.5 overflow-x-auto overscroll-x-contain py-1 px-0.5 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
           {ordered.map((person) => (
@@ -60,19 +60,15 @@ export function MobilePersonPicker({ people, activeId, selfId, onSelect, portfol
           ))}
           {ordered.length === 0 ? <p className="py-3 text-sm text-muted-foreground">Add someone to start.</p> : null}
         </div>
-        <DialogTrigger aria-label={`Choose person, ${ordered.length} people`} className="relative grid size-11 shrink-0 place-items-center rounded-full bg-background shadow-sm ring-1 ring-border/50 transition-colors hover:bg-accent focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring">
+        <button type="button" onClick={() => setOpen(true)} aria-label={`Choose person, ${ordered.length} people`} className="relative grid size-11 shrink-0 place-items-center rounded-full bg-background shadow-sm ring-1 ring-border/50 transition-colors hover:bg-accent focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring">
           <RiGroupLine className="size-5" aria-hidden />
           <span aria-hidden className="absolute -right-0.5 -top-0.5 grid min-w-4 h-4 place-items-center rounded-full bg-primary px-1 text-[10px] font-bold tabular-nums text-primary-foreground">{ordered.length}</span>
-        </DialogTrigger>
+        </button>
       </div>
       <p className="mt-1 text-center text-[11px] text-muted-foreground">Hold an avatar to see their total.</p>
       <p role="status" className="sr-only">Picking for {active?.name ?? 'no one'}</p>
-      <DialogContent className="top-auto bottom-0 start-0 max-w-full translate-x-0 translate-y-0 gap-4 rounded-b-none pb-[max(1.5rem,env(safe-area-inset-bottom))] sm:start-1/2 sm:max-w-md sm:-translate-x-1/2">
-        <DialogHeader>
-          <DialogTitle>Choose a person</DialogTitle>
-          <DialogDescription>Who are you picking items for?</DialogDescription>
-        </DialogHeader>
-        <div className="max-h-[50dvh] space-y-1 overflow-y-auto overscroll-contain">
+      <BottomSheet open={open} onOpenChange={setOpen} title="Choose a person" description="Who are you picking items for?" responsive>
+        <div className="max-h-[50dvh] space-y-1">
           {ordered.map((person) => (
             <button key={person.id} type="button" aria-pressed={person.id === activeId} onClick={() => { select(person.id); setOpen(false) }}
               className={cn('flex min-h-14 w-full items-center gap-3 rounded-control px-3 py-2 text-left transition-colors hover:bg-accent focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-ring', person.id === activeId && 'bg-primary/15')}>
@@ -84,7 +80,7 @@ export function MobilePersonPicker({ people, activeId, selfId, onSelect, portfol
           ))}
           {ordered.length === 0 ? <p className="py-3 text-sm text-muted-foreground">Use Add person below the receipt to get started.</p> : null}
         </div>
-      </DialogContent>
-    </Dialog>
+      </BottomSheet>
+    </>
   )
 }

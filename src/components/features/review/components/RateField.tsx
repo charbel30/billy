@@ -12,12 +12,15 @@ export function RateField({
   rate,
   onCommit,
   readOnly = false,
+  defaultOpen = false,
 }: {
   rate: number | null | undefined
   onCommit: (raw: string) => void
   readOnly?: boolean
+  /** Skip the chip and render the editor straight away (inside the dock panel). */
+  defaultOpen?: boolean
 }) {
-  const [open, setOpen] = useState(false)
+  const [open, setOpen] = useState(defaultOpen)
 
   if (readOnly) {
     return (
@@ -54,7 +57,7 @@ export function RateField({
           animate={{ opacity: 1, height: 'auto' }}
           exit={{ opacity: 0, height: 0 }}
           transition={sheetSpring}
-          className="overflow-hidden rounded-control bg-muted/70"
+          className="surface-inset overflow-hidden ring-1 ring-border/50"
         >
           <div className="p-3">
             <p className="text-xs font-medium text-muted-foreground">

@@ -1,11 +1,18 @@
 import { useState } from 'react'
-import type { CSSProperties, ReactNode } from 'react'
+import type { ReactNode } from 'react'
 import { RiErrorWarningLine } from '@remixicon/react'
 import { Alert, AlertTitle } from '~/components/ui/alert'
+import { Dock } from '~/components/ui/dock'
+import { formatUsd, toUsd } from '~/lib/money'
 import { ClaimList } from '../claims'
 import { SplitHero } from './SplitHero'
 import { PersonRail } from '../people'
-import { MobileSplitSheet } from './MobileSplitSheet'
+import {
+  SplitDockCollapsed,
+  SPLIT_DOCK_COLLAPSED_HINT,
+} from './SplitDockCollapsed'
+import { SplitTotalsPanel } from './SplitTotalsPanel'
+import { BillScreen } from './BillScreen'
 import { TipControl } from './TipControl'
 import { WorkspaceHeader } from './WorkspaceHeader'
 import { BillSummary, type BillSummaryBill } from '../summary'
@@ -102,16 +109,13 @@ export function BillSplitWorkspace({
   const grandLbp = portfolios.reduce((s, p) => s + p.totalLbp, 0)
   const tipLbp = portfolios.reduce((s, p) => s + p.tipShareLbp, 0)
 
-  // Claim status for the compact mobile overview trigger.
+  // Claim status for the collapsed dock's handle.
   const remainingLbp = totalRemainingLbp(bill.lineItems, bill.claims)
   const itemsTotal = bill.lineItems.length
   const itemsClaimed = bill.lineItems.filter(
     (item) => remainingUnits(item, bill.claims) <= 0.0001,
   ).length
 
-  // Bottom padding tracks the dock's measured collapsed height so the last
-  // item cards never hide under it (the old fixed pb-60 was too short).
-  const [dockHeight, setDockHeight] = useState(240)
   const [totalsExpanded, setTotalsExpanded] = useState(false)
 
   const tipControl =
@@ -136,12 +140,10 @@ export function BillSplitWorkspace({
   )
 
   // Compact view: nothing to claim (finalized, or a guest who hasn't joined).
-  // Here the full summary IS the point, so keep it.
+  // Here the full summary IS the point, so keep it — and there is no dock.
   if (!showClaims) {
     return (
-      <div className="mx-auto w-full max-w-md space-y-4 p-4 sm:p-6">
-        {header}
-        {notice}
+      <BillScreen header={header} notice={notice} width="narrow">
         {panelExtra}
         {actionSlot}
         <BillSummary
@@ -149,7 +151,7 @@ export function BillSplitWorkspace({
           title={bill.status === 'FINALIZED' ? 'Final receipt' : 'Live totals'}
           description={summaryDescription}
         />
-      </div>
+      </BillScreen>
     )
   }
 
@@ -157,7 +159,7 @@ export function BillSplitWorkspace({
     <>
       {panelExtra}
       {tipControl ? (
-        <div className="rounded-control bg-background/70 px-4 py-3 ring-1 ring-border/40">
+        <div className="surface-inset px-4 py-3 ring-1 ring-border/40">
           {tipControl}
         </div>
       ) : null}
@@ -190,73 +192,98 @@ export function BillSplitWorkspace({
   )
 
   return (
-    <div
-      className="mx-auto w-full max-w-7xl px-4 pb-[calc(var(--dock-h)+1.5rem)] pt-2 sm:px-6 lg:px-10 lg:pt-4 lg:pb-10"
-      style={{ '--dock-h': `${dockHeight}px` } as CSSProperties}
-    >
-      <div className="mb-3 lg:mb-5">{header}</div>
-
-      <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_22rem] lg:items-start">
-        <div className="min-w-0 space-y-4">
+    <BillScreen
+      header={header}
+      notice={
+        <>
           {notice}
-          <SplitHero lineItems={bill.lineItems} claims={bill.claims} rate={bill.rate} inviteAction={inviteAction} />
-
           {conflictMessage ? (
             <Alert variant="warning">
               <RiErrorWarningLine />
               <AlertTitle>{conflictMessage}</AlertTitle>
             </Alert>
           ) : null}
-
-          <ClaimList
-            lineItems={bill.lineItems}
-            people={displayBillPeople}
-            claims={bill.claims}
-            activePerson={activePerson ?? null}
-            rate={bill.rate}
-            onStep={onStep}
-            onShareEvenly={onShareEvenly}
-            canShareEvenly={canShareEvenly}
-            sharePeople={sharePeople}
-          />
-
-        </div>
-
-        {/* Desktop: sticky person panel + actions */}
+        </>
+      }
+      aside={
+        /* Desktop: sticky person panel + actions */
         <aside className="hidden lg:sticky lg:top-6 lg:block">
-          <div className="space-y-4 rounded-card bg-muted/60 p-4 ring-1 ring-border/40">
+          <div className="surface-panel space-y-4 p-4">
             {personPanel}
             {actionSlot ? <div className="space-y-2">{actionSlot}</div> : null}
           </div>
         </aside>
-      </div>
-
-      {/* Mobile: expandable bottom sheet (bar + breakdowns) */}
-      <MobileSplitSheet
-        people={displayPeople}
-        breakdownPeople={displayBillPeople}
-        activeId={activeId}
-        selfId={selfId}
-        onSelect={onSelect}
-        onAdd={onAdd}
-        portfolioByPerson={portfolioByPerson}
+      }
+      dock={
+        <Dock
+          collapsedHeightHint={SPLIT_DOCK_COLLAPSED_HINT}
+          expanded={totalsExpanded}
+          onExpandedChange={setTotalsExpanded}
+          keyboardAware
+          panelTitle="Table totals"
+          panelDescription="Tap a person to see their items."
+          handle={{
+            label: 'View table totals',
+            status:
+              remainingLbp > 0.5
+                ? `${formatUsd(toUsd(remainingLbp, bill.rate))} left`
+                : 'All assigned',
+            ariaLabel: `View table totals, ${itemsClaimed} of ${itemsTotal} items assigned`,
+          }}
+          collapsed={
+            <SplitDockCollapsed
+              people={displayPeople}
+              activeId={activeId}
+              selfId={selfId}
+              onSelect={onSelect}
+              onAdd={onAdd}
+              portfolioByPerson={portfolioByPerson}
+              ownIds={ownIds}
+              lineItems={bill.lineItems}
+              claims={bill.claims}
+              rate={bill.rate}
+              serviceChargeOn={bill.serviceChargeOn}
+              tipPercent={bill.tipPercent}
+              panelExtra={panelExtra}
+              actionSlot={actionSlot}
+            />
+          }
+          panel={
+            <SplitTotalsPanel
+              breakdownPeople={displayBillPeople}
+              selfId={selfId}
+              ownIds={ownIds}
+              portfolioByPerson={portfolioByPerson}
+              lineItems={bill.lineItems}
+              claims={bill.claims}
+              rate={bill.rate}
+              serviceChargeOn={bill.serviceChargeOn}
+              tipPercent={bill.tipPercent}
+              grandLbp={grandLbp}
+              remainingLbp={remainingLbp}
+              extra={tipControl}
+            />
+          }
+        />
+      }
+    >
+      <SplitHero
         lineItems={bill.lineItems}
         claims={bill.claims}
         rate={bill.rate}
-        serviceChargeOn={bill.serviceChargeOn}
-        tipPercent={bill.tipPercent}
-        grandLbp={grandLbp}
-        remainingLbp={remainingLbp}
-        itemsClaimed={itemsClaimed}
-        itemsTotal={itemsTotal}
-        panelExtra={panelExtra}
-        expandedExtra={tipControl}
-        actionSlot={actionSlot}
-        onCollapsedHeightChange={setDockHeight}
-        ownIds={ownIds}
-        expanded={totalsExpanded}
-        onExpandedChange={setTotalsExpanded}
+        inviteAction={inviteAction}
       />
-    </div>
+      <ClaimList
+        lineItems={bill.lineItems}
+        people={displayBillPeople}
+        claims={bill.claims}
+        activePerson={activePerson ?? null}
+        rate={bill.rate}
+        onStep={onStep}
+        onShareEvenly={onShareEvenly}
+        canShareEvenly={canShareEvenly}
+        sharePeople={sharePeople}
+      />
+    </BillScreen>
   )
 }

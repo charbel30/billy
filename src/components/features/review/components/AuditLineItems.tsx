@@ -5,8 +5,9 @@ import {
   RiReceiptLine,
 } from '@remixicon/react'
 import { BlurCommitInput } from '~/components/ui/blur-commit-input'
-import { formatUsd, toUsd } from '~/lib/money'
+import { formatLbp, formatUsd, toUsd } from '~/lib/money'
 import { formatLbpCompact, parseNumericInput } from '~/lib/format'
+import { useCurrencyDisplay } from '~/hooks/useCurrencyDisplay'
 import {
   ELEVATED_CARD,
   ELEVATED_CARD_HOVER,
@@ -109,6 +110,13 @@ function AuditLineItem({
 }) {
   const low =
     item.confidence != null && item.confidence < LOW_CONFIDENCE_THRESHOLD
+  // The header's currency chip drives the headline; the LBP field below stays
+  // put in every mode because it is the value of record being edited.
+  const { display } = useCurrencyDisplay()
+  const headline =
+    display === 'lbp'
+      ? formatLbp(item.lineTotal)
+      : formatUsd(toUsd(item.lineTotal, rate))
   const commitQty = (raw: string) => {
     const qty = parseNumericInput(raw)
     onUpdate(item.id, {
@@ -146,7 +154,7 @@ function AuditLineItem({
 
           <div className="shrink-0 text-right">
             <span className="block font-receipt text-3xl font-bold tracking-tight text-primary-strong">
-              {formatUsd(toUsd(item.lineTotal, rate))}
+              {headline}
             </span>
             <div className="mt-1.5 flex items-center justify-end gap-1 text-xs font-semibold text-muted-foreground">
               <BlurCommitInput
@@ -258,7 +266,7 @@ function AuditLineItem({
 
         <div className="text-right">
           <span className="block font-receipt text-base font-bold tracking-tight text-foreground">
-            {formatUsd(toUsd(item.lineTotal, rate))}
+            {headline}
           </span>
           <div className="mt-1.5 flex items-center justify-end gap-1 text-xs font-semibold text-muted-foreground">
             <BlurCommitInput

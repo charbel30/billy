@@ -3,28 +3,25 @@ import { Button } from '~/components/ui/button'
 import { useEffect, useState } from 'react'
 import { useNavigate } from '@tanstack/react-router'
 import { useSuspenseQuery } from '@tanstack/react-query'
-import { RiErrorWarningLine, RiReceiptLine } from '@remixicon/react'
+import { RiReceiptLine } from '@remixicon/react'
 import type { Id } from 'convex/_generated/dataModel'
-import { BlurCommitInput } from '~/components/ui/blur-commit-input'
 import { Alert, AlertDescription, AlertTitle } from '~/components/ui/alert'
 import { ReadOnlyNotice } from '~/components/shared/ReadOnlyNotice'
+import { BillScreen, WorkspaceHeader } from '~/components/features/bill'
 import { useBillEditor } from '~/hooks/useBillEditor'
 import { useHasHostToken } from '~/hooks/useHostAccess'
 import { billQueries } from '~/api'
-import { reconcile, formatLbp } from '~/lib/money'
-import { parseNumericInput } from '~/lib/format'
+import { reconcile } from '~/lib/money'
 import { canPersistWorkingBill } from '~/lib/bill'
 import { recordBill } from '~/lib/session'
 import { trackExtractionOutcome } from '~/lib/observability'
-import { RateField } from './components/RateField'
 import { AuditLineItems } from './components/AuditLineItems'
 import { SettlementSummary } from './components/SettlementSummary'
-import { MobileReviewAction } from './components/MobileReviewAction'
+import { ReviewDock } from './components/ReviewDock'
 import {
   ExtractingBanner,
   ExtractionFailedBanner,
 } from './components/ExtractionBanners'
-import { SaveStatus } from './components/SaveStatus'
 import { reviewCopy } from './content'
 
 export function ReviewPage({ billId }: { billId: Id<'bills'> }) {
@@ -48,6 +45,8 @@ export function ReviewPage({ billId }: { billId: Id<'bills'> }) {
   // Raw server doc (live) — carries extraction failure state the editor's
   // working copy doesn't track.
   const [failureDismissed, setFailureDismissed] = useState(false)
+  // The rate chip in the header opens the same panel the dock handle does.
+  const [settlementExpanded, setSettlementExpanded] = useState(false)
 
   useEffect(() => {
     if (!canEdit) return
@@ -81,157 +80,120 @@ export function ReviewPage({ billId }: { billId: Id<'bills'> }) {
     navigate({ to: '/split/$billId', params: { billId } })
   }
 
+  const description = isEmpty
+    ? canEdit
+      ? reviewCopy.emptySubhead
+      : reviewCopy.readOnlySubhead
+    : reviewCopy.subhead
+
   return (
-    <div className="mx-auto w-full max-w-7xl px-4 pb-8 pt-4 sm:px-6 lg:px-10">
-      <div className="mb-6 text-center lg:hidden">
-        <p className="text-sm text-muted-foreground">
-          {isEmpty
-            ? canEdit
-              ? reviewCopy.emptySubhead
-              : 'This bill does not have any items to show.'
-            : reviewCopy.subhead}
-        </p>
-      </div>
-
-      {!canEdit ? (
-        <div className="mb-5">
-          <ReadOnlyNotice
-            shareToken={
-              serverBill.status === 'PUBLISHED' ||
-              serverBill.status === 'FINALIZED'
-                ? serverBill.shareToken
-                : null
-            }
-            finalized={serverBill.status === 'FINALIZED'}
-          />
-        </div>
-      ) : null}
-
-      {validationError ? (
-        <Alert variant="warning" className="mb-4">
-          <AlertTitle>{validationError}</AlertTitle>
-        </Alert>
-      ) : null}
-      {editor.recoveryUnavailable ? (
-        <Alert variant="warning" className="mb-4">
-          <AlertTitle>
-            This browser cannot keep a recovery copy. Keep this page open until
-            changes finish saving.
-          </AlertTitle>
-        </Alert>
-      ) : null}
-      {editor.editedElsewhere ? (
-        <Alert variant="warning" className="mb-4">
-          <AlertTitle>
-            This bill changed in another tab or while scanning. Your draft has
-            been kept.
-          </AlertTitle>
-          <AlertDescription>
-            Review the latest version, or explicitly save your draft over it.
-          </AlertDescription>
-          <div className="mt-3 flex gap-2">
-            <Button variant="outline" onClick={editor.useServerVersion}>
-              Use latest version
-            </Button>
-            {canEdit ? (
-              <Button onClick={editor.keepLocalVersion}>
-                Save my draft instead
-              </Button>
-            ) : null}
-          </div>
-        </Alert>
-      ) : null}
-      {editor.extracting ? <ExtractingBanner /> : null}
-
-      {canEdit &&
-      serverBill.extractionError &&
-      !editor.extracting &&
-      !failureDismissed ? (
-        <ExtractionFailedBanner
-          billId={billId}
-          onDismiss={() => setFailureDismissed(true)}
+    <BillScreen
+      header={
+        <WorkspaceHeader
+          merchantName={meta.merchantName}
+          status={serverBill.status}
+          rate={meta.rate}
+          description={description}
+          icon={RiReceiptLine}
+          onNameCommit={
+            canEdit ? (raw) => setMeta({ merchantName: raw }) : undefined
+          }
+          onRateEdit={canEdit ? () => setSettlementExpanded(true) : undefined}
         />
-      ) : null}
-
-      <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_22rem] lg:items-start">
-        <section className="rounded-card bg-card/80 p-4 shadow-card ring-1 ring-border/50 backdrop-blur sm:p-6 lg:p-8">
-          <div className="mb-7">
-            <div className="min-w-0">
-              <BlurCommitInput
-                value={meta.merchantName}
-                placeholder="Store name"
-                onCommit={(raw) => setMeta({ merchantName: raw })}
-                readOnly={!canEdit}
-                className="w-full text-3xl font-black tracking-tight sm:text-4xl"
-              />
-              <p className="mt-2 flex items-center gap-2 text-sm text-muted-foreground">
-                <RiReceiptLine className="size-4" />
-                {isEmpty && canEdit
-                  ? reviewCopy.emptyCaption
-                  : reviewCopy.caption}
-              </p>
-            </div>
-          </div>
-
-          <div className="mb-6 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-            <RateField
-              rate={meta.rate}
-              readOnly={!canEdit}
-              onCommit={(raw) =>
-                setMeta({ rate: parseNumericInput(raw), rateSource: 'manual' })
+      }
+      notice={
+        <>
+          {!canEdit ? (
+            <ReadOnlyNotice
+              shareToken={
+                serverBill.status === 'PUBLISHED' ||
+                serverBill.status === 'FINALIZED'
+                  ? serverBill.shareToken
+                  : null
               }
+              finalized={serverBill.status === 'FINALIZED'}
             />
-            {canEdit ? (
-              <SaveStatus
-                state={editor.saveState}
-                onRetry={() => void editor.flushNow()}
-              />
-            ) : null}
-          </div>
-
-          <AuditLineItems
-            lineItems={bill.lineItems}
-            rate={meta.rate}
-            onUpdate={updateLineItem}
-            onRemove={removeLineItem}
-            onAdd={() => addLineItem()}
-            readOnly={!canEdit}
-          />
-
-          {recon.diff != null && !recon.ok && meta.printedTotalLbp != null ? (
-            <Alert variant="warning" className="mt-4">
-              <RiErrorWarningLine />
-              <AlertTitle>Totals don&apos;t add up</AlertTitle>
-              <AlertDescription>
-                Items differ from the printed receipt total by{' '}
-                <span className="font-receipt font-semibold">
-                  {formatLbp(Math.abs(recon.diff))}
-                </span>
-                . Check the lines above.
-              </AlertDescription>
+          ) : null}
+          {validationError ? (
+            <Alert variant="warning">
+              <AlertTitle>{validationError}</AlertTitle>
             </Alert>
           ) : null}
-        </section>
-
+          {editor.recoveryUnavailable ? (
+            <Alert variant="warning">
+              <AlertTitle>{reviewCopy.recoveryUnavailable}</AlertTitle>
+            </Alert>
+          ) : null}
+          {editor.editedElsewhere ? (
+            <Alert variant="warning">
+              <AlertTitle>{reviewCopy.editedElsewhereTitle}</AlertTitle>
+              <AlertDescription>
+                {reviewCopy.editedElsewhereBody}
+              </AlertDescription>
+              <div className="mt-3 flex gap-2">
+                <Button variant="outline" onClick={editor.useServerVersion}>
+                  {reviewCopy.useServerVersion}
+                </Button>
+                {canEdit ? (
+                  <Button onClick={editor.keepLocalVersion}>
+                    {reviewCopy.keepLocalVersion}
+                  </Button>
+                ) : null}
+              </div>
+            </Alert>
+          ) : null}
+          {editor.extracting ? <ExtractingBanner /> : null}
+          {canEdit &&
+          serverBill.extractionError &&
+          !editor.extracting &&
+          !failureDismissed ? (
+            <ExtractionFailedBanner
+              billId={billId}
+              onDismiss={() => setFailureDismissed(true)}
+            />
+          ) : null}
+        </>
+      }
+      aside={
         <SettlementSummary
           total={recon.computed}
-          rate={meta.rate}
+          recon={recon}
           meta={meta}
           onMetaChange={setMeta}
           canContinue={canContinue}
-          onContinue={continueToSplit}
+          onContinue={() => void continueToSplit()}
+          readOnly={!canEdit}
+          saveState={editor.saveState}
+          onRetrySave={() => void editor.flushNow()}
+        />
+      }
+      dock={
+        canEdit ? (
+          <ReviewDock
+            total={recon.computed}
+            recon={recon}
+            meta={meta}
+            onMetaChange={setMeta}
+            canContinue={canContinue}
+            onContinue={() => void continueToSplit()}
+            expanded={settlementExpanded}
+            onExpandedChange={setSettlementExpanded}
+            saveState={editor.saveState}
+            onRetrySave={() => void editor.flushNow()}
+          />
+        ) : undefined
+      }
+    >
+      <section className="surface-card p-4 sm:p-6 lg:p-8">
+        <AuditLineItems
+          lineItems={bill.lineItems}
+          rate={meta.rate}
+          onUpdate={updateLineItem}
+          onRemove={removeLineItem}
+          onAdd={() => addLineItem()}
           readOnly={!canEdit}
         />
-      </div>
-
-      {canEdit ? (
-        <MobileReviewAction
-          total={recon.computed}
-          rate={meta.rate}
-          canContinue={canContinue}
-          onContinue={continueToSplit}
-        />
-      ) : null}
-    </div>
+      </section>
+    </BillScreen>
   )
 }

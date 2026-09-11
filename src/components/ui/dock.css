@@ -1,0 +1,120 @@
+/* The persistent floating dock (ui/dock.tsx) and the modal bottom sheet
+   (ui/bottom-sheet.tsx). Both are base-ui Drawers whose transform we own, so
+   every position rule lives here rather than in a component's class list. */
+
+.dock-viewport {
+  pointer-events: none;
+  /* `--keyboard-inset` is set by the dock while an inline input is focused. */
+  padding-bottom: calc(
+    max(var(--dock-inset), env(safe-area-inset-bottom)) + var(--keyboard-inset, 0px)
+  );
+}
+
+.dock-viewport[data-dock-expanded='true'] {
+  pointer-events: auto;
+}
+
+.dock-popup {
+  pointer-events: auto;
+  height: 85dvh;
+  /* `--dock-offset` is declared by dock.tsx from the state + the collapsed
+     height, NOT read from `--drawer-snap-point-offset`: base-ui always writes
+     that variable and it is `0px` until the portal has been measured, which
+     paints the dock at full height for one frame. Declaring it ourselves means
+     the dock is correctly placed in the first committed frame — which is what
+     makes its view-transition snapshot valid. The library still owns snapping;
+     `--drawer-swipe-movement-y` is the live finger delta on top of the offset. */
+  transform: translateY(
+    calc(var(--dock-offset, 0px) + var(--drawer-swipe-movement-y, 0px))
+  );
+  transition: transform 260ms cubic-bezier(0.2, 0, 0, 1);
+}
+
+.dock-popup[data-swiping] {
+  transition: none;
+}
+
+/* Collapsed row(s) and the expanded panel share one box and crossfade along
+   the real sheet position (`--sheet-progress`, followed in dock.tsx). */
+.dock-compact {
+  opacity: calc(1 - var(--sheet-progress, 0));
+}
+
+.dock-panel {
+  opacity: var(--sheet-progress, 0);
+  pointer-events: none;
+}
+
+.dock-popup[data-dock-expanded='true'] .dock-compact {
+  pointer-events: none;
+}
+
+.dock-popup[data-dock-expanded='true'] .dock-panel {
+  pointer-events: auto;
+}
+
+.dock-backdrop {
+  pointer-events: none;
+  opacity: 0;
+  transition: opacity 260ms ease-out;
+}
+
+.dock-backdrop[data-dock-expanded='true'] {
+  pointer-events: auto;
+  opacity: calc(1 - var(--drawer-swipe-progress, 0));
+}
+
+/* Modal variant: opened on demand, one position, slides up from the edge. */
+.dock-sheet-viewport {
+  padding: var(--dock-inset);
+  padding-bottom: max(var(--dock-inset), env(safe-area-inset-bottom));
+}
+
+.dock-sheet-popup {
+  transform: translateY(var(--drawer-swipe-movement-y, 0px));
+  transition:
+    transform 300ms cubic-bezier(0.2, 0, 0, 1),
+    opacity 200ms ease-out;
+}
+
+.dock-sheet-popup[data-starting-style],
+.dock-sheet-popup[data-ending-style] {
+  transform: translateY(calc(100% + var(--dock-inset)));
+}
+
+.dock-sheet-popup[data-swiping] {
+  transition: none;
+}
+
+.dock-sheet-backdrop {
+  transition: opacity 200ms ease-out;
+}
+
+.dock-sheet-backdrop[data-starting-style],
+.dock-sheet-backdrop[data-ending-style] {
+  opacity: 0;
+}
+
+/* `responsive` sheets become a centred dialog once there is room for one. */
+@media (width >= 40rem) {
+  .dock-sheet-popup[data-responsive='true'] {
+    transform: none;
+  }
+
+  .dock-sheet-popup[data-responsive='true'][data-starting-style],
+  .dock-sheet-popup[data-responsive='true'][data-ending-style] {
+    transform: scale(0.97);
+    opacity: 0;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .dock-popup,
+  .dock-backdrop,
+  .dock-compact,
+  .dock-panel,
+  .dock-sheet-popup,
+  .dock-sheet-backdrop {
+    transition-duration: 0ms;
+  }
+}

@@ -14,7 +14,7 @@ export function CompactServiceTaxControl({
 }) {
   const on = meta.serviceChargeOn
   return (
-    <div className="mt-5 rounded-card bg-background/65 p-3 ring-1 ring-border/50">
+    <div className="surface-inset p-3 ring-1 ring-border/50">
       <div className="flex items-center justify-between gap-4">
         <div>
           <p className="text-sm font-bold">Service &amp; tax</p>

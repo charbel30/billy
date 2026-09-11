@@ -69,6 +69,24 @@ export const sheetSpring = {
   damping: 38,
 }
 
+// Receipt rows writing themselves in after an extraction reveal. Tighter than
+// `staggerContainer` because a receipt has many more rows than a hero has parts.
+export const revealContainer = {
+  hidden: {},
+  show: { transition: { staggerChildren: 0.05, delayChildren: 0.1 } },
+}
+
+/** The row of a `revealContainer` — same motion as `staggerChild`, named for intent. */
+export const revealRow = staggerChild
+
+// One-shot attention flash on a row the extraction is unsure about.
+export const pulseOnce = {
+  animate: {
+    backgroundColor: ['transparent', 'var(--warning-subtle)', 'transparent'],
+  },
+  transition: { duration: 1.2, times: [0, 0.3, 1] },
+}
+
 // New element popping into a collection (person pill just added).
 export const popIn = {
   initial: { opacity: 0, scale: 0.9 },

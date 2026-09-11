@@ -1,20 +1,26 @@
-import { useEffect } from 'react'
-import { useNavigate } from '@tanstack/react-router'
+import { useEffect, useState } from 'react'
 import { useSuspenseQuery } from '@tanstack/react-query'
 import toast from 'react-hot-toast'
-import { RiArrowLeftLine, RiChat1Line, RiInformationLine } from '@remixicon/react'
+import { RiChat1Line, RiInformationLine, RiPieChartLine } from '@remixicon/react'
 import type { Id } from 'convex/_generated/dataModel'
 import { Button } from '~/components/ui/button'
 import { Alert, AlertTitle } from '~/components/ui/alert'
-import { BillSummary, ShareSplitCard } from '~/components/features/bill'
+import {
+  BillScreen,
+  BillSummary,
+  ShareSplitCard,
+  ShareSplitDialog,
+  WorkspaceHeader,
+} from '~/components/features/bill'
 import { ReadOnlyNotice } from '~/components/shared/ReadOnlyNotice'
 import { billQueries, useRevokeShare, useSetHostPersonPaid } from '~/api'
 import { getHostToken, recordBill } from '~/lib/session'
 import { buildTotalsMessage, joinUrl } from '~/lib/format'
 import { useHasHostToken } from '~/hooks/useHostAccess'
+import { SummaryDock } from './components/SummaryDock'
+import { summaryCopy } from './content'
 
 export function SummaryPage({ billId }: { billId: Id<'bills'> }) {
-  const navigate = useNavigate()
   const canEdit = useHasHostToken(billId)
   const { data: bill } = useSuspenseQuery(billQueries.detail(billId))
   // Host writes carry the bill's capability, not just its id (the id is right
@@ -22,6 +28,7 @@ export function SummaryPage({ billId }: { billId: Id<'bills'> }) {
   const hostArgs = () => ({ id: billId, hostToken: getHostToken(billId) })
   const revokeShare = useRevokeShare()
   const setHostPersonPaid = useSetHostPersonPaid()
+  const [qrOpen, setQrOpen] = useState(false)
   const finalized = bill.status === 'FINALIZED'
   const shared = bill.status === 'PUBLISHED' || finalized
 
@@ -40,7 +47,7 @@ export function SummaryPage({ billId }: { billId: Id<'bills'> }) {
     }
     try {
       await navigator.clipboard.writeText(text)
-      toast.success('Totals copied — paste them in the group chat')
+      toast.success(summaryCopy.totalsCopied)
     } catch {
       toast(text)
     }
@@ -51,54 +58,93 @@ export function SummaryPage({ billId }: { billId: Id<'bills'> }) {
     recordBill({ billId, step: 'summary', name: bill.merchantName })
   }, [billId, bill.merchantName, canEdit])
 
-  const shareCard = shared ? (
-    <section className="rounded-card border border-border bg-card p-4">
-      <h2 className="mb-3 text-center text-sm font-bold text-muted-foreground">
-        Guests can scan to {finalized ? 'see the receipt' : 'claim items'}
-      </h2>
-      <ShareSplitCard
-        url={joinUrl(bill.shareToken)}
-        merchantName={bill.merchantName}
-        onRevoke={
-          finalized || !canEdit
-            ? undefined
-            : async () => {
-                await revokeShare.mutateAsync(hostArgs())
-              }
+  const revoke =
+    finalized || !canEdit
+      ? undefined
+      : async () => {
+          await revokeShare.mutateAsync(hostArgs())
         }
-      />
-    </section>
-  ) : null
 
   return (
-    // Mobile: single column. Desktop: receipts left, sticky share card right —
-    // pragmatic, not a separate design.
-    <div className="mx-auto w-full max-w-md p-4 sm:p-6 lg:grid lg:max-w-5xl lg:grid-cols-[minmax(0,1fr)_380px] lg:items-start lg:gap-8 lg:space-y-0">
-      <div className="space-y-4">
-        {!canEdit ? (
-          <ReadOnlyNotice
-            shareToken={shared ? bill.shareToken : null}
-            finalized={finalized}
+    <>
+      <BillScreen
+        header={
+          <WorkspaceHeader
+            merchantName={bill.merchantName}
+            status={bill.status}
+            rate={bill.rate}
+            icon={RiPieChartLine}
+            description={
+              !canEdit
+                ? summaryCopy.headerDescription.readOnly
+                : finalized
+                  ? summaryCopy.headerDescription.finalized
+                  : summaryCopy.headerDescription.preview
+            }
           />
-        ) : null}
-
-        {!finalized && canEdit ? (
-          <Alert variant="info">
-            <RiInformationLine />
-            <AlertTitle>
-              This is a live preview. Finalize the split when everyone is done
-              to lock the receipt.
-            </AlertTitle>
-          </Alert>
-        ) : null}
-
+        }
+        notice={
+          <>
+            {!canEdit ? (
+              <ReadOnlyNotice
+                shareToken={shared ? bill.shareToken : null}
+                finalized={finalized}
+              />
+            ) : null}
+            {!finalized && canEdit ? (
+              <Alert variant="info">
+                <RiInformationLine />
+                <AlertTitle>{summaryCopy.livePreview}</AlertTitle>
+              </Alert>
+            ) : null}
+          </>
+        }
+        aside={
+          /* Desktop keeps the share actions in a column; Phase E replaces this
+             with the dock's own panel content. */
+          <aside className="hidden lg:sticky lg:top-6 lg:block">
+            <div className="space-y-4">
+              <Button
+                size="lg"
+                className="w-full"
+                onClick={() => void shareTotalsText()}
+                disabled={bill.people.length === 0}
+              >
+                <RiChat1Line />
+                {summaryCopy.shareTotals}
+              </Button>
+              {shared ? (
+                <section className="surface-card p-4">
+                  <h2 className="mb-3 text-center text-sm font-bold text-muted-foreground">
+                    {finalized
+                      ? summaryCopy.qrCardTitle.finalized
+                      : summaryCopy.qrCardTitle.live}
+                  </h2>
+                  <ShareSplitCard
+                    url={joinUrl(bill.shareToken)}
+                    merchantName={bill.merchantName}
+                    onRevoke={revoke}
+                  />
+                </section>
+              ) : null}
+            </div>
+          </aside>
+        }
+        dock={
+          <SummaryDock
+            onShareTotals={() => void shareTotalsText()}
+            onShowQr={shared ? () => setQrOpen(true) : undefined}
+            shareDisabled={bill.people.length === 0}
+          />
+        }
+      >
         <BillSummary
           bill={bill}
-          title={bill.merchantName || 'Final receipt'}
+          title={bill.merchantName || summaryCopy.receiptTitle}
           description={
             finalized
-              ? 'This split is finalized and read-only.'
-              : 'Preview only. The split can still change.'
+              ? summaryCopy.receiptDescription.finalized
+              : summaryCopy.receiptDescription.preview
           }
           onTogglePaid={
             shared && canEdit
@@ -112,33 +158,27 @@ export function SummaryPage({ billId }: { billId: Id<'bills'> }) {
               : null
           }
         />
-      </div>
+      </BillScreen>
 
-      <div className="mt-4 space-y-4 lg:sticky lg:top-6 lg:mt-0">
-        <Button
-          size="lg"
-          className="w-full"
-          onClick={() => void shareTotalsText()}
-          disabled={bill.people.length === 0}
-        >
-          <RiChat1Line />
-          Share totals as text
-        </Button>
-
-        {shareCard}
-
-        {!finalized ? (
-          <Button
-            size="lg"
-            variant="outline"
-            className="w-full"
-            onClick={() => navigate({ to: '/split/$billId', params: { billId } })}
-          >
-            <RiArrowLeftLine />
-            Back to split
-          </Button>
-        ) : null}
-      </div>
-    </div>
+      {/* Portaled dialog lives outside the screen frame so only one modal /
+          focus scope mounts per page. */}
+      {shared ? (
+        <ShareSplitDialog
+          open={qrOpen}
+          onOpenChange={setQrOpen}
+          title={summaryCopy.qrDialogTitle}
+          url={joinUrl(bill.shareToken)}
+          merchantName={bill.merchantName}
+          onRevoke={
+            revoke
+              ? async () => {
+                  await revoke()
+                  setQrOpen(false)
+                }
+              : undefined
+          }
+        />
+      ) : null}
+    </>
   )
 }
