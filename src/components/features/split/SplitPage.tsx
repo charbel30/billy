@@ -41,11 +41,8 @@ import {
 } from '~/lib/money'
 import { joinUrl } from '~/lib/format'
 import { trackFunnelMilestone } from '~/lib/observability'
-import {
-  leftoverItemsPhrase,
-  splitCopy,
-  unallocatedServiceNote,
-} from './content'
+import { leftoverItemsPhrase, splitCopy, unallocatedServiceNote } from './content'
+import { useBillStepGate } from '~/hooks/useBillStepGate'
 
 export function SplitPage({ billId }: { billId: Id<'bills'> }) {
   const navigate = useNavigate()
@@ -54,6 +51,7 @@ export function SplitPage({ billId }: { billId: Id<'bills'> }) {
   // there in the URL). Read at call time so it's always the current value.
   const hostArgs = () => ({ id: billId, hostToken: getHostToken(billId) })
   const { data: bill } = useSuspenseQuery(billQueries.detail(billId))
+  const allowedHere = useBillStepGate(billId, 'split', bill)
   const publish = usePublish()
   const finalize = useFinalize()
   const revokeShare = useRevokeShare()
@@ -194,6 +192,8 @@ export function SplitPage({ billId }: { billId: Id<'bills'> }) {
     writes.pending ||
     finalize.isPending ||
     splitLeftoversEvenly.isPending
+
+  if (!allowedHere) return null
 
   return (
     <>

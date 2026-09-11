@@ -1,10 +1,11 @@
 import type { BillHistoryEntry } from '~/lib/session'
 
 export const scanHubCopy = {
-  readyStatus: 'Ready to scan',
-  scanningStatus: 'Reading receipt',
-  primaryAction: 'Start Scan',
   sampleAction: 'Try a sample bill',
+  // The confirmation dialog. "Starting…" and not "Uploading…": the wait here
+  // is only createBill — the upload itself happens on the review screen.
+  confirmAction: 'Use this photo',
+  startingAction: 'Starting…',
   // The no-camera escape hatch: always available, even when extraction is
   // rate-limited or paused (see src/hooks/useManualBill.ts).
   manualAction: 'Enter a bill manually',
@@ -13,6 +14,7 @@ export const scanHubCopy = {
   showLess: 'Show less',
   emptyRecent: 'No scans yet',
   emptyRecentHint: 'Your scanned receipts will appear here.',
+  resumeFailed: 'That bill is no longer available.',
   uploadError: 'Upload failed',
   fallbackError: 'Something went wrong',
 }

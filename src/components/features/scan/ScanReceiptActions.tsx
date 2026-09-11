@@ -18,22 +18,26 @@ import {
   DialogTitle,
 } from '~/components/ui/dialog'
 import { heroCopy } from '~/components/features/landing/content'
-import { scanErrorMessage, useScanUpload } from './hooks/useScanUpload'
+import { useScanRunner } from '~/hooks/useScanJob'
+import { scanErrorMessage } from '~/lib/bill'
 import { scanHubCopy, scanPrivacyNote } from './content'
 
 export function ScanReceiptActions() {
   const navigate = useNavigate()
-  const scan = useScanUpload()
+  const { startScan: beginScan } = useScanRunner()
   const sample = useCreateDemoBill()
   const manual = useManualBill()
   const inputRef = useRef<HTMLInputElement>(null)
   const scanButtonRef = useRef<HTMLButtonElement>(null)
   const inFlight = useRef(false)
+  // Only `createBill` happens here now — the rest of the scan runs on the
+  // review screen — so this is a ~200ms "Starting…", not an upload wait.
+  const [starting, setStarting] = useState(false)
   const [pending, setPending] = useState<{ file: File; url: string } | null>(
     null,
   )
   const [error, setError] = useState<string | null>(null)
-  const busy = scan.busy || sample.isPending || manual.busy
+  const busy = starting || sample.isPending || manual.busy
 
   // Release previews on replacement, cancellation, successful upload, and unmount.
   useEffect(() => {
@@ -61,14 +65,18 @@ export function ScanReceiptActions() {
   async function confirmPhoto() {
     if (!pending || busy || inFlight.current) return
     inFlight.current = true
+    setStarting(true)
     setError(null)
     try {
-      const billId = await scan.scanNew(pending.file)
+      // Resolves as soon as the bill exists; review takes the scan from here.
+      const billId = await beginScan(pending.file)
       await navigate({ to: '/review/$billId', params: { billId } })
+      // The job owns its own copy of the photo now; this preview can go.
       setPending(null)
     } catch (err) {
       setError(scanErrorMessage(err, scanHubCopy.fallbackError))
     } finally {
+      setStarting(false)
       inFlight.current = false
     }
   }
@@ -187,6 +195,11 @@ export function ScanReceiptActions() {
             <img
               src={pending.url}
               alt="Receipt photo preview"
+              // The shared element of the landing → review takeover. Named only
+              // while confirming, so exactly one element ever carries the name.
+              style={
+                starting ? { viewTransitionName: 'receipt-photo' } : undefined
+              }
               className="h-[min(42dvh,22rem)] w-full rounded-xl bg-muted object-contain outline -outline-offset-1 outline-black/10 dark:outline-white/10"
             />
           )}
@@ -200,13 +213,13 @@ export function ScanReceiptActions() {
             <Button
               className="h-12 active:scale-[0.96]"
               disabled={busy}
-              aria-busy={scan.busy}
+              aria-busy={starting}
               onClick={() => void confirmPhoto()}
             >
-              {scan.busy && (
+              {starting && (
                 <RiLoader4Line className="animate-spin" aria-hidden="true" />
               )}
-              {scan.busy ? 'Uploading receipt…' : 'Use this photo'}
+              {starting ? scanHubCopy.startingAction : scanHubCopy.confirmAction}
             </Button>
             <Button
               variant="outline"

@@ -1,3 +1,4 @@
+import type { RunId } from '@convex-dev/action-retrier'
 import { ConvexError, v } from 'convex/values'
 import { internal } from '../../_generated/api'
 import { action, internalMutation } from '../../_generated/server'
@@ -5,8 +6,12 @@ import * as imageStore from '../../lib/imageStore'
 import { invariant } from '../../lib/invariant'
 import { assertExtractionEnabled, rateLimiter } from '../../lib/rateLimits'
 import { retrier } from '../../lib/retrier'
-import { assertHostToken } from '../../model/bills'
-import { assertDeviceId, deviceLimitedMutation } from '../lib/functions'
+import { assertHostToken, assertScanOpen, now } from '../../model/bills'
+import {
+  assertDeviceId,
+  billMutation,
+  deviceLimitedMutation,
+} from '../lib/functions'
 
 // Scan mutations are public and unauthenticated, and extraction is the only
 // paid path — so both steps are rate limited per device (client-generated id;
@@ -49,11 +54,7 @@ export const prepareImageExtraction = internalMutation({
     const bill = await ctx.db.get(id)
     invariant(bill, `missing bill ${id}`)
     assertHostToken(bill, hostToken)
-    if (bill.status === 'PUBLISHED' || bill.status === 'FINALIZED') {
-      throw new ConvexError(
-        'Revoke sharing before scanning again. Finalized receipts cannot be rescanned.',
-      )
-    }
+    assertScanOpen(bill)
 
     const image = await ctx.db.system.get('_storage', imageRef)
     if (!image) {
@@ -148,6 +149,50 @@ export const discardUnreferencedUpload = internalMutation({
     if (owner) return false
     await imageStore.deleteImage(ctx, imageRef)
     return true
+  },
+})
+
+// "Taking long? Enter items manually" — the escape hatch out of the processing
+// screen (ux-flow-and-motion-plan.md §5). Detaches the bill from its in-flight
+// extraction so the host can type the items in without a late vision result
+// landing on top of them: applyExtraction bails on a mismatched imageRef, and
+// onExtractionComplete resolves runs through by_extractionRunId, which no
+// longer matches this bill. Cancelling the run and deleting the image are best
+// effort — correctness comes from clearing the pointers, and the hourly
+// retention sweep is the durable delete path.
+export const abandonExtraction = billMutation({
+  args: {},
+  returns: v.null(),
+  handler: async (ctx) => {
+    const bill = ctx.bill
+    assertScanOpen(bill)
+    if (bill.extractionRunId !== undefined) {
+      try {
+        await retrier.cancel(ctx, bill.extractionRunId as RunId)
+      } catch {
+        // Throws when the run is already finished or not yet executing.
+      }
+    }
+    if (bill.imageRef) {
+      try {
+        await imageStore.deleteImage(ctx, bill.imageRef)
+      } catch (error) {
+        console.error('[privacy] failed to delete abandoned receipt upload', {
+          imageRef: bill.imageRef,
+          error: error instanceof Error ? error.message : 'unknown error',
+        })
+      }
+    }
+    // Status is deliberately untouched (a PENDING bill stays PENDING) and the
+    // version is not bumped: nothing the user can see changed.
+    await ctx.db.patch(bill._id, {
+      imageRef: undefined,
+      extractionRunId: undefined,
+      extractionBaseVersion: undefined,
+      extractionError: undefined,
+      updatedAt: now(),
+    })
+    return null
   },
 })
 

@@ -30,3 +30,20 @@
 @media (prefers-reduced-motion: reduce) {
   .receipt-scan-beam { opacity: .5; }
 }
+
+/* The same read-beam as the ReceiptScan illustration, scaled to the real photo
+   on the processing screen. The band is 20% of the box, so a 400% translate
+   takes it exactly from the top edge to the bottom one. */
+.scan-beam { display: none; }
+
+@media (prefers-reduced-motion: no-preference) {
+  .scan-beam {
+    display: block;
+    animation: scan-sweep 2.6s ease-in-out infinite;
+  }
+
+  @keyframes scan-sweep {
+    0%, 100% { transform: translateY(0); opacity: .5; }
+    50% { transform: translateY(400%); opacity: 1; }
+  }
+}

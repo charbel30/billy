@@ -1,23 +1,37 @@
 export const summaryCopy = {
   headerDescription: {
     finalized: 'The final receipt — send everyone their share.',
-    preview: 'A live preview of the split. Finalize it to lock the receipt.',
     readOnly: 'A read-only view of this receipt.',
   },
-  livePreview:
-    'This is a live preview. Finalize the split when everyone is done to lock the receipt.',
-  receiptTitle: 'Final receipt',
-  receiptDescription: {
-    finalized: 'This split is finalized and read-only.',
-    preview: 'Preview only. The split can still change.',
+  header: {
+    allSettled: 'All settled',
+    progress: (settled: number, total: number) =>
+      `${settled} of ${total} settled`,
+    outstanding: 'Outstanding',
   },
+  progress: (settled: number, total: number) =>
+    `${settled} of ${total} settled`,
+  allSettled: 'All settled',
+  outstanding: 'Outstanding',
+  nothingClaimed: 'Nothing claimed',
+  send: 'Send',
+  sendAria: (name: string) => `Send ${name}'s total`,
+  sendCopied: (name: string) => `Copied ${name}'s total`,
+  shareAllTotals: 'Share all totals',
   shareTotals: 'Share totals as text',
-  shareTotalsShort: 'Share totals',
+  shareTotalsShort: 'Share all totals',
   showQr: 'Show QR',
-  qrDialogTitle: 'Scan to join the split',
-  qrCardTitle: {
-    finalized: 'Guests can scan to see the receipt',
-    live: 'Guests can scan to claim items',
-  },
+  qrDialogTitle: 'Scan to see the receipt',
+  qrCardTitle: 'Guests can scan to see the receipt',
   totalsCopied: 'Totals copied — paste them in the group chat',
+  dock: {
+    handle: 'Settlement',
+    panelDescription: 'Rate and tip on this bill.',
+    ariaLabel: 'Settlement details',
+    rate: 'Venue rate',
+    tip: (percent: number) => `${percent}% tip`,
+    noTip: 'No tip added',
+  },
+  joinFinalized:
+    'This split is finalized — the receipt is locked.',
 }

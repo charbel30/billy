@@ -51,7 +51,7 @@ const newBillMutation = deviceLimitedMutation(
 // The caller stores it on the device (src/lib/session/hostToken.ts); it is
 // never readable again through any query.
 
-// Two callers: the scan flow (src/components/features/scan/hooks/useScanUpload.ts,
+// Two callers: the scan flow (src/hooks/useScanJob.ts,
 // which then uploads a photo and asks for extraction) and manual entry
 // (src/hooks/useManualBill.ts, which navigates straight to the review editor).
 // INVARIANT — never add `assertExtractionEnabled` or any extraction rate limit

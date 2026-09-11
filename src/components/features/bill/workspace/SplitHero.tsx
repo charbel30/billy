@@ -31,8 +31,10 @@ export function SplitHero({ lineItems, claims, rate, inviteAction }: {
         </p>
         <span className={cn('shrink-0 rounded-full px-2.5 py-1 font-receipt text-xs font-bold tabular-nums', done ? 'bg-success/15 text-success-subtle-foreground' : 'bg-primary/15 text-primary-strong')}>{percent}%</span>
       </div>
-      <AnimatedAmount value={hasRate ? toUsd(remaining, rate) : remaining} format={hasRate ? formatUsd : formatLbp}
-        className={cn('mt-2 block font-receipt text-[clamp(2rem,9vw,3rem)] font-bold leading-tight tracking-tight tabular-nums', done ? 'text-success-subtle-foreground' : 'text-primary-strong')} />
+      <div style={{ viewTransitionName: 'bill-total' }}>
+        <AnimatedAmount value={hasRate ? toUsd(remaining, rate) : remaining} format={hasRate ? formatUsd : formatLbp}
+          className={cn('mt-2 block font-receipt text-[clamp(2rem,9vw,3rem)] font-bold leading-tight tracking-tight tabular-nums', done ? 'text-success-subtle-foreground' : 'text-primary-strong')} />
+      </div>
       {hasRate ? <AnimatedAmount value={remaining} format={formatLbp} className="mt-0.5 block font-receipt text-xs font-semibold text-muted-foreground" /> : null}
       <div role="progressbar" aria-label="Receipt items assigned" aria-valuemin={0} aria-valuemax={100} aria-valuenow={percent}
         aria-valuetext={`${assigned} of ${lineItems.length} items fully assigned, ${percent}% of item value split`}

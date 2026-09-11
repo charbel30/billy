@@ -1,3 +1,4 @@
+import { motion } from 'motion/react'
 import { RiArrowRightLine } from '@remixicon/react'
 import { Button } from '~/components/ui/button'
 import { AnimatedAmount } from '~/components/ui/animated-amount'
@@ -5,7 +6,7 @@ import { Dock } from '~/components/ui/dock'
 import { formatUsd, toUsd } from '~/lib/money'
 import type { ReconcileResult } from '~/lib/money'
 import { formatLbpCompact } from '~/lib/format'
-import { tapHaptic } from '~/lib/ui'
+import { fadeRise, tapHaptic } from '~/lib/ui'
 import type { SaveState } from '~/lib/bill/editorSession'
 import type { WorkingMeta } from '~/lib/bill/types'
 import { ReviewSettlementPanel } from './ReviewSettlementPanel'
@@ -24,25 +25,44 @@ export function ReviewDockCollapsed({
   rate,
   canContinue,
   onContinue,
+  revealDelay,
 }: {
   total: number
   rate: number | null | undefined
   canContinue: boolean
   onContinue: () => void
+  /** Seconds to wait before rising in; set only on an extraction reveal. */
+  revealDelay?: number
 }) {
+  const revealing = revealDelay != null
   return (
-    <div className="flex items-center justify-between gap-3">
+    <motion.div
+      className="flex items-center justify-between gap-3"
+      initial={revealing ? { ...fadeRise.initial, y: 24 } : false}
+      animate={fadeRise.animate}
+      transition={
+        revealing
+          ? { ...fadeRise.transition, delay: revealDelay }
+          : { duration: 0 }
+      }
+    >
       <div className="min-w-0">
         <span className="text-xs font-black uppercase tracking-wide text-muted-foreground">
           {reviewCopy.dock.totalLabel}
         </span>
-        <AnimatedAmount
-          value={toUsd(total, rate)}
-          format={formatUsd}
-          className="block text-3xl font-black leading-none tracking-tight text-primary-strong"
-        />
+        <div style={{ viewTransitionName: 'bill-total' }}>
+          <AnimatedAmount
+            value={toUsd(total, rate)}
+            initialValue={revealing ? 0 : undefined}
+            initialDelayMs={revealing ? revealDelay * 1000 : undefined}
+            format={formatUsd}
+            className="block text-3xl font-black leading-none tracking-tight text-primary-strong"
+          />
+        </div>
         <AnimatedAmount
           value={total}
+          initialValue={revealing ? 0 : undefined}
+          initialDelayMs={revealing ? revealDelay * 1000 : undefined}
           format={formatLbpCompact}
           className="mt-1 block text-xs font-bold text-primary-strong/80"
         />
@@ -59,7 +79,7 @@ export function ReviewDockCollapsed({
         {reviewCopy.dock.proceed}
         <RiArrowRightLine />
       </Button>
-    </div>
+    </motion.div>
   )
 }
 
@@ -76,6 +96,7 @@ export function ReviewDock({
   saveState,
   onRetrySave,
   onCollapsedHeightChange,
+  revealDelay,
 }: {
   total: number
   recon: ReconcileResult
@@ -88,6 +109,8 @@ export function ReviewDock({
   saveState: SaveState
   onRetrySave: () => void
   onCollapsedHeightChange?: (px: number) => void
+  /** Rise in after the line items, once, when a scan reveals the editor. */
+  revealDelay?: number
 }) {
   const hasPrintedTotal = meta.printedTotalLbp != null
 
@@ -115,6 +138,7 @@ export function ReviewDock({
           rate={meta.rate}
           canContinue={canContinue}
           onContinue={onContinue}
+          revealDelay={revealDelay}
         />
       }
       panel={
@@ -124,6 +148,7 @@ export function ReviewDock({
           recon={recon}
           saveState={saveState}
           onRetrySave={onRetrySave}
+          rateDefaultOpen
         />
       }
     />

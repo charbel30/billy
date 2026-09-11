@@ -8,14 +8,12 @@ import type { LineItem } from '../schema'
 import { deleteClaimRowsForBill } from '../model/claimRows'
 import { DEFAULT_RATE, deriveRate } from '../../src/lib/money/currency'
 import { newClientId } from '../../src/lib/bill/ids'
+import {
+  LOW_CONFIDENCE_THRESHOLD,
+  MIN_PLAUSIBLE_LBP,
+} from '../../src/lib/bill/constants'
 import { reconcile } from '../../src/lib/money/reconcile'
 import { extractedReceiptValidator } from './lib/validators'
-
-const LOW_CONFIDENCE_THRESHOLD = 0.8
-// The app keeps money in LBP internally (split + reconcile math are LBP). Real
-// LBP prices are 10,000+; anything below this floor is almost certainly a USD
-// figure that leaked through as LBP, or a dropped "000". We flag, never auto-fix.
-const MIN_PLAUSIBLE_LBP = 1000
 
 export const applyExtraction = internalMutation({
   args: {

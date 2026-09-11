@@ -1,7 +1,9 @@
 // A local, client-side history of the bills you've worked on. Powers the
 // landing page's recent bills list. Stored in
 // localStorage only — no server round-trip.
-export type BillStep = 'review' | 'split' | 'summary'
+import type { BillStep } from '~/lib/bill/steps'
+
+export type { BillStep }
 
 export interface BillHistoryEntry {
   billId: string
@@ -72,4 +74,9 @@ export function getLastBill(): BillHistoryEntry | null {
 
 export function clearBillHistory(): void {
   write([])
+}
+
+/** Drop one entry (deleted/expired bills, lost host access). */
+export function removeBill(billId: string): void {
+  write(read().filter((e) => e.billId !== billId))
 }

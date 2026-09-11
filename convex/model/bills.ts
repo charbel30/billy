@@ -203,6 +203,17 @@ export function assertSharedForGuestWrites(bill: Bill) {
   }
 }
 
+// A shared bill's items are already in other people's hands: replacing them
+// with a fresh scan (or dropping a scan that is mid-flight) would rewrite what
+// guests are looking at. Revoke first, or start a new bill.
+export function assertScanOpen(bill: Bill) {
+  if (bill.status === 'PUBLISHED' || bill.status === 'FINALIZED') {
+    throw new ConvexError(
+      'Revoke sharing before scanning again. Finalized receipts cannot be rescanned.',
+    )
+  }
+}
+
 export function assertEditableSplit(bill: Bill) {
   if (bill.status === 'FINALIZED') {
     throw new Error('This split has been finalized')

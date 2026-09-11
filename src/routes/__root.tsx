@@ -98,6 +98,7 @@ function RootDocument({ children }: { children: React.ReactNode }) {
         <DirectionProvider direction="ltr">
           {children}
           <Toaster
+            containerStyle={{ viewTransitionName: 'none' }}
             toastOptions={{
               style: {
                 background: "var(--card)",
@@ -165,7 +166,7 @@ function AppLayout({ children }: { children: React.ReactNode }) {
     <MotionConfig reducedMotion="user">
       <div className="min-h-screen flex flex-col bg-background text-foreground antialiased">
         <AppHeader />
-        <main className="grow flex flex-col">{children}</main>
+        <main className="grow flex flex-col" style={{ viewTransitionName: 'page' }}>{children}</main>
       </div>
     </MotionConfig>
   );

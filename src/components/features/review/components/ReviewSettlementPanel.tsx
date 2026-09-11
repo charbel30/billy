@@ -22,6 +22,7 @@ export function ReviewSettlementPanel({
   readOnly = false,
   saveState,
   onRetrySave,
+  rateDefaultOpen = false,
 }: {
   meta: WorkingMeta
   onMetaChange: (patch: Partial<WorkingMeta>) => void
@@ -30,6 +31,8 @@ export function ReviewSettlementPanel({
   /** Omitted in read-only mode, where there is nothing to save. */
   saveState?: SaveState
   onRetrySave?: () => void
+  /** Dock panel opens the rate editor; the desktop aside keeps the chip. */
+  rateDefaultOpen?: boolean
 }) {
   const mismatch =
     recon.diff != null && !recon.ok && meta.printedTotalLbp != null
@@ -45,7 +48,7 @@ export function ReviewSettlementPanel({
       <RateField
         rate={meta.rate}
         readOnly={readOnly}
-        defaultOpen
+        defaultOpen={rateDefaultOpen}
         onCommit={(raw) =>
           onMetaChange({ rate: parseNumericInput(raw), rateSource: 'manual' })
         }

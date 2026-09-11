@@ -12,6 +12,7 @@ import { routeTree } from './routeTree.gen'
 import { DefaultCatchBoundary } from './components/shared/DefaultCatchBoundary'
 import { NotFound } from './components/shared/NotFound'
 import { captureFrontendError, initObservability } from './lib/observability'
+import { transitionTypes } from './lib/ui/viewTransitions'
 
 export function getRouter() {
   if (typeof document !== 'undefined') {
@@ -47,6 +48,10 @@ export function getRouter() {
     defaultErrorComponent: DefaultCatchBoundary,
     defaultNotFoundComponent: () => <NotFound />,
     context: { queryClient },
+    defaultViewTransition: {
+      types: ({ fromLocation, toLocation }) =>
+        transitionTypes(fromLocation?.pathname, toLocation.pathname),
+    },
     Wrap: ({ children }) => (
       <ConvexProvider client={convexQueryClient.convexClient}>
         {children}

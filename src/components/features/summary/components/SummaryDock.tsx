@@ -1,18 +1,18 @@
+import { useState } from 'react'
 import { RiChat1Line, RiQrCodeLine } from '@remixicon/react'
 import { Button } from '~/components/ui/button'
 import { Dock } from '~/components/ui/dock'
 import { tapHaptic } from '~/lib/ui'
+import { formatLbpCompact } from '~/lib/format'
 import { summaryCopy } from '../content'
 
 /**
- * Declared collapsed height of the summary dock at 390px: no handle (it never
- * expands), so 24px padding + one 48px button row. Only has to be right for
- * the first frame — the dock re-measures the row itself and corrects.
+ * Declared collapsed height at 390px: handle + share/QR row. The dock
+ * re-measures after mount.
  */
-export const SUMMARY_DOCK_COLLAPSED_HINT = 72
+export const SUMMARY_DOCK_COLLAPSED_HINT = 120
 
-/** Sharing is the whole job of this screen, so it is the whole dock. */
-export function SummaryDockCollapsed({
+function SummaryDockCollapsed({
   onShareTotals,
   onShowQr,
   shareDisabled = false,
@@ -54,24 +54,63 @@ export function SummaryDockCollapsed({
   )
 }
 
-/** The summary screen's dock: share actions only — no panel, no handle. */
+export function SummarySettlementPanel({
+  rate,
+  tipPercent,
+}: {
+  rate: number | null | undefined
+  tipPercent?: number | null
+}) {
+  return (
+    <div className="space-y-3">
+      <div className="surface-inset px-3 py-2.5">
+        <p className="text-xs font-bold uppercase tracking-wide text-muted-foreground">
+          {summaryCopy.dock.rate}
+        </p>
+        <p className="font-receipt text-sm font-semibold tabular-nums">
+          1 USD = {formatLbpCompact(rate ?? 0)} LL
+        </p>
+      </div>
+      <div className="surface-inset px-3 py-2.5">
+        <p className="text-sm font-semibold">
+          {tipPercent
+            ? summaryCopy.dock.tip(tipPercent)
+            : summaryCopy.dock.noTip}
+        </p>
+      </div>
+    </div>
+  )
+}
+
+/** The summary screen's dock: share actions, settlement details behind the handle. */
 export function SummaryDock({
   onShareTotals,
   onShowQr,
   shareDisabled = false,
+  rate,
+  tipPercent,
   onCollapsedHeightChange,
 }: {
   onShareTotals: () => void
   onShowQr?: () => void
   shareDisabled?: boolean
+  rate: number | null | undefined
+  tipPercent?: number | null
   onCollapsedHeightChange?: (px: number) => void
 }) {
+  const [expanded, setExpanded] = useState(false)
   return (
     <Dock
       collapsedHeightHint={SUMMARY_DOCK_COLLAPSED_HINT}
       onCollapsedHeightChange={onCollapsedHeightChange}
-      expanded={false}
-      onExpandedChange={() => {}}
+      expanded={expanded}
+      onExpandedChange={setExpanded}
+      panelTitle={summaryCopy.dock.handle}
+      panelDescription={summaryCopy.dock.panelDescription}
+      handle={{
+        label: summaryCopy.dock.handle,
+        ariaLabel: summaryCopy.dock.ariaLabel,
+      }}
       collapsed={
         <SummaryDockCollapsed
           onShareTotals={onShareTotals}
@@ -79,6 +118,7 @@ export function SummaryDock({
           shareDisabled={shareDisabled}
         />
       }
+      panel={<SummarySettlementPanel rate={rate} tipPercent={tipPercent} />}
     />
   )
 }

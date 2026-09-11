@@ -1,10 +1,10 @@
 import { motion } from 'motion/react'
-import { RiCheckLine } from '@remixicon/react'
+import { RiCheckLine, RiSendPlaneLine } from '@remixicon/react'
 import type { Portfolio, ClaimedLine } from '~/lib/money'
 import { formatLbp, formatUsd, toUsd } from '~/lib/money'
 import { formatUnits } from '~/lib/format'
 import { ELEVATED_CARD, itemEmoji } from '~/lib/bill'
-import { tapHaptic } from '~/lib/ui'
+import { tapHaptic, sheetSpring } from '~/lib/ui'
 import { cn } from '~/lib/utils'
 import { PersonAvatar } from '../people/PersonAvatar'
 
@@ -20,6 +20,9 @@ export function PortfolioReceipt({
   paidAt,
   onTogglePaid,
   togglePending = false,
+  onSend,
+  sendPending = false,
+  sendLabel,
 }: {
   portfolio: Portfolio
   lines: ClaimedLine[]
@@ -35,12 +38,16 @@ export function PortfolioReceipt({
   paidAt?: number
   onTogglePaid?: (paid: boolean) => void
   togglePending?: boolean
+  onSend?: () => void
+  sendPending?: boolean
+  sendLabel?: string
 }) {
   const paid = paidAt != null
 
   return (
     <motion.div
       layout
+      transition={sheetSpring}
       initial={bare ? false : { opacity: 0, y: 8 }}
       animate={{ opacity: 1, y: 0 }}
       className={cn(
@@ -50,35 +57,51 @@ export function PortfolioReceipt({
     >
       <div className="flex items-center gap-2">
         <PersonAvatar name={portfolio.name} color={portfolio.color} size="sm" />
-        <span className="truncate font-bold">{portfolio.name}</span>
-        {onTogglePaid ? (
-          <button
-            type="button"
-            disabled={togglePending}
-            onClick={() => {
-              tapHaptic()
-              onTogglePaid(!paid)
-            }}
-            className={cn(
-              'ml-auto flex shrink-0 items-center gap-1 rounded-full px-2.5 py-1 text-xs font-bold transition-[background-color,color,scale] active:scale-[0.96] disabled:opacity-50',
-              paid
-                ? 'bg-success-subtle text-success-subtle-foreground'
-                : 'bg-muted text-muted-foreground hover:bg-success-subtle hover:text-success-subtle-foreground',
-            )}
-          >
-            {paid ? (
-              <>
-                Paid <RiCheckLine className="size-3.5" />
-              </>
-            ) : (
-              'Mark paid'
-            )}
-          </button>
-        ) : paid ? (
-          <span className="ml-auto flex shrink-0 items-center gap-1 rounded-full bg-success-subtle px-2.5 py-1 text-xs font-bold text-success-subtle-foreground">
-            Paid <RiCheckLine className="size-3.5" />
-          </span>
-        ) : null}
+        <span className="min-w-0 truncate font-bold">{portfolio.name}</span>
+        <div className="ml-auto flex shrink-0 items-center gap-1">
+          {onSend ? (
+            <button
+              type="button"
+              disabled={sendPending}
+              onClick={() => {
+                tapHaptic()
+                onSend()
+              }}
+              aria-label={sendLabel ?? 'Send'}
+              className="flex size-11 items-center justify-center rounded-full text-primary-strong transition-[background-color,scale] hover:bg-primary/10 active:scale-[0.96] disabled:opacity-50"
+            >
+              <RiSendPlaneLine className="size-5" aria-hidden />
+            </button>
+          ) : null}
+          {onTogglePaid ? (
+            <button
+              type="button"
+              disabled={togglePending}
+              onClick={() => {
+                tapHaptic()
+                onTogglePaid(!paid)
+              }}
+              className={cn(
+                'flex min-h-11 shrink-0 items-center gap-1 rounded-full px-2.5 text-xs font-bold transition-[background-color,color,scale] active:scale-[0.96] disabled:opacity-50',
+                paid
+                  ? 'bg-success-subtle text-success-subtle-foreground'
+                  : 'bg-muted text-muted-foreground hover:bg-success-subtle hover:text-success-subtle-foreground',
+              )}
+            >
+              {paid ? (
+                <>
+                  Paid <RiCheckLine className="size-3.5" />
+                </>
+              ) : (
+                'Mark paid'
+              )}
+            </button>
+          ) : paid ? (
+            <span className="flex min-h-11 shrink-0 items-center gap-1 rounded-full bg-success-subtle px-2.5 text-xs font-bold text-success-subtle-foreground">
+              Paid <RiCheckLine className="size-3.5" />
+            </span>
+          ) : null}
+        </div>
       </div>
 
       <div className="my-3 border-t border-dashed border-border" />

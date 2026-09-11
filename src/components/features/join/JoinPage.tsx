@@ -3,11 +3,19 @@ import { useQuery, useSuspenseQuery } from '@tanstack/react-query'
 import {
   RiDoorLockLine,
   RiInformationLine,
+  RiPieChartLine,
   RiUserSmileLine,
 } from '@remixicon/react'
 import { Alert, AlertTitle } from '~/components/ui/alert'
 import { EmptyState } from '~/components/shared/EmptyState'
-import { BillSplitWorkspace, BillSummary, NameEntryForm } from '~/components/features/bill'
+import {
+  BillScreen,
+  BillSplitWorkspace,
+  BillSummary,
+  NameEntryForm,
+  SettlementHeader,
+  WorkspaceHeader,
+} from '~/components/features/bill'
 import {
   billQueries,
   useAddGuestPerson,
@@ -19,6 +27,10 @@ import {
 import { getOrCreateGuestSessionId } from '~/lib/session'
 import { LegalFooter } from '~/components/shared/LegalFooter'
 import { trackFunnelMilestone } from '~/lib/observability'
+import { settlementProgress } from '~/lib/bill'
+import { buildPersonMessage, joinUrl } from '~/lib/format'
+import toast from 'react-hot-toast'
+import { summaryCopy } from '~/components/features/summary/content'
 
 export function JoinPage({ shareToken }: { shareToken: string }) {
   const { data: bill } = useSuspenseQuery(billQueries.byToken(shareToken))
@@ -27,6 +39,7 @@ export function JoinPage({ shareToken }: { shareToken: string }) {
   const [activeId, setActiveId] = useState<string | null>(null)
   const [selfIdentity, setSelfIdentity] = useState<{ key: string; id: string } | null>(null)
   const [conflictMessage, setConflictMessage] = useState<string | null>(null)
+  const [sendPendingId, setSendPendingId] = useState<string | null>(null)
 
   const joinSplit = useJoinSplit()
   const addGuestPerson = useAddGuestPerson()
@@ -146,23 +159,65 @@ export function JoinPage({ shareToken }: { shareToken: string }) {
     setGuestPersonPaid.mutate({ shareToken, guestSessionId, personId, paid })
   }
 
+  async function sendPerson(personId: string) {
+    if (!isMine(personId)) return
+    const person = bill.people.find((p) => p.id === personId)
+    const text = buildPersonMessage(bill, personId, {
+      joinUrl: joinUrl(shareToken),
+    })
+    setSendPendingId(personId)
+    try {
+      if (typeof navigator.share === 'function') {
+        try {
+          await navigator.share({ text })
+          return
+        } catch (err) {
+          if (err instanceof DOMException && err.name === 'AbortError') return
+        }
+      }
+      await navigator.clipboard.writeText(text)
+      toast.success(summaryCopy.sendCopied(person?.name.trim() || 'their'))
+    } catch {
+      toast(text)
+    } finally {
+      setSendPendingId(null)
+    }
+  }
+
   if (bill.status !== 'PUBLISHED' && bill.status !== 'FINALIZED') {
     return <NotOpenNotice />
   }
 
   if (bill.status === 'FINALIZED') {
     return (
-      <div className="mx-auto w-full max-w-md p-4 sm:p-6 space-y-4">
-        <Alert variant="info">
-          <RiInformationLine />
-          <AlertTitle>
-            This split is finalized — the receipt is locked.
-          </AlertTitle>
-        </Alert>
+      <BillScreen
+        width="narrow"
+        header={
+          <WorkspaceHeader
+            merchantName={bill.merchantName}
+            status={bill.status}
+            rate={bill.rate}
+            icon={RiPieChartLine}
+            description={summaryCopy.headerDescription.finalized}
+          />
+        }
+        notice={
+          <Alert variant="info">
+            <RiInformationLine />
+            <AlertTitle>{summaryCopy.joinFinalized}</AlertTitle>
+          </Alert>
+        }
+      >
+        <SettlementHeader
+          progress={settlementProgress(bill)}
+          labels={summaryCopy.header}
+        />
         <BillSummary
           bill={bill}
-          title={bill.merchantName || 'Final receipt'}
-          description="This split is finalized, so the receipt is read-only."
+          header={null}
+          hideGrandTotal
+          sortUnpaidFirst
+          nothingClaimedLabel={summaryCopy.nothingClaimed}
           onTogglePaid={togglePaid}
           canTogglePaid={isMine}
           paidPendingId={
@@ -170,9 +225,12 @@ export function JoinPage({ shareToken }: { shareToken: string }) {
               ? (setGuestPersonPaid.variables?.personId ?? null)
               : null
           }
+          onSend={(personId) => void sendPerson(personId)}
+          sendPendingId={sendPendingId}
+          sendLabel={summaryCopy.sendAria}
         />
         <LegalFooter />
-      </div>
+      </BillScreen>
     )
   }
 

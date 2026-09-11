@@ -1,3 +1,5 @@
+import type { ReactNode } from 'react'
+import { motion } from 'motion/react'
 import {
   RiAddLine,
   RiAlertLine,
@@ -12,10 +14,20 @@ import {
   ELEVATED_CARD,
   ELEVATED_CARD_HOVER,
   LOW_CONFIDENCE_THRESHOLD,
+  MIN_PLAUSIBLE_LBP,
 } from '~/lib/bill/constants'
+import { pulseOnce, revealContainer, revealRow, revealTailDelay } from '~/lib/ui'
 import { cn } from '~/lib/utils'
 import type { LineItem } from '~/lib/types'
 import { reviewCopy } from '../content'
+
+/** The two things extraction flags: a shaky read, or an LBP amount that can't be one. */
+function isFlagged(item: LineItem) {
+  return (
+    (item.confidence != null && item.confidence < LOW_CONFIDENCE_THRESHOLD) ||
+    (item.lineTotal > 0 && item.lineTotal < MIN_PLAUSIBLE_LBP)
+  )
+}
 
 export function AuditLineItems({
   lineItems,
@@ -24,6 +36,7 @@ export function AuditLineItems({
   onRemove,
   onAdd,
   readOnly = false,
+  animateIn = false,
 }: {
   lineItems: LineItem[]
   rate: number | null | undefined
@@ -31,6 +44,8 @@ export function AuditLineItems({
   onRemove: (id: string) => void
   onAdd: () => void
   readOnly?: boolean
+  /** Write the rows in one by one — set only on the mount that follows a scan. */
+  animateIn?: boolean
 }) {
   // Empty is a first-class state, not an error: manual entry starts here, and
   // so does a bill whose extraction failed. A bare "Add item" row reads like a
@@ -68,18 +83,24 @@ export function AuditLineItems({
         <span className="text-right">Amount</span>
       </div>
 
-      <div className="space-y-3">
+      <RevealList animateIn={animateIn}>
         {lineItems.map((item) => (
-          <AuditLineItem
+          <RevealRow
             key={item.id}
-            item={item}
-            rate={rate}
-            onUpdate={onUpdate}
-            onRemove={onRemove}
-            readOnly={readOnly}
-          />
+            animateIn={animateIn}
+            pulse={isFlagged(item)}
+            pulseDelay={revealTailDelay(lineItems.length)}
+          >
+            <AuditLineItem
+              item={item}
+              rate={rate}
+              onUpdate={onUpdate}
+              onRemove={onRemove}
+              readOnly={readOnly}
+            />
+          </RevealRow>
         ))}
-      </div>
+      </RevealList>
 
       {readOnly ? null : (
         <button
@@ -92,6 +113,57 @@ export function AuditLineItems({
         </button>
       )}
     </div>
+  )
+}
+
+// Motion only exists on the reveal mount; every later edit re-renders plain
+// elements so a price change never re-staggers the whole receipt.
+function RevealList({
+  animateIn,
+  children,
+}: {
+  animateIn: boolean
+  children: ReactNode
+}) {
+  if (!animateIn) return <div className="space-y-3">{children}</div>
+  return (
+    <motion.div
+      className="space-y-3"
+      variants={revealContainer}
+      initial="hidden"
+      animate="show"
+    >
+      {children}
+    </motion.div>
+  )
+}
+
+function RevealRow({
+  animateIn,
+  pulse,
+  pulseDelay,
+  children,
+}: {
+  animateIn: boolean
+  pulse: boolean
+  pulseDelay: number
+  children: ReactNode
+}) {
+  if (!animateIn) return children
+  return (
+    <motion.div variants={revealRow} className="relative isolate">
+      {/* Behind the (opaque) card, so the flash reads as a halo rather than
+          covering the line it is pointing at. */}
+      {pulse ? (
+        <motion.span
+          aria-hidden
+          className="pointer-events-none absolute -inset-1 -z-10 rounded-card"
+          animate={pulseOnce.animate}
+          transition={{ ...pulseOnce.transition, delay: pulseDelay }}
+        />
+      ) : null}
+      {children}
+    </motion.div>
   )
 }
 

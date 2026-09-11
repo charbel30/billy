@@ -4,6 +4,7 @@ import { RiErrorWarningLine } from '@remixicon/react'
 import { Alert, AlertTitle } from '~/components/ui/alert'
 import { Dock } from '~/components/ui/dock'
 import { formatUsd, toUsd } from '~/lib/money'
+import { useMediaQuery } from '~/hooks/useMediaQuery'
 import { ClaimList } from '../claims'
 import { SplitHero } from './SplitHero'
 import { PersonRail } from '../people'
@@ -117,6 +118,7 @@ export function BillSplitWorkspace({
   ).length
 
   const [totalsExpanded, setTotalsExpanded] = useState(false)
+  const isDesktop = useMediaQuery('(min-width: 1024px)')
 
   const tipControl =
     onTipChange && bill.status !== 'FINALIZED' ? (
@@ -206,13 +208,14 @@ export function BillSplitWorkspace({
         </>
       }
       aside={
-        /* Desktop: sticky person panel + actions */
-        <aside className="hidden lg:sticky lg:top-6 lg:block">
-          <div className="surface-panel space-y-4 p-4">
-            {personPanel}
-            {actionSlot ? <div className="space-y-2">{actionSlot}</div> : null}
-          </div>
-        </aside>
+        isDesktop ? (
+          <aside className="lg:sticky lg:top-6">
+            <div className="surface-panel space-y-4 p-4">
+              {personPanel}
+              {actionSlot ? <div className="space-y-2">{actionSlot}</div> : null}
+            </div>
+          </aside>
+        ) : null
       }
       dock={
         <Dock

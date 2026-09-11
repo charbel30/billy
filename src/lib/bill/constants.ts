@@ -35,7 +35,15 @@ export const ELEVATED_CARD = 'rounded-card border border-border bg-card shadow-c
 export const ELEVATED_CARD_HOVER =
   'hover:border-foreground/15 hover:shadow-card-hover transition-[box-shadow,border-color]'
 
-export const LOW_CONFIDENCE_THRESHOLD = 0.6
+// Extraction flags (shared with convex/bills/extraction.ts, which decides
+// PENDING vs NEEDS_REVIEW with them; the review UI badges and pulses exactly
+// the items that caused that verdict, so both sides read one number).
+export const LOW_CONFIDENCE_THRESHOLD = 0.8
+// The app keeps money in LBP internally (split + reconcile math are LBP). Real
+// LBP prices are 10,000+; anything below this floor is almost certainly a USD
+// figure that leaked through as LBP, or a dropped "000". We flag, never auto-fix.
+export const MIN_PLAUSIBLE_LBP = 1000
+
 export const SAVE_DELAY_MS = 5000
 export const DEFAULT_PERSON_NAME = 'self'
 
