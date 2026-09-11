@@ -1,7 +1,7 @@
 export type ThemePreference = "system" | "light" | "dark";
 
 export const THEME_STORAGE_KEY = "billy:theme";
-export const THEME_COLORS = { light: '#f8f7f3', dark: '#100f0c' };
+export const THEME_COLORS = { light: '#f0f3ef', dark: '#100f0c' };
 
 export const THEME_PREFERENCES: ThemePreference[] = ["system", "light", "dark"];
 

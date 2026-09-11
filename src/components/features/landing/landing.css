@@ -1,9 +1,9 @@
 .landing-page {
   --landing-green: var(--brand-green);
-  --landing-soft: #e8ecdf;
-  --landing-paper: #fffef9;
+  --landing-soft: #dce7d8;
+  --landing-paper: #ffffff;
   --landing-ink: var(--brand-ink);
-  --landing-muted: #6b7063;
+  --landing-muted: var(--muted-foreground);
   flex: 1;
   background: var(--background);
 }

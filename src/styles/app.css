@@ -129,23 +129,23 @@
   --brand-gold: #f7c928;
   --brand-ink: #202820;
   --brand-green: #285647;
-  /* warm neutrals — hue ~85, low chroma: warm paper, not blue-gray */
-  --background: #f8f7f3;
+  /* Pale sage canvas, white receipt surfaces, and deep green ink. */
+  --background: #f0f3ef;
   --foreground: var(--brand-ink);
   --card: oklch(1 0 0);
-  --card-foreground: oklch(0.19 0.006 85);
+  --card-foreground: var(--foreground);
   --popover: oklch(1 0 0);
-  --popover-foreground: oklch(0.19 0.006 85);
+  --popover-foreground: var(--foreground);
   /* Gold fills carry the brand; deep green handles readable links and amounts. */
   --primary: var(--brand-gold);
   --primary-foreground: var(--brand-ink);
   --primary-strong: var(--brand-green);
-  --secondary: oklch(0.955 0.004 85);
-  --secondary-foreground: oklch(0.25 0.008 85);
-  --muted: oklch(0.955 0.004 85);
-  --muted-foreground: oklch(0.49 0.014 85);
-  --accent: oklch(0.955 0.004 85);
-  --accent-foreground: oklch(0.25 0.008 85);
+  --secondary: #e4ebe3;
+  --secondary-foreground: #294b3c;
+  --muted: #e7ece6;
+  --muted-foreground: #5d695f;
+  --accent: #e0eade;
+  --accent-foreground: #294b3c;
   --destructive: oklch(0.577 0.245 27.325);
   --destructive-subtle: oklch(0.955 0.025 25);
   --destructive-subtle-foreground: oklch(0.44 0.16 25);
@@ -159,8 +159,8 @@
   --warning-subtle-foreground: oklch(0.45 0.1 70);
   --info-subtle: oklch(0.955 0.02 250);
   --info-subtle-foreground: oklch(0.42 0.1 250);
-  --border: oklch(0.905 0.006 85);
-  --input: oklch(0.905 0.006 85);
+  --border: #cfd9ce;
+  --input: #aab9aa;
   --ring: var(--primary-strong);
   --chart-1: oklch(0.828 0.111 230.318);
   --chart-2: oklch(0.685 0.169 237.323);
@@ -170,9 +170,9 @@
   --radius: 0.625rem;
   --radius-card: 1.25rem;
   --radius-control: 0.75rem;
-  /* layered transparent shadows */
-  --shadow-card: 0 1px 2px rgb(0 0 0 / 0.05), 0 8px 24px rgb(0 0 0 / 0.06);
-  --shadow-card-hover: 0 2px 5px rgb(0 0 0 / 0.07), 0 14px 36px rgb(0 0 0 / 0.09);
+  /* Tight contact shadows keep white cards crisp against the sage canvas. */
+  --shadow-card: 0 1px 2px rgb(32 40 32 / 0.05), 0 4px 14px rgb(32 40 32 / 0.04);
+  --shadow-card-hover: 0 2px 4px rgb(32 40 32 / 0.06), 0 10px 24px rgb(32 40 32 / 0.07);
   --shadow-raised: 0 1px 3px rgb(0 0 0 / 0.08), 0 16px 44px rgb(0 0 0 / 0.1);
   --shadow-overlay: 0 4px 10px rgb(0 0 0 / 0.08), 0 24px 60px rgb(0 0 0 / 0.16);
   --shadow-dock: 0 -6px 16px rgb(0 0 0 / 0.05), 0 -18px 48px rgb(0 0 0 / 0.09);
@@ -187,14 +187,14 @@
   --person-7: oklch(0.66 0.11 190);
   --person-8: oklch(0.68 0.17 50);
   --person-fallback: oklch(0.62 0.01 85);
-  --sidebar: oklch(0.985 0 0);
-  --sidebar-foreground: oklch(0.145 0 0);
-  --sidebar-primary: oklch(0.681 0.162 75.834);
-  --sidebar-primary-foreground: oklch(0.987 0.026 102.212);
-  --sidebar-accent: oklch(0.97 0 0);
-  --sidebar-accent-foreground: oklch(0.205 0 0);
-  --sidebar-border: oklch(0.922 0 0);
-  --sidebar-ring: oklch(0.708 0 0);
+  --sidebar: #e7ece6;
+  --sidebar-foreground: var(--foreground);
+  --sidebar-primary: var(--primary);
+  --sidebar-primary-foreground: var(--primary-foreground);
+  --sidebar-accent: var(--accent);
+  --sidebar-accent-foreground: var(--accent-foreground);
+  --sidebar-border: var(--border);
+  --sidebar-ring: var(--ring);
 }
 
 .dark {
