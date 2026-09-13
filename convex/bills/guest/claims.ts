@@ -11,6 +11,9 @@ import {
 } from '../../model/claimRows'
 import { guestMutation } from '../lib/functions'
 import { assertOwnPerson } from '../../model/bills'
+import { itemShareResult, itemSplitSnapshot } from '../lib/validators'
+import { restoreItemSplit, shareItemEvenly } from '../../model/itemSharing'
+import type { Doc } from '../../_generated/dataModel'
 
 // Each tap carries intent; Convex applies it atomically to current claim rows.
 export const stepGuestClaim = guestMutation({
@@ -30,29 +33,21 @@ export const stepGuestClaim = guestMutation({
   },
 })
 
-// Share only the selected owned people, preserving everyone else's claims.
+function editablePeople(bill: Doc<'bills'>, sessionId: string) {
+  return new Set(bill.people.filter((p) => p.guestAccessVersion === 2 && p.guestSessionId === sessionId).map((p) => p.id))
+}
+
+// Add the chosen unclaimed quantity to selected people in this session.
 export const shareGuestItemEvenly = guestMutation({
-  args: { itemId: v.string(), personIds: v.array(v.string()) },
-  returns: v.object({ rejectedCount: v.number() }),
-  handler: async (ctx, { itemId, personIds }) => {
-    const { bill } = ctx
-    const ids = new Set(personIds)
-    if (ids.size === 0) throw new Error('Choose at least one person')
-    for (const id of ids) assertOwnPerson(bill, id, ctx.guestSessionId)
-    const item = bill.lineItems.find((item) => item.id === itemId)
-    if (!item) throw new Error('Item no longer exists')
-    const current = toWireClaims(await claimRowsForBill(ctx, bill._id))
-    const preserved = current.filter(
-      (c) => c.itemId !== itemId || !ids.has(c.personId),
-    )
-    const taken = preserved
-      .filter((c) => c.itemId === itemId)
-      .reduce((sum, c) => sum + c.units, 0)
-    const units = Math.max(0, item.qty - taken) / ids.size
-    await syncClaimRows(ctx, bill._id, [
-      ...preserved,
-      ...(units > 0 ? [...ids].map((personId) => ({ itemId, personId, units })) : []),
-    ])
-    return { rejectedCount: taken > 0 ? 1 : 0 }
-  },
+  args: { itemId: v.string(), personIds: v.array(v.string()), quantity: v.number() },
+  returns: itemShareResult,
+  handler: async (ctx, { itemId, personIds, quantity }) =>
+    shareItemEvenly(ctx, ctx.bill, itemId, personIds, quantity, editablePeople(ctx.bill, ctx.guestSessionId)),
+})
+
+export const restoreGuestItemSplit = guestMutation({
+  args: { itemId: v.string(), ...itemSplitSnapshot },
+  returns: v.null(),
+  handler: async (ctx, args) =>
+    restoreItemSplit(ctx, ctx.bill, args, editablePeople(ctx.bill, ctx.guestSessionId)),
 })

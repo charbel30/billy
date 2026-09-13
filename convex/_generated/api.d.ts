@@ -30,6 +30,7 @@ import type * as lib_retrier from "../lib/retrier.js";
 import type * as model_bills from "../model/bills.js";
 import type * as model_claimChanges from "../model/claimChanges.js";
 import type * as model_claimRows from "../model/claimRows.js";
+import type * as model_itemSharing from "../model/itemSharing.js";
 
 import type {
   ApiFromModules,
@@ -60,6 +61,7 @@ declare const fullApi: ApiFromModules<{
   "model/bills": typeof model_bills;
   "model/claimChanges": typeof model_claimChanges;
   "model/claimRows": typeof model_claimRows;
+  "model/itemSharing": typeof model_itemSharing;
 }>;
 
 /**

@@ -7,6 +7,16 @@ import {
   serviceSplitMode,
 } from '../../schema'
 
+export const itemSplitSnapshot = {
+  before: v.array(claim),
+  after: v.array(claim),
+  qty: v.number(),
+}
+
+export const itemShareResult = v.object({
+  ...itemSplitSnapshot,
+})
+
 export const publicPerson = v.object({
   id: v.string(),
   name: v.string(),

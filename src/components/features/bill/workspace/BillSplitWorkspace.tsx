@@ -23,6 +23,7 @@ import {
   totalRemainingLbp,
 } from '~/lib/money'
 import type { BillStatus, Person } from '~/lib/types'
+import type { ShareItemEvenly } from '~/lib/bill'
 
 interface WorkspaceBill extends BillSummaryBill {
   merchantName: string
@@ -74,7 +75,7 @@ export function BillSplitWorkspace({
   addLabel?: string
   addPlaceholder?: string
   onStep: (itemId: string, personId: string, delta: number) => void
-  onShareEvenly: (itemId: string, personIds: string[]) => void
+  onShareEvenly: ShareItemEvenly
   canShareEvenly?: boolean
   sharePeople?: Person[]
   showClaims?: boolean
@@ -285,7 +286,7 @@ export function BillSplitWorkspace({
         onStep={onStep}
         onShareEvenly={onShareEvenly}
         canShareEvenly={canShareEvenly}
-        sharePeople={sharePeople}
+        sharePeople={sharePeople?.map(displayPerson)}
       />
     </BillScreen>
   )

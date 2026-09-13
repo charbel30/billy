@@ -10,36 +10,30 @@ import {
   toWireClaims,
 } from '../../model/claimRows'
 import { editableBillMutation } from '../lib/functions'
+import { itemShareResult, itemSplitSnapshot } from '../lib/validators'
+import { restoreItemSplit, shareItemEvenly } from '../../model/itemSharing'
 
 export const shareHostItemEvenly = editableBillMutation({
   args: {
     itemId: v.string(),
     personIds: v.array(v.string()),
+    quantity: v.number(),
   },
-  returns: v.null(),
-  handler: async (ctx, { itemId, personIds }) => {
-    const { bill } = ctx
-    const item = bill.lineItems.find((li) => li.id === itemId)
-    invariant(item, 'item not found')
-    if (personIds.length === 0) throw new Error('Choose at least one person')
-    const peopleIds = new Set(bill.people.map((p) => p.id))
-    for (const personId of personIds) {
-      if (!peopleIds.has(personId)) throw new Error('person not found')
-    }
+  returns: itemShareResult,
+  handler: async (ctx, { itemId, personIds, quantity }) =>
+    shareItemEvenly(ctx, ctx.bill, itemId, personIds, quantity, new Set(ctx.bill.people.map((p) => p.id))),
+})
 
-    const units = item.qty / personIds.length
-    const currentClaims = toWireClaims(await claimRowsForBill(ctx, bill._id))
-    await syncClaimRows(ctx, bill._id, [
-      ...currentClaims.filter((c) => c.itemId !== itemId),
-      ...personIds.map((personId) => ({ itemId, personId, units })),
-    ])
-    return null
-  },
+export const restoreHostItemSplit = editableBillMutation({
+  args: { itemId: v.string(), ...itemSplitSnapshot },
+  returns: v.null(),
+  handler: async (ctx, args) =>
+    restoreItemSplit(ctx, ctx.bill, args, new Set(ctx.bill.people.map((p) => p.id))),
 })
 
 // End-of-split stall killer (roadmap Phase B): distribute every item's still-
 // unclaimed units evenly across ALL people, ADDING on top of existing claims
-// (unlike shareHostItemEvenly, which replaces an item's claims). Claims-only
+// (shareHostItemEvenly adds only the chosen quantity for one item). Claims-only
 // write — no bill patch, no version bump, same as the other claim mutations.
 export const splitLeftoversEvenly = editableBillMutation({
   args: {},

@@ -1,6 +1,25 @@
-/** Whole numbers plain, fractions to 2dp (e.g. "0.33"). */
+const fractionGlyphs: Record<string, string> = {
+  '1/2': '½', '1/3': '⅓', '2/3': '⅔', '1/4': '¼', '3/4': '¾',
+  '1/5': '⅕', '2/5': '⅖', '3/5': '⅗', '4/5': '⅘',
+  '1/6': '⅙', '5/6': '⅚', '1/8': '⅛', '3/8': '⅜', '5/8': '⅝', '7/8': '⅞',
+}
+
+/** Preserve recognizable shares without rounding the stored quantity. */
 export function formatUnits(n: number): string {
-  return Number.isInteger(n) ? String(n) : n.toFixed(2)
+  if (!Number.isFinite(n)) return String(n)
+  if (Math.abs(n - Math.round(n)) < 1e-8) return String(Math.round(n))
+  const sign = n < 0 ? '−' : ''
+  const whole = Math.floor(Math.abs(n))
+  const fraction = Math.abs(n) - whole
+  for (let denominator = 2; denominator <= 30; denominator++) {
+    const numerator = Math.round(fraction * denominator)
+    if (numerator > 0 && numerator < denominator && Math.abs(fraction - numerator / denominator) < 1e-8) {
+      const key = `${numerator}/${denominator}`
+      const glyph = fractionGlyphs[key]
+      return `${sign}${whole ? `${whole}${glyph ? '' : ' '}` : ''}${glyph ?? key}`
+    }
+  }
+  return n.toFixed(2)
 }
 
 /** LBP amount as a bare grouped number ("1,260,000") — no currency suffix. */

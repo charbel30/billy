@@ -22,6 +22,7 @@ import {
   useJoinSplit,
   useStepGuestClaim,
   useShareGuestItemEvenly,
+  useRestoreGuestItemSplit,
   useSetGuestPersonPaid,
 } from '~/api'
 import { getOrCreateGuestSessionId } from '~/lib/session'
@@ -45,6 +46,7 @@ export function JoinPage({ shareToken }: { shareToken: string }) {
   const addGuestPerson = useAddGuestPerson()
   const stepGuestClaim = useStepGuestClaim()
   const shareGuestItemEvenly = useShareGuestItemEvenly()
+  const restoreGuestItemSplit = useRestoreGuestItemSplit()
   const setGuestPersonPaid = useSetGuestPersonPaid()
 
   useEffect(() => {
@@ -132,26 +134,18 @@ export function JoinPage({ shareToken }: { shareToken: string }) {
       )
   }
 
-  function shareEvenly(itemId: string, personIds: string[]) {
+  async function shareEvenly(itemId: string, personIds: string[], quantity: number) {
     if (
       !guestSessionId ||
       personIds.length === 0 ||
       personIds.some((id) => !isMine(id))
     )
-      return
+      throw new Error('Choose people you can manage')
     setConflictMessage(null)
-    void shareGuestItemEvenly
-      .mutateAsync({ shareToken, guestSessionId, itemId, personIds })
-      .then((result) => {
-        if (result.rejectedCount > 0) {
-          setConflictMessage(
-            'Some units were already claimed, so we split only what was still available.',
-          )
-        }
-      })
-      .catch(() =>
-        setConflictMessage('That split could not be saved. Please try again.'),
-      )
+    const { before, after, qty } = await shareGuestItemEvenly.mutateAsync({ shareToken, guestSessionId, itemId, personIds, quantity })
+    return async () => {
+      await restoreGuestItemSplit.mutateAsync({ shareToken, guestSessionId, itemId, before, after, qty })
+    }
   }
 
   function togglePaid(personId: string, paid: boolean) {

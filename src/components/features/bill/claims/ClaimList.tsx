@@ -1,13 +1,16 @@
 import { AnimatePresence } from 'motion/react'
+import { useState } from 'react'
+import toast from 'react-hot-toast'
+import type { ShareItemEvenly } from '~/lib/bill'
 import type { Claim, LineItem, Person } from '~/lib/types'
 import { remainingUnits } from '~/lib/money'
 import { tapHaptic } from '~/lib/ui'
 import { ClaimListItem } from './ClaimListItem'
+import { ItemOrderSplit } from './ItemOrderSplit'
+import { SplitSavedToast } from './SplitSavedToast'
 
 // Pull units off each receipt line onto the active person (ui-flow-vision.md):
-// pick a person → +1/-1 per item. Tapping a claimant's avatar removes one of
-// THEIR units (without changing who's active). A line greys out + collapses to a
-// check once it's fully assigned. "Split evenly" is the compact group button.
+// Whole orders use the stepper; the inline splitter adds shares of unclaimed orders.
 export function ClaimList({
   lineItems,
   people,
@@ -25,13 +28,17 @@ export function ClaimList({
   activePerson: Person | null
   rate: number | null | undefined
   onStep: (itemId: string, personId: string, delta: number) => void
-  onShareEvenly: (itemId: string, personIds: string[]) => void
+  onShareEvenly: ShareItemEvenly
   canShareEvenly?: boolean
   sharePeople?: Person[]
 }) {
   const personById = new Map(people.map((p) => [p.id, p]))
+  const [sharingId, setSharingId] = useState<string | null>(null)
+  const [pendingId, setPendingId] = useState<string | null>(null)
+  const editableIds = new Set(sharePeople.map((person) => person.id))
 
   function step(itemId: string, personId: string, delta: number) {
+    if (pendingId === itemId) return
     tapHaptic()
     onStep(itemId, personId, delta)
   }
@@ -39,7 +46,7 @@ export function ClaimList({
   // Unclaimed items float to the top; fully-claimed ones sink (stable sort, so
   // receipt order is preserved within each group and `layout` animates the move).
   const doneById = new Map(
-    lineItems.map((item) => [item.id, remainingUnits(item, claims) <= 0.0001]),
+    lineItems.map((item) => [item.id, item.id !== sharingId && remainingUnits(item, claims) <= 0.0001]),
   )
   const sortedItems = [...lineItems].sort(
     (a, b) => Number(doneById.get(a.id)) - Number(doneById.get(b.id)),
@@ -57,10 +64,34 @@ export function ClaimList({
             activePerson={activePerson}
             rate={rate}
             onStep={step}
-            onShareEvenly={onShareEvenly}
-            canShareEvenly={canShareEvenly}
-            sharePeople={sharePeople}
-          />
+            onShare={() => { tapHaptic(); setSharingId((current) => current === item.id ? null : item.id) }}
+            canShare={canShareEvenly && sharePeople.length > 1}
+            sharingOpen={sharingId === item.id}
+            pending={pendingId !== null}
+            editableIds={editableIds}
+          >
+            {sharingId === item.id ? (
+              <ItemOrderSplit
+                item={item}
+                claims={claims}
+                people={sharePeople}
+                activePerson={activePerson}
+                rate={rate}
+                restricted={sharePeople.length < people.length}
+                onClose={() => setSharingId(null)}
+                onSave={async (itemId, personIds, quantity) => {
+                  setPendingId(itemId)
+                  try { return await onShareEvenly(itemId, personIds, quantity) }
+                  finally { setPendingId(null) }
+                }}
+                onSaved={(undo) => {
+                  tapHaptic([8, 30, 8])
+                  const savedAt = Date.now()
+                  toast((t) => <SplitSavedToast key={savedAt} itemName={item.name} undo={undo} toastId={t.id} />, { id: `item-split-${item.id}`, duration: 8000 })
+                }}
+              />
+            ) : null}
+          </ClaimListItem>
         ))}
       </AnimatePresence>
     </div>

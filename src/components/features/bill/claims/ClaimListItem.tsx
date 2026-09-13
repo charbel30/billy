@@ -1,3 +1,4 @@
+import { useId, type ReactNode } from 'react'
 import { AnimatePresence, motion } from 'motion/react'
 import {
   RiAddLine,
@@ -15,7 +16,7 @@ import {
   itemEmoji,
   unitsFor,
 } from '~/lib/bill'
-import { tapHaptic, swap } from '~/lib/ui'
+import { swap } from '~/lib/ui'
 import { useCurrencyDisplay } from '~/hooks/useCurrencyDisplay'
 import { PersonAvatar } from '../people'
 import { ItemPrice } from '../receipt'
@@ -23,8 +24,7 @@ import { FitText } from '~/components/ui/fit-text'
 import { cn } from '~/lib/utils'
 
 // One receipt line in the claim list: name + qty badge, tap-to-flip price,
-// claimant pills (tap to drop a unit), and the active person's +/- stepper,
-// which morphs into a done check once the line is fully assigned.
+// named claim totals, whole-order controls and an inline order splitter.
 export function ClaimListItem({
   item,
   claims,
@@ -32,9 +32,12 @@ export function ClaimListItem({
   activePerson,
   rate,
   onStep,
-  onShareEvenly,
-  canShareEvenly,
-  sharePeople,
+  onShare,
+  canShare,
+  editableIds,
+  sharingOpen,
+  pending,
+  children,
 }: {
   item: LineItem
   claims: Claim[]
@@ -43,14 +46,20 @@ export function ClaimListItem({
   rate: number | null | undefined
   /** Already haptic-wrapped by the parent list. */
   onStep: (itemId: string, personId: string, delta: number) => void
-  onShareEvenly: (itemId: string, personIds: string[]) => void
-  canShareEvenly: boolean
-  sharePeople: Person[]
+  onShare: () => void
+  canShare: boolean
+  editableIds: ReadonlySet<string>
+  sharingOpen: boolean
+  pending: boolean
+  children?: ReactNode
 }) {
+  const editorId = useId()
   const { display } = useCurrencyDisplay()
   const remaining = remainingUnits(item, claims)
   const mine = activePerson ? unitsFor(claims, item.id, activePerson.id) : 0
   const claimants = claims.filter((c) => c.itemId === item.id && c.units > 0)
+  const shared = claimants.length > 1 || claimants.some((c) => Math.abs(c.units - Math.round(c.units)) > 1e-8)
+  const equal = claimants.length > 1 && claimants.every((c) => Math.abs(c.units - claimants[0]!.units) < 1e-8)
   const unit = effectiveUnitPrice(item)
   const done = remaining <= 0.0001
   const emoji = itemEmoji(item.name)
@@ -70,7 +79,7 @@ export function ClaimListItem({
       initial={{ opacity: 0, y: 8 }}
       // Motion owns opacity (enter/exit + done dimming); keeping it out of the
       // CSS transition list avoids double-driving every animation frame.
-      animate={{ opacity: done ? 0.75 : 1, y: 0 }}
+      animate={{ opacity: done && !sharingOpen ? 0.9 : 1, y: 0 }}
       exit={{ opacity: 0, y: -8, filter: 'blur(4px)' }}
       transition={{ type: 'spring', duration: 0.4, bounce: 0 }}
       className={cn(
@@ -131,12 +140,12 @@ export function ClaimListItem({
       <motion.div
         layout="position"
         className={cn(
-          'flex items-center justify-between gap-3',
+          'flex flex-wrap items-center justify-between gap-3',
           done ? 'mt-2' : 'mt-3',
         )}
       >
-        {/* Claimants — tap a pill to drop one of that person's units */}
-        <div className="flex min-w-0 flex-1 flex-wrap items-center gap-1.5">
+        {/* Claim totals stay independent of each new split. Tap to remove up to one order. */}
+        <div className="flex w-full min-w-0 flex-wrap items-center gap-1.5">
           {claimants.length > 0 ? (
             <AnimatePresence initial={false} mode="popLayout">
               {claimants.map((c) => {
@@ -152,11 +161,12 @@ export function ClaimListItem({
                     exit={{ opacity: 0, scale: 0.6, filter: 'blur(4px)' }}
                     transition={{ type: 'spring', duration: 0.3, bounce: 0 }}
                     whileTap={{ scale: 0.96 }}
+                    disabled={pending || !editableIds.has(c.personId)}
                     onClick={() => onStep(item.id, c.personId, -1)}
-                    title={`${p?.name ?? 'Someone'} · ${formatUnits(c.units)} — tap to remove one`}
-                    aria-label={`Remove one from ${p?.name ?? 'person'}`}
+                    title={`${p?.name ?? 'Someone'} · ${formatUnits(c.units)}`}
+                    aria-label={`Remove ${c.units < 1 ? 'share' : 'one order'} from ${p?.name ?? 'person'}`}
                     className={cn(
-                      'group/pill inline-flex items-center gap-1 rounded-full py-1 pl-1 pr-1.5 transition-[box-shadow,background-color]',
+                      'group/pill inline-flex min-h-10 items-center gap-1.5 rounded-full py-1 pl-1.5 pr-2.5 text-xs transition-[box-shadow,background-color] focus-visible:outline-2 focus-visible:outline-ring disabled:cursor-default',
                       isActive
                         ? 'bg-background'
                         : 'bg-background/70 ring-1 ring-border/40 hover:ring-destructive/40',
@@ -172,8 +182,9 @@ export function ClaimListItem({
                       color={p?.color}
                       size="sm"
                     />
+                    <span className="max-w-28 truncate font-semibold">{p?.name ?? 'Someone'}</span>
                     {c.units !== 1 ? (
-                      <span className="text-[10px] font-bold tabular-nums text-muted-foreground">
+                      <span className="text-xs font-bold tabular-nums text-muted-foreground">
                         {formatUnits(c.units)}
                       </span>
                     ) : null}
@@ -188,18 +199,37 @@ export function ClaimListItem({
           )}
         </div>
 
-        {/* Active-person controls morph into a done check + undo hint */}
+        {canShare ? (
+          <button
+            type="button"
+            aria-expanded={sharingOpen}
+            aria-controls={editorId}
+            aria-label={`Split orders of ${item.name}`}
+            disabled={pending || (done && !sharingOpen)}
+            onClick={onShare}
+            className={cn(
+              'inline-flex min-h-10 shrink-0 items-center gap-1.5 rounded-full px-3 text-sm font-bold text-primary-strong transition-[scale,background-color] hover:bg-primary/10 active:scale-[0.96] disabled:opacity-40 focus-visible:outline-2 focus-visible:outline-ring',
+              sharingOpen && 'bg-primary/10',
+            )}
+          >
+            <RiGroupLine className="size-4" aria-hidden />
+            {sharingOpen ? 'Close' : 'Split'}
+          </button>
+        ) : <span className="text-xs text-muted-foreground">{shared ? `Shared by ${claimants.length}` : 'Whole items'}</span>}
+
+        {/* Hide the whole-order stepper while splitting so two quantity
+            controls are not competing in the same card. */}
         <AnimatePresence mode="popLayout" initial={false}>
-          {done ? (
+          {sharingOpen ? null : done && mine <= 0 ? (
             <motion.div
               key="done"
               {...swap}
               className="flex shrink-0 items-center gap-1.5 text-primary-strong"
             >
               <span className="text-[11px] font-medium text-muted-foreground">
-                tap avatar to remove
+                {equal ? `${formatUnits(claimants[0]!.units)} each` : 'All assigned'}
               </span>
-              <RiCheckboxCircleFill className="size-5" />
+              <RiCheckboxCircleFill className="size-5" aria-label="All assigned" />
             </motion.div>
           ) : (
             <motion.div
@@ -207,37 +237,19 @@ export function ClaimListItem({
               {...swap}
               className="flex shrink-0 items-center gap-1.5"
             >
-              {canShareEvenly && sharePeople.length > 1 ? (
-                <button
-                  type="button"
-                  aria-label="Split evenly across everyone"
-                  title="Split evenly across everyone"
-                  onClick={() => {
-                    tapHaptic([8, 30, 8])
-                    onShareEvenly(
-                      item.id,
-                      sharePeople.map((p) => p.id),
-                    )
-                  }}
-                  className="grid size-10 place-items-center rounded-full text-muted-foreground transition-[scale,color,background-color] hover:bg-muted hover:text-foreground active:scale-[0.96]"
-                >
-                  <RiGroupLine className="size-4" />
-                </button>
-              ) : null}
-
               <div className="flex items-center gap-0.5">
                 <button
                   type="button"
-                  aria-label="Remove one"
-                  disabled={!activePerson || mine <= 0}
+                  aria-label={mine > 0 && mine < 1 ? 'Remove my share' : 'Remove one order'}
+                  disabled={pending || !activePerson || mine <= 0}
                   onClick={() =>
                     activePerson && onStep(item.id, activePerson.id, -1)
                   }
-                  className="grid size-10 place-items-center rounded-full border border-border transition-[scale,background-color] hover:bg-muted active:scale-[0.96] disabled:opacity-30"
+                  className="grid size-10 place-items-center rounded-full border border-border transition-[scale,background-color] hover:bg-muted active:scale-[0.96] focus-visible:outline-2 focus-visible:outline-ring disabled:opacity-30"
                 >
                   <RiSubtractLine className="size-4" />
                 </button>
-                <div className="w-6 text-center">
+                <div className="min-w-6 px-1 text-center">
                   <AnimatePresence mode="popLayout" initial={false}>
                     <motion.span
                       key={mine}
@@ -253,12 +265,12 @@ export function ClaimListItem({
                 </div>
                 <button
                   type="button"
-                  aria-label="Add one"
-                  disabled={!activePerson || remaining <= 0.0001}
+                  aria-label="Claim one order"
+                  disabled={pending || !activePerson || remaining <= 0.0001}
                   onClick={() =>
                     activePerson && onStep(item.id, activePerson.id, +1)
                   }
-                  className="grid size-10 place-items-center rounded-full border border-border transition-[scale,background-color,opacity] hover:bg-muted active:scale-[0.96] disabled:opacity-30"
+                  className="grid size-10 place-items-center rounded-full border border-border transition-[scale,background-color,opacity] hover:bg-muted active:scale-[0.96] focus-visible:outline-2 focus-visible:outline-ring disabled:opacity-30"
                   style={
                     activePerson && remaining > 0.0001
                       ? {
@@ -276,6 +288,7 @@ export function ClaimListItem({
           )}
         </AnimatePresence>
       </motion.div>
+      <div id={editorId}>{children}</div>
     </motion.div>
   )
 }

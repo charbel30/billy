@@ -141,7 +141,7 @@ test('capacity conflicts are reported without discarding other items or people',
   await t.mutation(api.bills.host.claims.shareHostItemEvenly, {
     ...host,
     itemId: 'meal',
-    personIds: ['bob'],
+    personIds: ['bob'], quantity: 4,
   })
   await t.mutation(api.bills.guest.claims.stepGuestClaim, {
     ...guest,
@@ -185,9 +185,9 @@ test('guest even split is atomic, preserves other items, and respects ownership'
   const result = await t.mutation(api.bills.guest.claims.shareGuestItemEvenly, {
     ...guest,
     itemId: 'meal',
-    personIds: ['alice', 'companion'],
+    personIds: ['alice', 'companion'], quantity: 3,
   })
-  expect(result.rejectedCount).toBe(1)
+  expect(result.after).toHaveLength(3)
   const bill = await t.query(api.bills.host.queries.getBill, {
     id,
     hostToken: 'test-host-token',
@@ -204,7 +204,7 @@ test('guest even split is atomic, preserves other items, and respects ownership'
     t.mutation(api.bills.guest.claims.shareGuestItemEvenly, {
       ...guest,
       itemId: 'meal',
-      personIds: ['alice', 'bob'],
+      personIds: ['alice', 'bob'], quantity: 1,
     }),
   ).rejects.toThrow()
   await expect(
@@ -263,3 +263,139 @@ test('finalization preserves accepted choices and rejects later taps', async () 
   expect(bill.status).toBe('FINALIZED')
   expect(bill.claims).toHaveLength(2)
 })
+
+test('separate guest splits add shares without removing earlier participants', async () => {
+  const { t, host, guest } = await setup()
+  await t.mutation(api.bills.host.claims.stepHostClaim, { ...host, itemId: 'meal', personId: 'bob', delta: 1 })
+  await t.mutation(api.bills.guest.claims.shareGuestItemEvenly, { ...guest, itemId: 'meal', personIds: ['alice', 'companion'], quantity: 2 })
+  await t.mutation(api.bills.guest.claims.shareGuestItemEvenly, { ...guest, itemId: 'meal', personIds: ['alice'], quantity: 1 })
+  const bill = await t.query(api.bills.host.queries.getBill, host)
+  expect(bill.claims).toHaveLength(3)
+  expect(bill.claims).toEqual(expect.arrayContaining([
+    { itemId: 'meal', personId: 'bob', units: 1 },
+    { itemId: 'meal', personId: 'alice', units: 2 },
+    { itemId: 'meal', personId: 'companion', units: 1 },
+  ]))
+})
+
+test('host sharing deduplicates people and keeps exact thirds', async () => {
+  const { t, host } = await setup()
+  await t.mutation(api.bills.host.claims.shareHostItemEvenly, { ...host, itemId: 'meal', personIds: ['alice', 'bob', 'companion', 'alice'], quantity: 4 })
+  const bill = await t.query(api.bills.host.queries.getBill, host)
+  expect(bill.claims).toHaveLength(3)
+  expect(bill.claims.every((c) => c.units === 4 / 3)).toBe(true)
+  expect(bill.claims.reduce((sum, c) => sum + c.units, 0)).toBe(4)
+})
+
+for (const caller of ['host', 'guest'] as const) {
+  test(`${caller}: undo restores prior quantities and leaves newer changes on other items alone`, async () => {
+    const { t, host, guest } = await setup()
+    await t.mutation(api.bills.host.claims.stepHostClaim, { ...host, itemId: 'meal', personId: 'alice', delta: 1 })
+    const result = caller === 'host'
+      ? await t.mutation(api.bills.host.claims.shareHostItemEvenly, { ...host, itemId: 'meal', personIds: ['alice', 'companion'], quantity: 3 })
+      : await t.mutation(api.bills.guest.claims.shareGuestItemEvenly, { ...guest, itemId: 'meal', personIds: ['alice', 'companion'], quantity: 3 })
+    await t.mutation(api.bills.host.claims.stepHostClaim, { ...host, itemId: 'drink', personId: 'bob', delta: 1 })
+    const { before, after, qty } = result
+    const snapshot = { itemId: 'meal', before, after, qty }
+    if (caller === 'host') await t.mutation(api.bills.host.claims.restoreHostItemSplit, { ...host, ...snapshot })
+    else await t.mutation(api.bills.guest.claims.restoreGuestItemSplit, { ...guest, ...snapshot })
+    const bill = await t.query(api.bills.host.queries.getBill, host)
+    expect(bill.claims).toHaveLength(2)
+    expect(bill.claims).toEqual(expect.arrayContaining([
+      { itemId: 'meal', personId: 'alice', units: 1 },
+      { itemId: 'drink', personId: 'bob', units: 1 },
+    ]))
+    // The old snapshot cannot be replayed over a different split.
+    await expect(caller === 'host'
+      ? t.mutation(api.bills.host.claims.restoreHostItemSplit, { ...host, ...snapshot })
+      : t.mutation(api.bills.guest.claims.restoreGuestItemSplit, { ...guest, ...snapshot }),
+    ).rejects.toThrow('split changed')
+  })
+}
+
+test('guest undo cannot forge another guest’s share or exceed the item quantity', async () => {
+  const { t, host, guest } = await setup()
+  await t.mutation(api.bills.host.claims.stepHostClaim, { ...host, itemId: 'meal', personId: 'bob', delta: 1 })
+  const { before, after, qty } = await t.mutation(api.bills.guest.claims.shareGuestItemEvenly, { ...guest, itemId: 'meal', personIds: ['alice', 'companion'], quantity: 3 })
+  for (const invalidBefore of [
+    before.map((c) => ({ ...c, units: 0.5 })),
+    [...before, { itemId: 'meal', personId: 'alice', units: 10 }],
+    [...before, { itemId: 'drink', personId: 'alice', units: 1 }],
+  ]) {
+    await expect(t.mutation(api.bills.guest.claims.restoreGuestItemSplit, { ...guest, itemId: 'meal', before: invalidBefore, after, qty })).rejects.toThrow()
+  }
+  const bill = await t.query(api.bills.host.queries.getBill, host)
+  expect(bill.claims).toEqual(expect.arrayContaining(after))
+})
+
+test('sharing and undo reject finalized bills', async () => {
+  const { t, host, guest } = await setup()
+  const { before, after, qty } = await t.mutation(api.bills.host.claims.shareHostItemEvenly, { ...host, itemId: 'meal', personIds: ['alice', 'companion'], quantity: 3 })
+  await t.mutation(api.bills.host.lifecycle.finalize, host)
+  await expect(t.mutation(api.bills.host.claims.restoreHostItemSplit, { ...host, itemId: 'meal', before, after, qty })).rejects.toThrow()
+  await expect(t.mutation(api.bills.guest.claims.restoreGuestItemSplit, { ...guest, itemId: 'meal', before, after, qty })).rejects.toThrow()
+  await expect(t.mutation(api.bills.host.claims.shareHostItemEvenly, { ...host, itemId: 'meal', personIds: ['alice'], quantity: 1 })).rejects.toThrow()
+})
+
+for (const caller of ['host', 'guest'] as const) {
+  test(`${caller}: sharing one order preserves a whole order already claimed by a recipient`, async () => {
+    const { t, host, guest } = await setup()
+    await t.mutation(api.bills.host.claims.stepHostClaim, { ...host, itemId: 'meal', personId: 'alice', delta: 1 })
+    const args = { itemId: 'meal', personIds: ['alice', 'companion'], quantity: 1 }
+    if (caller === 'host') await t.mutation(api.bills.host.claims.shareHostItemEvenly, { ...host, ...args })
+    else await t.mutation(api.bills.guest.claims.shareGuestItemEvenly, { ...guest, ...args })
+    const bill = await t.query(api.bills.host.queries.getBill, host)
+    expect(bill.claims).toEqual(expect.arrayContaining([
+      { itemId: 'meal', personId: 'alice', units: 1.5 },
+      { itemId: 'meal', personId: 'companion', units: 0.5 },
+    ]))
+    expect(bill.claims.reduce((sum, c) => sum + c.units, 0)).toBe(2)
+  })
+}
+
+test('two mozzarella orders: one solo order and another shared by three people', async () => {
+  const { t, id, host } = await setup()
+  await t.run(async (ctx) => {
+    const bill = await ctx.db.get(id)
+    if (!bill) throw Error('missing fixture')
+    await ctx.db.patch(id, {
+      lineItems: [{ id: 'mozzarella', name: 'Mozzarella sticks', qty: 2, unitPrice: 100, lineTotal: 200 }],
+      people: [...bill.people, { id: 'dana', name: 'Dana', color: 'pink' }],
+    })
+  })
+  await t.mutation(api.bills.host.claims.stepHostClaim, { ...host, itemId: 'mozzarella', personId: 'alice', delta: 1 })
+  const snapshot = await t.mutation(api.bills.host.claims.shareHostItemEvenly, { ...host, itemId: 'mozzarella', personIds: ['bob', 'companion', 'dana'], quantity: 1 })
+  const bill = await t.query(api.bills.host.queries.getBill, host)
+  expect(bill.claims).toHaveLength(4)
+  expect(bill.claims.find((c) => c.personId === 'alice')?.units).toBe(1)
+  expect(bill.claims.filter((c) => c.personId !== 'alice').every((c) => c.units === 1 / 3)).toBe(true)
+  expect(bill.claims.reduce((sum, c) => sum + c.units, 0)).toBeCloseTo(2)
+  const { before, after, qty } = snapshot
+  await t.mutation(api.bills.host.claims.restoreHostItemSplit, { ...host, itemId: 'mozzarella', before, after, qty })
+  expect((await t.query(api.bills.host.queries.getBill, host)).claims).toEqual([{ itemId: 'mozzarella', personId: 'alice', units: 1 }])
+})
+
+test('three nachos can all be split equally in one action', async () => {
+  const { t, id, host } = await setup()
+  await t.run((ctx) => ctx.db.patch(id, { lineItems: [{ id: 'nachos', name: 'Nachos', qty: 3, unitPrice: 100, lineTotal: 300 }] }))
+  await t.mutation(api.bills.host.claims.shareHostItemEvenly, { ...host, itemId: 'nachos', personIds: ['alice', 'bob', 'companion'], quantity: 3 })
+  const bill = await t.query(api.bills.host.queries.getBill, host)
+  expect(bill.claims).toHaveLength(3)
+  expect(bill.claims.every((c) => c.units === 1)).toBe(true)
+})
+
+for (const caller of ['host', 'guest'] as const) {
+  test(`${caller}: invalid or stale quantities never overwrite claims`, async () => {
+    const { t, host, guest } = await setup()
+    await t.mutation(api.bills.host.claims.stepHostClaim, { ...host, itemId: 'meal', personId: 'alice', delta: 1 })
+    const before = (await t.query(api.bills.host.queries.getBill, host)).claims
+    for (const quantity of [0, -1, NaN, Infinity, 4]) {
+      const args = { itemId: 'meal', personIds: ['alice', 'companion'], quantity }
+      await expect(caller === 'host'
+        ? t.mutation(api.bills.host.claims.shareHostItemEvenly, { ...host, ...args })
+        : t.mutation(api.bills.guest.claims.shareGuestItemEvenly, { ...guest, ...args }),
+      ).rejects.toThrow()
+      expect((await t.query(api.bills.host.queries.getBill, host)).claims).toEqual(before)
+    }
+  })
+}

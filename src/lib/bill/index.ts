@@ -1,4 +1,5 @@
 export * from './claims'
+export * from './itemSharing'
 export * from './constants'
 export * from './edits'
 export * from './ids'

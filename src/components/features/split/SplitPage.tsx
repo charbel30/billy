@@ -27,6 +27,7 @@ import {
   useStepHostClaim,
   useSetTipPercent,
   useShareHostItemEvenly,
+  useRestoreHostItemSplit,
   useSplitLeftoversEvenly,
 } from '~/api'
 import { getHostToken, recordBill } from '~/lib/session'
@@ -63,6 +64,7 @@ export function SplitPage({ billId }: { billId: Id<'bills'> }) {
   const removeHostPerson = useRemoveHostPerson()
   const stepHostClaim = useStepHostClaim()
   const shareHostItemEvenly = useShareHostItemEvenly()
+  const restoreHostItemSplit = useRestoreHostItemSplit()
 
   const [activeId, setActiveId] = useState<string | null>(
     bill.people[0]?.id ?? null,
@@ -143,13 +145,16 @@ export function SplitPage({ billId }: { billId: Id<'bills'> }) {
       })
   }
 
-  function shareEvenly(itemId: string, personIds: string[]) {
-    if (finalizing.current) return
-    void writes
-      .run(() =>
-        shareHostItemEvenly.mutateAsync({ ...hostArgs(), itemId, personIds }),
-      )
-      .catch(() => setConflictMessage(splitCopy.conflicts.shareFailed))
+  async function shareEvenly(itemId: string, personIds: string[], quantity: number) {
+    if (finalizing.current) throw new Error('The bill is being finalized')
+    setConflictMessage(null)
+    const { before, after, qty } = await writes.run(() =>
+      shareHostItemEvenly.mutateAsync({ ...hostArgs(), itemId, personIds, quantity }),
+    )
+    return async () => {
+      if (finalizing.current) throw new Error('The bill is being finalized')
+      await writes.run(() => restoreHostItemSplit.mutateAsync({ ...hostArgs(), itemId, before, after, qty }))
+    }
   }
 
   // One button does it all: flip to PUBLISHED in the background (don't await —

@@ -92,6 +92,10 @@ export function useShareHostItemEvenly() {
   })
 }
 
+export function useRestoreHostItemSplit() {
+  return useMutation({ mutationFn: useConvexMutation(api.bills.host.claims.restoreHostItemSplit) })
+}
+
 export function useSplitLeftoversEvenly() {
   return useMutation({
     mutationFn: useConvexMutation(api.bills.host.claims.splitLeftoversEvenly),
@@ -122,4 +126,8 @@ export function useShareGuestItemEvenly() {
   return useMutation({
     mutationFn: useConvexMutation(api.bills.guest.claims.shareGuestItemEvenly),
   })
+}
+
+export function useRestoreGuestItemSplit() {
+  return useMutation({ mutationFn: useConvexMutation(api.bills.guest.claims.restoreGuestItemSplit) })
 }
