@@ -16,7 +16,12 @@ import {
   LOW_CONFIDENCE_THRESHOLD,
   MIN_PLAUSIBLE_LBP,
 } from '~/lib/bill/constants'
-import { pulseOnce, revealContainer, revealRow, revealTailDelay } from '~/lib/ui'
+import {
+  pulseOnce,
+  revealContainer,
+  revealRow,
+  revealTailDelay,
+} from '~/lib/ui'
 import { cn } from '~/lib/utils'
 import type { LineItem } from '~/lib/types'
 import { reviewCopy } from '../content'
@@ -206,52 +211,40 @@ function AuditLineItem({
 
   return (
     <>
-      <div className={cn('p-4 sm:hidden', ELEVATED_CARD)}>
-        <div className="flex items-start justify-between gap-3">
-          <div className="min-w-0 flex-1">
+      <div className={cn('space-y-3 p-4 sm:hidden', ELEVATED_CARD)}>
+        <div className="flex items-start gap-2">
+          <label className="min-w-0 flex-1">
+            <span className="mb-1 block text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">
+              Item name
+            </span>
             <BlurCommitInput
               value={item.name}
               placeholder="Item"
               onCommit={(raw) => onUpdate(item.id, { name: raw })}
               readOnly={readOnly}
-              className="w-full min-w-0 text-lg font-black leading-tight tracking-tight"
+              className="min-h-11 w-full min-w-0 rounded-lg bg-muted/50 px-2 text-base font-bold"
             />
-            {low ? (
-              <span className="mt-1 inline-flex items-center gap-1 rounded-full bg-warning-subtle px-2 py-0.5 text-xs font-semibold text-warning-subtle-foreground">
-                <RiAlertLine className="size-3.5" />
-                Check this
-              </span>
-            ) : null}
-          </div>
-
-          <div className="shrink-0 text-right">
-            <span className="block font-receipt text-3xl font-bold tracking-tight text-primary-strong">
-              {headline}
-            </span>
-            <div className="mt-1.5 flex items-center justify-end gap-1 text-xs font-semibold text-muted-foreground">
-              <BlurCommitInput
-                value={Math.round(item.lineTotal)}
-                numeric
-                onCommit={commitLineTotal}
-                readOnly={readOnly}
-                align="right"
-                className="w-24 text-right text-muted-foreground"
-              />
-              <span>LBP</span>
-            </div>
-          </div>
-        </div>
-
-        <div
-          className={cn(
-            'mt-4 grid gap-2',
-            readOnly
-              ? 'grid-cols-[5.5rem_minmax(0,1fr)]'
-              : 'grid-cols-[5.5rem_minmax(0,1fr)_2.5rem]',
+          </label>
+          {readOnly ? null : (
+            <button
+              type="button"
+              onClick={() => onRemove(item.id)}
+              className="mt-5 grid size-11 shrink-0 place-items-center rounded-full text-muted-foreground transition-[scale,background-color,color] hover:bg-destructive/10 hover:text-destructive active:scale-[0.96] focus-visible:outline-2 focus-visible:outline-ring"
+              aria-label={`Remove ${item.name || 'item'}`}
+            >
+              <RiDeleteBin6Line className="size-4" />
+            </button>
           )}
-        >
-          <label className="rounded-control bg-muted/65 px-3 py-2">
-            <span className="block text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">
+        </div>
+        {low ? (
+          <span className="inline-flex items-center gap-1 rounded-full bg-warning-subtle px-2 py-1 text-xs font-semibold text-warning-subtle-foreground">
+            <RiAlertLine className="size-3.5" /> Check this item against the
+            photo
+          </span>
+        ) : null}
+        <div className="grid grid-cols-[4rem_minmax(0,1fr)] gap-3">
+          <label>
+            <span className="mb-1 block text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">
               Qty
             </span>
             <BlurCommitInput
@@ -260,32 +253,33 @@ function AuditLineItem({
               onCommit={commitQty}
               readOnly={readOnly}
               align="center"
-              className="mt-0.5 w-full text-center text-base font-bold text-foreground"
+              className="min-h-11 w-full rounded-lg bg-muted/50 text-base font-bold"
             />
           </label>
-
-          <div className="min-w-0 rounded-control bg-muted/65 px-3 py-2">
-            <span className="block text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">
-              Unit price
+          <label className="min-w-0">
+            <span className="mb-1 block text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">
+              Line total · LBP
             </span>
-            <span className="mt-0.5 block truncate font-receipt text-sm font-bold text-foreground">
-              {formatLbpCompact(item.unitPrice)} LBP
-            </span>
-          </div>
-
-          {readOnly ? null : (
-            <button
-              type="button"
-              onClick={() => onRemove(item.id)}
-              className="grid place-items-center rounded-control bg-muted/65 text-muted-foreground transition-[scale,background-color,color] hover:bg-destructive/10 hover:text-destructive active:scale-[0.96]"
-              aria-label="Remove item"
-            >
-              <RiDeleteBin6Line className="size-5" />
-            </button>
-          )}
+            <BlurCommitInput
+              value={Math.round(item.lineTotal)}
+              numeric
+              onCommit={commitLineTotal}
+              readOnly={readOnly}
+              align="right"
+              className="min-h-11 w-full rounded-lg bg-muted/50 px-3 text-base font-semibold"
+            />
+          </label>
+        </div>
+        <div className="flex flex-wrap items-baseline justify-between gap-x-3 gap-y-1 border-t border-border/60 pt-3">
+          <span className="text-xs text-muted-foreground">
+            <span className="font-receipt">{formatLbp(item.unitPrice)}</span>{' '}
+            each
+          </span>
+          <span className="break-words font-receipt text-xl font-bold tracking-tight text-primary-strong">
+            {headline}
+          </span>
         </div>
       </div>
-
       <div
         className={cn(
           'group hidden grid-cols-[minmax(0,1fr)_9rem] gap-3 p-4 transition-[box-shadow,border-color] sm:grid',

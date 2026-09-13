@@ -2,7 +2,10 @@ import type { ReactNode } from 'react'
 import { Accordion } from '@base-ui/react/accordion'
 import type { Claim, LineItem, Person } from '~/lib/types'
 import type { Portfolio } from '~/lib/money'
-import { formatLbp, formatUsd, toUsd } from '~/lib/money'
+import { RiCheckLine, RiTimeLine } from '@remixicon/react'
+import { formatLbp } from '~/lib/money'
+import { CurrencyAmount } from '../receipt/CurrencyAmount'
+import { cn } from '~/lib/utils'
 import { SplitTotalsPersonRow } from './SplitTotalsPersonRow'
 
 /**
@@ -50,17 +53,42 @@ export function SplitTotalsPanel({
 
   return (
     <>
-      <div className="mb-4 grid grid-cols-2 gap-4 px-2">
-        <div>
-          <p className="text-xs text-muted-foreground">Assigned total</p>
-          <p className="mt-1 font-receipt text-xl font-bold text-primary-strong">
-            {formatUsd(toUsd(grandLbp, rate))}
+      <div className="mb-4 grid grid-cols-2 gap-2">
+        <div className="min-w-0 rounded-control bg-primary/10 p-3 ring-1 ring-primary/15">
+          <p className="flex items-center gap-1.5 text-xs font-semibold text-primary-strong">
+            <RiCheckLine className="size-4 shrink-0" aria-hidden /> Assigned
+          </p>
+          <CurrencyAmount
+            lbp={grandLbp}
+            usd={[...portfolioByPerson.values()].reduce(
+              (sum, p) => sum + p.totalUsd,
+              0,
+            )}
+            rate={rate}
+            className="mt-2 block break-words text-lg font-bold text-primary-strong"
+          />
+          <p className="mt-1 text-[11px] text-muted-foreground">
+            Includes tip &amp; charges
           </p>
         </div>
-        <div className="text-right">
-          <p className="text-xs text-muted-foreground">Unclaimed items</p>
-          <p className="mt-1 font-receipt text-xl font-semibold">
-            {formatUsd(toUsd(remainingLbp, rate))}
+        <div
+          className={cn(
+            'min-w-0 rounded-control p-3 ring-1',
+            remainingLbp > 0
+              ? 'bg-warning-subtle text-warning-subtle-foreground ring-warning/20'
+              : 'bg-success-subtle text-success-subtle-foreground ring-success/20',
+          )}
+        >
+          <p className="flex items-center gap-1.5 text-xs font-semibold">
+            <RiTimeLine className="size-4 shrink-0" aria-hidden /> Unclaimed
+          </p>
+          <CurrencyAmount
+            lbp={remainingLbp}
+            rate={rate}
+            className="mt-2 block break-words text-lg font-bold"
+          />
+          <p className="mt-1 text-[11px]">
+            {remainingLbp > 0 ? 'Still needs assigning' : 'All items assigned'}
           </p>
         </div>
       </div>
@@ -68,11 +96,26 @@ export function SplitTotalsPanel({
       {rate ? (
         <p className="mb-3 px-2 text-xs text-muted-foreground">
           Exchange rate{' '}
-          <span className="font-receipt tabular-nums">$1 = {formatLbp(rate)}</span>
+          <span className="font-receipt tabular-nums">
+            $1 = {formatLbp(rate)}
+          </span>
         </p>
       ) : null}
 
-      <Accordion.Root className="space-y-1">
+      <div className="mb-2 flex items-center justify-between px-1">
+        <h3 className="text-xs font-bold uppercase tracking-wide text-muted-foreground">
+          Everyone’s share
+        </h3>
+        <span className="text-xs text-muted-foreground">
+          {ordered.length} people
+        </span>
+      </div>
+      {ordered.length === 0 ? (
+        <p className="surface-inset p-4 text-sm text-muted-foreground">
+          Add people and assign items to see their totals here.
+        </p>
+      ) : null}
+      <Accordion.Root className="space-y-2">
         {ordered.map((person) => {
           const portfolio = portfolioByPerson.get(person.id)
           if (!portfolio) return null
@@ -91,7 +134,9 @@ export function SplitTotalsPanel({
         })}
       </Accordion.Root>
 
-      {extra ? <div className="surface-inset mt-4 px-4 py-3">{extra}</div> : null}
+      {extra ? (
+        <div className="surface-inset mt-4 px-4 py-3">{extra}</div>
+      ) : null}
     </>
   )
 }

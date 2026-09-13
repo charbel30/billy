@@ -111,6 +111,7 @@ export function SummaryPage({ billId }: { billId: Id<'bills'> }) {
               <div className="surface-panel space-y-4 p-4">
                 <SettlementHeader
                   progress={progress}
+                  rate={bill.rate}
                   travelTotal={false}
                   labels={summaryCopy.header}
                 />
@@ -131,10 +132,7 @@ export function SummaryPage({ billId }: { billId: Id<'bills'> }) {
                   <h2 className="mb-3 text-center text-sm font-bold text-muted-foreground">
                     {summaryCopy.qrCardTitle}
                   </h2>
-                  <ShareSplitCard
-                    url={link}
-                    merchantName={bill.merchantName}
-                  />
+                  <ShareSplitCard url={link} merchantName={bill.merchantName} />
                 </section>
               </div>
             </aside>
@@ -150,7 +148,11 @@ export function SummaryPage({ billId }: { billId: Id<'bills'> }) {
           />
         }
       >
-        <SettlementHeader progress={progress} labels={summaryCopy.header} />
+        <SettlementHeader
+          progress={progress}
+          rate={bill.rate}
+          labels={summaryCopy.header}
+        />
         <BillSummary
           bill={bill}
           header={null}

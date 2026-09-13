@@ -138,7 +138,6 @@ export function BillSplitWorkspace({
       status={bill.status}
       rate={bill.rate}
       description={description}
-      compactMobile={showClaims}
     />
   )
 

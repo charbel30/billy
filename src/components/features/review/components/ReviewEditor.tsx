@@ -40,7 +40,7 @@ export function ReviewEditor({
 }) {
   const { bill, setMeta, addLineItem, updateLineItem, removeLineItem } = editor
   const { meta } = bill
-  // The rate chip in the header opens the same panel the dock handle does.
+  // Settlement details, including the exchange rate, open from the dock.
   const [settlementExpanded, setSettlementExpanded] = useState(false)
   const isEmpty = bill.lineItems.length === 0
   const canContinue =
@@ -66,10 +66,6 @@ export function ReviewEditor({
           icon={RiReceiptLine}
           onNameCommit={
             canEdit ? (raw) => setMeta({ merchantName: raw }) : undefined
-          }
-          onRateEdit={canEdit ? () => setSettlementExpanded(true) : undefined}
-          trailing={
-            photoUrl ? <ReceiptPhotoThumb previewUrl={photoUrl} /> : undefined
           }
         />
       }
@@ -144,7 +140,23 @@ export function ReviewEditor({
         ) : undefined
       }
     >
-      <section className="surface-card p-4 sm:p-6 lg:p-8">
+      <section aria-label="Receipt items" className="space-y-3">
+        <div className="flex items-center justify-between gap-3 px-1">
+          <h2 className="text-sm font-bold">
+            Receipt items{' '}
+            <span className="ml-1 text-muted-foreground">
+              {bill.lineItems.length}
+            </span>
+          </h2>
+          <div className="flex items-center gap-3">
+            {canEdit && !isEmpty ? (
+              <p className="hidden text-xs text-muted-foreground sm:block">
+                Tap a field to edit
+              </p>
+            ) : null}
+            {photoUrl ? <ReceiptPhotoThumb previewUrl={photoUrl} /> : null}
+          </div>
+        </div>
         <AuditLineItems
           lineItems={bill.lineItems}
           rate={meta.rate}

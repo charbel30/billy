@@ -1,14 +1,12 @@
 import type { ReactNode } from 'react'
 import { metadataError, lineItemsError } from '~/lib/bill/validation'
-import { AnimatedAmount } from '~/components/ui/animated-amount'
+import { CurrencyAmount } from '../receipt/CurrencyAmount'
 import { PortfolioReceipt } from '../receipt'
 import {
   computePortfolios,
   unallocatedAmounts,
   personClaimedLines,
   formatLbp,
-  formatUsd,
-  toUsd,
   type Portfolio,
 } from '~/lib/money'
 import type { Claim, LineItem, Person, ServiceSplitMode } from '~/lib/types'
@@ -40,8 +38,7 @@ function groupPortfolios(portfolios: Portfolio[], people: Person[]) {
   return { unpaid, paid, nothing, paidAt }
 }
 
-// Per-person "little receipts" plus the grand total. USD is the headline figure
-// with LBP underneath (matches the redesigned review screen) — no currency toggle.
+// Per-person receipts and the grand total follow the shared currency display.
 export function BillSummary({
   bill,
   title = 'Totals',
@@ -156,14 +153,20 @@ export function BillSummary({
             : ''}
         </p>
       ) : null}
-      <p className="text-xs text-muted-foreground">
-        LBP totals use whole lira. USD totals share any rounding cents so
-        everyone’s amounts add up.
-      </p>
       <div className="space-y-3">
         {sortUnpaidFirst ? (
           <>
+            {grouped.unpaid.length > 0 ? (
+              <h3 className="px-1 text-xs font-bold uppercase tracking-wide text-muted-foreground">
+                Awaiting payment · {grouped.unpaid.length}
+              </h3>
+            ) : null}
             {grouped.unpaid.map(renderReceipt)}
+            {grouped.paid.length > 0 ? (
+              <h3 className="px-1 pt-2 text-xs font-bold uppercase tracking-wide text-success-subtle-foreground">
+                Paid · {grouped.paid.length}
+              </h3>
+            ) : null}
             {grouped.paid.map(renderReceipt)}
             {grouped.nothing.length > 0 ? (
               <div className="space-y-3">
@@ -181,6 +184,10 @@ export function BillSummary({
         )}
       </div>
 
+      <p className="px-1 text-xs text-muted-foreground">
+        Totals include tip and applicable charges. Rounding is shared so
+        everyone’s amounts add up.
+      </p>
       {hideGrandTotal ? null : (
         <div className="flex items-center justify-between rounded-card bg-muted/70 px-4 py-3 ring-1 ring-border/40">
           <div>
@@ -194,15 +201,12 @@ export function BillSummary({
             ) : null}
           </div>
           <div className="text-right">
-            <AnimatedAmount
-              value={toUsd(grandLbp, bill.rate)}
-              format={formatUsd}
+            <CurrencyAmount
+              lbp={grandLbp}
+              usd={portfolios.reduce((sum, p) => sum + p.totalUsd, 0)}
+              rate={bill.rate}
+              secondary
               className="block text-xl font-bold tracking-tight text-primary-strong"
-            />
-            <AnimatedAmount
-              value={grandLbp}
-              format={formatLbp}
-              className="block text-xs font-semibold text-muted-foreground"
             />
           </div>
         </div>

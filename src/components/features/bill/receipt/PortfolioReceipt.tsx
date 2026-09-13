@@ -1,7 +1,7 @@
 import { motion } from 'motion/react'
 import { RiCheckLine, RiSendPlaneLine } from '@remixicon/react'
 import type { Portfolio, ClaimedLine } from '~/lib/money'
-import { formatLbp, formatUsd, toUsd } from '~/lib/money'
+import { CurrencyAmount } from './CurrencyAmount'
 import { formatUnits } from '~/lib/format'
 import { ELEVATED_CARD, itemEmoji } from '~/lib/bill'
 import { tapHaptic, sheetSpring } from '~/lib/ui'
@@ -55,10 +55,12 @@ export function PortfolioReceipt({
         !bare && paid && 'bg-success-subtle/50',
       )}
     >
-      <div className="flex items-center gap-2">
+      <div className="grid grid-cols-[auto_minmax(0,1fr)] items-center gap-2 sm:grid-cols-[auto_minmax(0,1fr)_auto]">
         <PersonAvatar name={portfolio.name} color={portfolio.color} size="sm" />
-        <span className="min-w-0 truncate font-bold">{portfolio.name}</span>
-        <div className="ml-auto flex shrink-0 items-center gap-1">
+        <span className="min-w-0 flex-1 break-words font-bold">
+          {portfolio.name}
+        </span>
+        <div className="col-span-2 flex flex-wrap items-center justify-end gap-2 sm:col-span-1">
           {onSend ? (
             <button
               type="button"
@@ -68,9 +70,10 @@ export function PortfolioReceipt({
                 onSend()
               }}
               aria-label={sendLabel ?? 'Send'}
-              className="flex size-11 items-center justify-center rounded-full text-primary-strong transition-[background-color,scale] hover:bg-primary/10 active:scale-[0.96] disabled:opacity-50"
+              className="flex min-h-11 items-center justify-center gap-1.5 rounded-full bg-primary/10 px-3 text-xs font-bold text-primary-strong transition-[background-color,scale] hover:bg-primary/10 active:scale-[0.96] disabled:opacity-50"
             >
-              <RiSendPlaneLine className="size-5" aria-hidden />
+              <RiSendPlaneLine className="size-4" aria-hidden />
+              Send
             </button>
           ) : null}
           {onTogglePaid ? (
@@ -85,7 +88,7 @@ export function PortfolioReceipt({
                 'flex min-h-11 shrink-0 items-center gap-1 rounded-full px-2.5 text-xs font-bold transition-[background-color,color,scale] active:scale-[0.96] disabled:opacity-50',
                 paid
                   ? 'bg-success-subtle text-success-subtle-foreground'
-                  : 'bg-muted text-muted-foreground hover:bg-success-subtle hover:text-success-subtle-foreground',
+                  : 'bg-primary/10 text-primary-strong ring-1 ring-primary/20 hover:bg-success-subtle hover:text-success-subtle-foreground',
               )}
             >
               {paid ? (
@@ -112,14 +115,14 @@ export function PortfolioReceipt({
           return (
             <div
               key={l.itemId}
-              className="flex justify-between gap-2 font-receipt"
+              className="flex items-start justify-between gap-3"
             >
-              <span className="truncate text-muted-foreground">
+              <span className="min-w-0 break-words text-muted-foreground">
                 {formatUnits(l.units)}×{' '}
                 {emoji ? <span aria-hidden>{emoji} </span> : null}
                 {l.name}
               </span>
-              <span>{formatUsd(toUsd(l.lbp, rate))}</span>
+              <CurrencyAmount lbp={l.lbp} rate={rate} className="shrink-0" />
             </div>
           )
         })}
@@ -133,14 +136,14 @@ export function PortfolioReceipt({
       {serviceChargeOn && portfolio.serviceShareLbp !== 0 && (
         <div className="mt-1 flex justify-between font-receipt text-xs text-muted-foreground">
           <span>service &amp; tax</span>
-          <span>{formatUsd(toUsd(portfolio.serviceShareLbp, rate))}</span>
+          <CurrencyAmount lbp={portfolio.serviceShareLbp} rate={rate} />
         </div>
       )}
 
       {portfolio.tipShareLbp !== 0 && (
         <div className="mt-1 flex justify-between font-receipt text-xs text-muted-foreground">
           <span>tip{tipPercent ? ` (${tipPercent}%)` : ''}</span>
-          <span>{formatUsd(toUsd(portfolio.tipShareLbp, rate))}</span>
+          <CurrencyAmount lbp={portfolio.tipShareLbp} rate={rate} />
         </div>
       )}
 
@@ -151,12 +154,13 @@ export function PortfolioReceipt({
           Total
         </span>
         <div className="text-right">
-          <div className="font-receipt text-2xl font-bold tracking-tight text-primary-strong">
-            {formatUsd(portfolio.totalUsd)}
-          </div>
-          <div className="font-receipt text-xs text-muted-foreground">
-            {formatLbp(portfolio.totalLbp)}
-          </div>
+          <CurrencyAmount
+            lbp={portfolio.totalLbp}
+            usd={portfolio.totalUsd}
+            rate={rate}
+            secondary
+            className="block break-words text-2xl font-bold tracking-tight text-primary-strong"
+          />
         </div>
       </div>
     </motion.div>

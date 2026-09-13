@@ -19,14 +19,15 @@ export function ReceiptPhotoThumb({ previewUrl }: { previewUrl: string }) {
         onClick={() => setOpen(true)}
         aria-label={copy.label}
         title={copy.label}
-        className="surface-inset size-11 shrink-0 overflow-hidden p-0 transition-transform active:scale-[0.96] focus-visible:outline-2 focus-visible:outline-ring"
+        className="inline-flex min-h-11 shrink-0 items-center gap-2 rounded-control px-2 text-xs font-semibold text-muted-foreground hover:bg-muted/50 transition-transform active:scale-[0.96] focus-visible:outline-2 focus-visible:outline-ring"
       >
         <motion.img
           layoutId="receipt-photo"
           src={previewUrl}
           alt=""
-          className="size-full object-cover"
+          className="h-7 w-5 rounded-sm object-cover"
         />
+        <span>Photo</span>
       </button>
       <BottomSheet
         open={open}

@@ -203,6 +203,7 @@ export function JoinPage({ shareToken }: { shareToken: string }) {
         }
       >
         <SettlementHeader
+          rate={bill.rate}
           progress={settlementProgress(bill)}
           labels={summaryCopy.header}
         />

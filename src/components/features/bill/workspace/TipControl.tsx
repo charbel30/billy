@@ -1,10 +1,9 @@
-import { AnimatedAmount } from '~/components/ui/animated-amount'
-import { formatUsd, toUsd } from '~/lib/money'
+import { CurrencyAmount } from '../receipt/CurrencyAmount'
 import { TIP_PRESETS } from '~/lib/bill'
 import { cn } from '~/lib/utils'
 
 // Bill-level tip picker — one compact row of preset chips with a live preview
-// of the tip in USD. Host-only (guests never see it); the value writes through
+// of the tip in the selected currency. Host-only (guests never see it); the value writes through
 // the dedicated setTipPercent mutation, never saveWorking.
 export function TipControl({
   value,
@@ -27,11 +26,24 @@ export function TipControl({
     : [...TIP_PRESETS, value].sort((a, b) => a - b)
 
   return (
-    <div className="flex flex-wrap items-center gap-2">
-      <span className="shrink-0 text-xs font-bold text-muted-foreground">
-        Tip
-      </span>
-      <div className="flex min-w-0 basis-48 flex-1 items-center gap-1 overflow-x-auto py-0.5 [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+    <div className="space-y-3">
+      <div className="flex flex-wrap items-baseline justify-between gap-2">
+        <span className="shrink-0 text-xs font-bold text-muted-foreground">
+          Tip
+        </span>
+        <span className="text-xs text-muted-foreground">
+          {tipLbp > 0 ? (
+            <CurrencyAmount lbp={tipLbp} rate={rate} />
+          ) : (
+            'No tip added'
+          )}
+        </span>
+      </div>
+      <div
+        role="group"
+        aria-label="Tip percentage"
+        className="grid grid-cols-5 gap-1.5"
+      >
         {options.map((pct) => {
           const selected = pct === value
           return (
@@ -42,7 +54,7 @@ export function TipControl({
               onClick={() => !selected && onChange(pct)}
               aria-pressed={selected}
               className={cn(
-                'min-h-11 min-w-11 shrink-0 rounded-full focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring px-2.5 py-1 text-xs font-bold tabular-nums transition-[background-color,color,scale] active:scale-[0.96] disabled:opacity-60',
+                'min-h-11 min-w-0 rounded-full focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring px-1 py-1 text-xs font-bold tabular-nums transition-[background-color,color,scale] active:scale-[0.96] disabled:opacity-60',
                 selected
                   ? 'bg-primary text-primary-foreground'
                   : 'bg-background text-muted-foreground ring-1 ring-border/50 hover:bg-muted hover:text-foreground',
@@ -53,12 +65,6 @@ export function TipControl({
           )
         })}
       </div>
-      {tipLbp > 0 ? (
-        <span className="shrink-0 text-xs font-semibold text-muted-foreground tabular-nums">
-          ≈{' '}
-          <AnimatedAmount value={toUsd(tipLbp, rate)} format={formatUsd} />
-        </span>
-      ) : null}
     </div>
   )
 }
