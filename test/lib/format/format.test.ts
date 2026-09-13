@@ -1,5 +1,5 @@
 import { expect, test } from 'vitest'
-import { formatUnits } from './format'
+import { formatUnits } from '~/lib/format/format'
 
 test('shared units show exact familiar fractions and mixed quantities', () => {
   expect(formatUnits(1 / 3)).toBe('⅓')

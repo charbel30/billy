@@ -1,6 +1,6 @@
 import { expect, test, vi, afterEach } from 'vitest'
-import { rememberHostToken } from './hostToken'
-import { getOrCreateGuestSessionId } from './guestSession'
+import { rememberHostToken } from '~/lib/session/hostToken'
+import { getOrCreateGuestSessionId } from '~/lib/session/guestSession'
 afterEach(() => vi.unstubAllGlobals())
 function blockedStorage() {
   vi.stubGlobal('window', {
@@ -22,7 +22,7 @@ test('guest storage failure does not crash mounting', () => {
 })
 
 test('stored host access can be read, and cleared site data removes it', async () => {
-  const { getHostToken } = await import('./hostToken')
+  const { getHostToken } = await import('~/lib/session/hostToken')
   const data = new Map<string, string>()
   vi.stubGlobal('window', {
     localStorage: {

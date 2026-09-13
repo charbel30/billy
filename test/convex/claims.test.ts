@@ -1,10 +1,7 @@
-/// <reference types="vite/client" />
 import { convexTest } from 'convex-test'
 import { expect, test } from 'vitest'
-import { api } from './_generated/api'
-import schema from './schema'
-
-const modules = import.meta.glob('./**/*.ts')
+import { api } from 'convex/_generated/api'
+import { modules, schema } from './setup'
 
 async function setup() {
   const t = convexTest(schema, modules)

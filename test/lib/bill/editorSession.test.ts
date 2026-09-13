@@ -1,6 +1,6 @@
 import { expect, test, vi } from 'vitest'
-import { EditorSession } from './editorSession'
-import type { WorkingBill } from './types'
+import { EditorSession } from '~/lib/bill/editorSession'
+import type { WorkingBill } from '~/lib/bill/types'
 const initial: WorkingBill = {
   version: 1,
   status: 'READY',

@@ -4,8 +4,8 @@ import {
   clearWorkingBill,
   persistWorkingBill,
   readWorkingBill,
-} from './storage'
-import type { WorkingBill } from './types'
+} from '~/lib/bill/storage'
+import type { WorkingBill } from '~/lib/bill/types'
 
 test('an old acknowledgement cannot delete a newer recovery draft', () => {
   const values = new Map<string, string>()

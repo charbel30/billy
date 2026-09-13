@@ -1,5 +1,5 @@
 import { expect, test } from 'vitest'
-import { PendingWrites } from './pendingWrites'
+import { PendingWrites } from '~/lib/bill/pendingWrites'
 
 function deferred() {
   let resolve!: () => void

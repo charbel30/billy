@@ -1,5 +1,10 @@
 import { expect, test } from 'vitest'
-import { computePortfolios } from './split'
+import {
+  computePortfolios,
+  unallocatedAmounts,
+  type ComputePortfoliosInput,
+} from '~/lib/money/split'
+
 test('proportional service with no claims remains unallocated', () => {
   const portfolios = computePortfolios({
     lineItems: [],
@@ -14,8 +19,6 @@ test('proportional service with no claims remains unallocated', () => {
   expect(portfolios[0].totalLbp).toBe(0)
 })
 
-import { unallocatedAmounts } from './split'
-import type { ComputePortfoliosInput } from './split'
 const people = ['a', 'b', 'c'].map((id) => ({ id, name: id, color: 'red' }))
 const base: ComputePortfoliosInput = {
   lineItems: [
