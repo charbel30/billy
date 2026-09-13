@@ -1,6 +1,6 @@
-import { useId, useState } from 'react'
+import { useId, useState, type Dispatch, type SetStateAction } from 'react'
 import { motion } from 'motion/react'
-import { RiAddLine, RiCheckLine, RiGroupLine, RiSubtractLine } from '@remixicon/react'
+import { RiAddLine, RiCheckLine, RiSubtractLine } from '@remixicon/react'
 import { AnimatedAmount } from '~/components/ui/animated-amount'
 import { Button } from '~/components/ui/button'
 import { Input } from '~/components/ui/input'
@@ -14,6 +14,20 @@ import { cn } from '~/lib/utils'
 import { PersonAvatar } from '../people'
 
 const quantityText = (value: number) => String(Number(value.toFixed(8)))
+
+/** Layout-safe stagger: no blur/filter inside a `layout` card. */
+const splitReveal = {
+  hidden: {},
+  show: { transition: { staggerChildren: 0.07 } },
+}
+const splitRevealItem = {
+  hidden: { opacity: 0, y: 8 },
+  show: {
+    opacity: 1,
+    y: 0,
+    transition: { type: 'spring' as const, duration: 0.3, bounce: 0 },
+  },
+}
 
 function ordersLabel(n: number) {
   const abs = Math.abs(n)
@@ -52,11 +66,13 @@ function SharePrice({
 
 /** Add shares of a chosen quantity without redistributing any existing claims. */
 export function ItemOrderSplit({
-  item, claims, people, activePerson, rate, restricted, onClose, onSave, onSaved,
+  item, claims, people, selected, onSelectedChange, activePerson, rate, restricted, onClose, onSave, onSaved,
 }: {
   item: LineItem
   claims: Claim[]
   people: Person[]
+  selected: ReadonlySet<string>
+  onSelectedChange: Dispatch<SetStateAction<Set<string>>>
   activePerson: Person | null
   rate: number | null | undefined
   restricted: boolean
@@ -67,7 +83,6 @@ export function ItemOrderSplit({
   const quantityId = useId()
   const available = remainingUnits(item, claims)
   const [quantityInput, setQuantityInput] = useState(() => quantityText(available))
-  const [selected, setSelected] = useState(() => new Set(people.map((person) => person.id)))
   const [pending, setPending] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const orderedPeople = activePerson && people.some((person) => person.id === activePerson.id)
@@ -79,12 +94,11 @@ export function ItemOrderSplit({
   const validQuantity = Number.isFinite(quantity) && quantity > 0 && quantity <= available + 1e-8
   const ready = count >= 2 && validQuantity
   const units = ready ? Math.min(quantity, available) / count : 0
-  const allSelected = people.length > 0 && count === people.length
   const belowMax = validQuantity && quantity < available - 1e-8
   const shareLbp = units * effectiveUnitPrice(item)
 
   function togglePerson(id: string) {
-    setSelected((current) => {
+    onSelectedChange((current) => {
       const next = new Set(current)
       if (next.has(id)) next.delete(id)
       else next.add(id)
@@ -118,10 +132,7 @@ export function ItemOrderSplit({
           : null
 
   return (
-    <motion.form
-      initial={{ opacity: 0, y: 8 }}
-      animate={{ opacity: 1, y: 0 }}
-      transition={{ type: 'spring', duration: 0.3, bounce: 0 }}
+    <form
       aria-label={`Split orders of ${item.name}`}
       aria-busy={pending}
       onSubmit={(event) => { event.preventDefault(); void save() }}
@@ -132,63 +143,57 @@ export function ItemOrderSplit({
           onClose()
         }
       }}
-      className="mt-3 space-y-3 border-t border-border/60 pt-3"
+      className="mt-3 border-t border-border/60 pt-3"
     >
-      <fieldset disabled={pending} className="space-y-3">
+      <motion.fieldset
+        disabled={pending}
+        variants={splitReveal}
+        initial="hidden"
+        animate="show"
+        className="space-y-3"
+      >
         <legend className="sr-only">Choose orders and people</legend>
 
-        <div>
+        <motion.div variants={splitRevealItem}>
           <p className="text-sm font-bold">Who</p>
           {restricted ? (
             <p className="text-xs text-pretty text-muted-foreground">The people you added.</p>
           ) : null}
-          <div className="mt-2 space-y-2">
-            {!allSelected && people.length > 2 ? (
-              <button
-                type="button"
-                onClick={() => setSelected(new Set(people.map((person) => person.id)))}
-                className="flex min-h-11 w-full items-center justify-center gap-2 rounded-full bg-muted/60 text-sm font-bold ring-1 ring-border transition-[scale,background-color] hover:bg-muted active:scale-[0.96] focus-visible:outline-2 focus-visible:outline-ring"
-              >
-                <RiGroupLine className="size-4" aria-hidden />
-                Everyone
-              </button>
-            ) : null}
-            <div role="group" aria-label="People who share" className="grid grid-cols-2 gap-2">
-              {orderedPeople.map((person) => {
-                const checked = selected.has(person.id)
-                return (
-                  <label
-                    key={person.id}
-                    className={cn(
-                      'flex min-h-11 max-w-full cursor-pointer items-center gap-2 rounded-full px-2.5 py-1.5 text-sm transition-[scale,background-color,box-shadow] active:scale-[0.96] has-focus-visible:outline-2 has-focus-visible:outline-ring',
-                      checked ? 'bg-background' : 'bg-muted/60 ring-1 ring-border hover:bg-muted',
-                      pending && 'pointer-events-none opacity-60',
-                    )}
-                    style={
-                      checked
-                        ? { boxShadow: `0 0 0 2px ${personColorValue(person.color)}` }
-                        : undefined
-                    }
-                  >
-                    <input
-                      type="checkbox"
-                      aria-label={person.name}
-                      className="sr-only"
-                      checked={checked}
-                      onChange={() => togglePerson(person.id)}
-                    />
-                    <PersonAvatar name={person.name} color={person.color} size="sm" />
-                    <span className="min-w-0 flex-1 truncate font-semibold">{person.name}</span>
-                    {checked ? <RiCheckLine className="size-4 shrink-0" aria-hidden /> : null}
-                  </label>
-                )
-              })}
-            </div>
+          <div role="group" aria-label="People who share" className="mt-2 grid grid-cols-2 gap-2">
+            {orderedPeople.map((person) => {
+              const checked = selected.has(person.id)
+              return (
+                <label
+                  key={person.id}
+                  className={cn(
+                    'flex min-h-11 max-w-full cursor-pointer items-center gap-2 rounded-full px-2.5 py-1.5 text-sm transition-[scale,background-color,box-shadow] active:scale-[0.96] has-focus-visible:outline-2 has-focus-visible:outline-ring',
+                    checked ? 'bg-background' : 'bg-muted/60 ring-1 ring-border hover:bg-muted',
+                    pending && 'pointer-events-none opacity-60',
+                  )}
+                  style={
+                    checked
+                      ? { boxShadow: `0 0 0 2px ${personColorValue(person.color)}` }
+                      : undefined
+                  }
+                >
+                  <input
+                    type="checkbox"
+                    aria-label={person.name}
+                    className="sr-only"
+                    checked={checked}
+                    onChange={() => togglePerson(person.id)}
+                  />
+                  <PersonAvatar name={person.name} color={person.color} size="sm" />
+                  <span className="min-w-0 flex-1 truncate font-semibold">{person.name}</span>
+                  {checked ? <RiCheckLine className="size-4 shrink-0" aria-hidden /> : null}
+                </label>
+              )
+            })}
           </div>
-        </div>
+        </motion.div>
 
         {available > 1 + 1e-8 ? (
-          <div className="flex flex-wrap items-center justify-between gap-3">
+          <motion.div variants={splitRevealItem} className="flex flex-wrap items-center justify-between gap-3">
             <div className="min-w-0">
               <label htmlFor={quantityId} className="text-sm font-bold">How many</label>
               <p id={`${quantityId}-hint`} className="text-xs text-muted-foreground tabular-nums">
@@ -241,40 +246,43 @@ export function ItemOrderSplit({
                 </Button>
               ) : null}
             </div>
-          </div>
+          </motion.div>
         ) : (
           <p id={`${quantityId}-hint`} className="sr-only">{ordersLabel(available)} left</p>
         )}
-      </fieldset>
 
-      <div
-        aria-live="polite"
-        aria-atomic="true"
-        className="flex min-h-16 items-center justify-between gap-3 rounded-control bg-muted/60 px-4 py-3"
-      >
-        {ready ? (
-          <>
-            <div className="min-w-0">
-              <p className="text-xs font-medium text-muted-foreground">Each person</p>
-              <p className="text-sm font-bold tabular-nums text-pretty">{ordersLabel(units)}</p>
-            </div>
-            <SharePrice lbp={shareLbp} rate={rate} />
-          </>
-        ) : (
-          <p className="text-sm text-pretty text-muted-foreground">{hint}</p>
-        )}
-      </div>
-      {error ? <p role="alert" className="text-sm text-destructive">{error}</p> : null}
-      <Button
-        type="submit"
-        size="lg"
-        disabled={pending || !ready}
-        className="h-11 w-full font-bold active:scale-[0.96]"
-      >
-        <span className="truncate">
-          {pending ? 'Splitting…' : validQuantity ? `Split ${ordersLabel(quantity)}` : 'Split orders'}
-        </span>
-      </Button>
-    </motion.form>
+        <motion.div
+          variants={splitRevealItem}
+          aria-live="polite"
+          aria-atomic="true"
+          className="flex min-h-16 items-center justify-between gap-3 rounded-control bg-muted/60 px-4 py-3"
+        >
+          {ready ? (
+            <>
+              <div className="min-w-0">
+                <p className="text-xs font-medium text-muted-foreground">Each person</p>
+                <p className="text-sm font-bold tabular-nums text-pretty">{ordersLabel(units)}</p>
+              </div>
+              <SharePrice lbp={shareLbp} rate={rate} />
+            </>
+          ) : (
+            <p className="text-sm text-pretty text-muted-foreground">{hint}</p>
+          )}
+        </motion.div>
+        {error ? <p role="alert" className="text-sm text-destructive">{error}</p> : null}
+        <motion.div variants={splitRevealItem}>
+          <Button
+            type="submit"
+            size="lg"
+            disabled={pending || !ready}
+            className="h-11 w-full font-bold active:scale-[0.96]"
+          >
+            <span className="truncate">
+              {pending ? 'Splitting…' : validQuantity ? `Split ${ordersLabel(quantity)}` : 'Split orders'}
+            </span>
+          </Button>
+        </motion.div>
+      </motion.fieldset>
+    </form>
   )
 }

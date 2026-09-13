@@ -34,8 +34,20 @@ export function ClaimList({
 }) {
   const personById = new Map(people.map((p) => [p.id, p]))
   const [sharingId, setSharingId] = useState<string | null>(null)
+  const [sharingPeople, setSharingPeople] = useState(() => new Set<string>())
   const [pendingId, setPendingId] = useState<string | null>(null)
   const editableIds = new Set(sharePeople.map((person) => person.id))
+  const everyoneSelected = sharePeople.length > 0 && sharePeople.every((person) => sharingPeople.has(person.id))
+
+  function toggleShare(itemId: string) {
+    tapHaptic()
+    if (sharingId === itemId) {
+      setSharingId(null)
+      return
+    }
+    setSharingId(itemId)
+    setSharingPeople(new Set(sharePeople.map((person) => person.id)))
+  }
 
   function step(itemId: string, personId: string, delta: number) {
     if (pendingId === itemId) return
@@ -64,7 +76,12 @@ export function ClaimList({
             activePerson={activePerson}
             rate={rate}
             onStep={step}
-            onShare={() => { tapHaptic(); setSharingId((current) => current === item.id ? null : item.id) }}
+            onShare={() => toggleShare(item.id)}
+            onSelectEveryone={() => {
+              tapHaptic()
+              setSharingPeople(new Set(sharePeople.map((person) => person.id)))
+            }}
+            everyoneSelected={everyoneSelected}
             canShare={canShareEvenly && sharePeople.length > 1}
             sharingOpen={sharingId === item.id}
             pending={pendingId !== null}
@@ -75,6 +92,8 @@ export function ClaimList({
                 item={item}
                 claims={claims}
                 people={sharePeople}
+                selected={sharingPeople}
+                onSelectedChange={setSharingPeople}
                 activePerson={activePerson}
                 rate={rate}
                 restricted={sharePeople.length < people.length}

@@ -33,6 +33,8 @@ export function ClaimListItem({
   rate,
   onStep,
   onShare,
+  onSelectEveryone,
+  everyoneSelected,
   canShare,
   editableIds,
   sharingOpen,
@@ -47,6 +49,8 @@ export function ClaimListItem({
   /** Already haptic-wrapped by the parent list. */
   onStep: (itemId: string, personId: string, delta: number) => void
   onShare: () => void
+  onSelectEveryone: () => void
+  everyoneSelected: boolean
   canShare: boolean
   editableIds: ReadonlySet<string>
   sharingOpen: boolean
@@ -217,10 +221,30 @@ export function ClaimListItem({
           </button>
         ) : <span className="text-xs text-muted-foreground">{shared ? `Shared by ${claimants.length}` : 'Whole items'}</span>}
 
-        {/* Hide the whole-order stepper while splitting so two quantity
-            controls are not competing in the same card. */}
+        {/* The right-hand slot stays occupied while splitting: Everyone
+            takes the stepper's place so the Close row does not go empty
+            and the people grid below does not jump. */}
         <AnimatePresence mode="popLayout" initial={false}>
-          {sharingOpen ? null : done && mine <= 0 ? (
+          {sharingOpen ? (
+            <motion.button
+              key="everyone"
+              type="button"
+              {...swap}
+              aria-pressed={everyoneSelected}
+              aria-label={everyoneSelected ? 'Everyone is sharing' : 'Select everyone'}
+              disabled={pending}
+              onClick={onSelectEveryone}
+              className={cn(
+                'inline-flex min-h-10 shrink-0 items-center gap-1.5 rounded-full px-3 text-sm font-bold transition-[scale,background-color] active:scale-[0.96] focus-visible:outline-2 focus-visible:outline-ring',
+                everyoneSelected
+                  ? 'bg-primary/10 text-primary-strong'
+                  : 'bg-muted/60 text-foreground ring-1 ring-border hover:bg-muted',
+              )}
+            >
+              <RiGroupLine className="size-4" aria-hidden />
+              Everyone
+            </motion.button>
+          ) : done && mine <= 0 ? (
             <motion.div
               key="done"
               {...swap}
