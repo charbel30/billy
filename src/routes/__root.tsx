@@ -15,6 +15,8 @@ import { DirectionProvider } from "~/components/ui/direction";
 import { NotFound } from "~/components/shared/NotFound";
 import { AppHeader } from "~/components/shared/AppHeader";
 import appCss from "~/styles/app.css?url";
+import figtreeFont from "@fontsource-variable/figtree/files/figtree-latin-wght-normal.woff2?url";
+import cascadiaFont from "@fontsource-variable/cascadia-mono/files/cascadia-mono-latin-wght-normal.woff2?url";
 import { THEME_INIT_SCRIPT } from "~/lib/ui";
 import { seo } from "~/lib/seo";
 
@@ -41,6 +43,10 @@ export const Route = createRootRouteWithContext<{
       }),
     ],
     links: [
+      // These faces render the header and hero. Discover them with the HTML
+      // instead of waiting for the stylesheet's font-face rules.
+      { rel: "preload", href: figtreeFont, as: "font", type: "font/woff2", crossOrigin: "anonymous" },
+      { rel: "preload", href: cascadiaFont, as: "font", type: "font/woff2", crossOrigin: "anonymous" },
       { rel: "stylesheet", href: appCss },
       {
         rel: "apple-touch-icon",

@@ -1,6 +1,6 @@
 import type { ErrorEvent } from '@sentry/react'
 
-type SentryBrowser = typeof import('@sentry/react')
+type SentryBrowser = typeof import('./sentry')
 
 type SentryMetric = {
   name: string
@@ -41,7 +41,7 @@ export function initObservability(): void {
   if (!dsn) return
 
   observabilityEnabled = true
-  sentryPromise = import('@sentry/react')
+  sentryPromise = import('./sentry')
     .then((Sentry) => {
       Sentry.init({
         dsn,
