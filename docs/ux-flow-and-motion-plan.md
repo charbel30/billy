@@ -104,7 +104,7 @@ sheet and has no job of its own.
 The design tree, collapsed. Each line is a decision that was put to the owner and answered.
 
 **Document**
-- Lives at repo root as this file, implementation-ready, listed in `CLAUDE.md`.
+- Lives in `docs/` as this file, implementation-ready, listed in `CLAUDE.md`.
 
 **Motion technology**
 - Route transitions use the **CSS View Transitions API** through TanStack Router's

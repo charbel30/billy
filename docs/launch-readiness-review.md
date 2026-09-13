@@ -59,9 +59,9 @@ The deployed homepage references a different entry asset from the local build. T
 
 ## What is already in good shape
 
-Spolio has a clear reason to exist: splitting a Lebanese restaurant receipt using dollars, lira, and the table's exchange rate. The landing page communicates that purpose, offers scanning immediately, and has a sample bill for people arriving without a receipt. Manual entry provides a useful alternative when the paid extraction path is unavailable. See [landing content](./src/components/features/landing/content.ts), [scan actions](./src/components/features/scan/ScanReceiptActions.tsx), and [manual entry](./src/hooks/useManualBill.ts).
+Spolio has a clear reason to exist: splitting a Lebanese restaurant receipt using dollars, lira, and the table's exchange rate. The landing page communicates that purpose, offers scanning immediately, and has a sample bill for people arriving without a receipt. Manual entry provides a useful alternative when the paid extraction path is unavailable. See [landing content](../src/components/features/landing/content.ts), [scan actions](../src/components/features/scan/ScanReceiptActions.tsx), and [manual entry](../src/hooks/useManualBill.ts).
 
-There are meaningful protections already implemented: separate host capabilities, backend checks on host mutations, claim-availability calculations, an extraction quota and pause switch, retry handling, image cleanup, and a bill inactivity TTL. These deserve credit as implemented mechanisms; they still need acceptance tests and production evidence. See [function builders](./convex/bills/lib/functions.ts), [rate limits](./convex/lib/rateLimits.ts), [extraction](./convex/bills/extraction.ts), and [cleanup jobs](./convex/crons.ts).
+There are meaningful protections already implemented: separate host capabilities, backend checks on host mutations, claim-availability calculations, an extraction quota and pause switch, retry handling, image cleanup, and a bill inactivity TTL. These deserve credit as implemented mechanisms; they still need acceptance tests and production evidence. See [function builders](../convex/bills/lib/functions.ts), [rate limits](../convex/lib/rateLimits.ts), [extraction](../convex/bills/extraction.ts), and [cleanup jobs](../convex/crons.ts).
 
 The product also includes the small essentials often missing from first launches: legal pages, scan disclosure, finalization confirmation, leftover handling, read-only notices, share text, QR codes, production metadata, and devtools excluded from production. These observations come from source inspection and public HTML, not a visual or accessibility certification.
 
@@ -81,7 +81,7 @@ A viewer can therefore copy another participant's session ID from a response and
 
 **Acceptance:** two independent guest sessions can read the table; neither can rename, clear claims, or mark paid for the other using anything learned from public responses. Check JSON and server-rendered/hydration data as well as the UI. Preserve companion management for the caller's own people.
 
-Evidence: [serialization and ownership checks](./convex/model/bills.ts), [person schema](./convex/schema.ts), [guest query](./convex/bills/guest/queries.ts), [guest claims](./convex/bills/guest/claims.ts), [guest people](./convex/bills/guest/people.ts), [join ownership UI](./src/components/features/join/JoinPage.tsx).
+Evidence: [serialization and ownership checks](../convex/model/bills.ts), [person schema](../convex/schema.ts), [guest query](../convex/bills/guest/queries.ts), [guest claims](../convex/bills/guest/claims.ts), [guest people](../convex/bills/guest/people.ts), [join ownership UI](../src/components/features/join/JoinPage.tsx).
 
 ### P0 — Revoking a share link does not revoke a previous viewer's access
 
@@ -95,7 +95,7 @@ This undermines the intended access revocation described in the privacy/terms pa
 
 **Acceptance:** save every identifier returned to a guest, revoke, then attempt both query families and direct route refreshes. No old credential or learned public identifier should expose new receipt data or the replacement token. A newly invited guest must still work.
 
-Evidence: [read builders](./convex/bills/lib/functions.ts), [host query](./convex/bills/host/queries.ts), [revokeShare](./convex/bills/host/lifecycle.ts), [privacy promise](./src/routes/privacy.tsx).
+Evidence: [read builders](../convex/bills/lib/functions.ts), [host query](../convex/bills/host/queries.ts), [revokeShare](../convex/bills/host/lifecycle.ts), [privacy promise](../src/routes/privacy.tsx).
 
 ### P1 — A late extraction can replace a finalized receipt
 
@@ -109,7 +109,7 @@ One reachable risk is a slow scan followed by manual editing, splitting, and fin
 
 **Acceptance:** start extraction, make manual changes and finalize, then release the delayed result. Preserve the agreed manual/finalized data and still clean up the image. Also cover replacement scans and extraction failure.
 
-Evidence: [upload preparation](./convex/bills/host/uploads.ts), [applyExtraction](./convex/bills/extraction.ts), [review editor](./src/components/features/review/ReviewPage.tsx).
+Evidence: [upload preparation](../convex/bills/host/uploads.ts), [applyExtraction](../convex/bills/extraction.ts), [review editor](../src/components/features/review/ReviewPage.tsx).
 
 ### P1 — Claim taps can silently replace earlier accepted choices
 
@@ -129,7 +129,7 @@ Two taps before the subscription updates can submit two lists based on the same 
 
 **Acceptance:** under added latency, tap two different items quickly, increment one item repeatedly, change active participant, and immediately finalize. Every acknowledged choice must survive or be explicitly rejected.
 
-Evidence: [host split page](./src/components/features/split/SplitPage.tsx), [guest page](./src/components/features/join/JoinPage.tsx), [claim buttons](./src/components/features/bill/claims/ClaimListItem.tsx), [replacement-list calculation](./convex/model/bills.ts).
+Evidence: [host split page](../src/components/features/split/SplitPage.tsx), [guest page](../src/components/features/join/JoinPage.tsx), [claim buttons](../src/components/features/bill/claims/ClaimListItem.tsx), [replacement-list calculation](../convex/model/bills.ts).
 
 ### P1 — “Saved” does not mean the save succeeded
 
@@ -141,7 +141,7 @@ There is a related recovery hazard: a successful older request unconditionally c
 
 **Acceptance:** fail a save and check that “Saved” never appears; edit during a delayed save, close the tab after the first acknowledgement, and reopen. The newer edit must be recoverable. Check offline/reconnect and multiple host tabs.
 
-Evidence: [SaveStatus](./src/components/features/review/components/SaveStatus.tsx), [editor coordinator](./src/hooks/useBillEditor.ts), [working storage](./src/lib/bill/storage.ts).
+Evidence: [SaveStatus](../src/components/features/review/components/SaveStatus.tsx), [editor coordinator](../src/hooks/useBillEditor.ts), [working storage](../src/lib/bill/storage.ts).
 
 ### P1 — Numeric metadata can produce invalid settlement amounts
 
@@ -153,7 +153,7 @@ Evidence: [SaveStatus](./src/components/features/review/components/SaveStatus.ts
 
 **Acceptance:** blank, zero, negative, nonfinite, and extreme values either receive actionable validation or are handled by an explicitly supported rule. Invalid metadata must never reach a finalized summary.
 
-Evidence: [saveWorking](./convex/bills/host/lifecycle.ts), [validators](./convex/bills/lib/validators.ts), [client validity](./src/lib/bill/working.ts), [number parsing](./src/lib/format/number.ts), [currency conversion](./src/lib/money/currency.ts).
+Evidence: [saveWorking](../convex/bills/host/lifecycle.ts), [validators](../convex/bills/lib/validators.ts), [client validity](../src/lib/bill/working.ts), [number parsing](../src/lib/format/number.ts), [currency conversion](../src/lib/money/currency.ts).
 
 ### P1 — Proportional service allocation fails when nobody has claimed anything
 
@@ -165,7 +165,7 @@ Evidence: [saveWorking](./convex/bills/host/lifecycle.ts), [validators](./convex
 
 **Acceptance:** independently calculate no-claim, zero-price, partial-claim, fractional, even-service, proportional-service, and tip examples. Person totals must reconcile to the documented payable amount, including any deliberate unallocated amount.
 
-Evidence: [split math](./src/lib/money/split.ts), [finalize-as-is flow](./src/components/features/split/SplitPage.tsx), [summary rendering](./src/components/features/bill/summary/BillSummary.tsx).
+Evidence: [split math](../src/lib/money/split.ts), [finalize-as-is flow](../src/components/features/split/SplitPage.tsx), [summary rendering](../src/components/features/bill/summary/BillSummary.tsx).
 
 ### P1 — Browser-storage failure can silently remove host access
 
@@ -177,7 +177,7 @@ Host capabilities are intentionally stored only in the originating browser. That
 
 **Acceptance:** blocked storage, quota failure, private browsing, clearing site data, and a second device produce an intentional, understandable experience. A guest storage error must not crash the join flow.
 
-Evidence: [host token storage](./src/lib/session/hostToken.ts), [guest session storage](./src/lib/session/guestSession.ts), [scan flow](./src/components/features/scan/hooks/useScanUpload.ts), [manual flow](./src/hooks/useManualBill.ts).
+Evidence: [host token storage](../src/lib/session/hostToken.ts), [guest session storage](../src/lib/session/guestSession.ts), [scan flow](../src/components/features/scan/hooks/useScanUpload.ts), [manual flow](../src/hooks/useManualBill.ts).
 
 ## Production evidence still missing
 
@@ -189,7 +189,7 @@ The live homepage HTML did not include the configured Cloudflare beacon script. 
 
 Before announcing, demonstrate a sanitized browser error arriving in Sentry and a backend extraction/cleanup alert reaching the operator. Record release identifiers so reports can be tied to deployed code. A console log about an exhausted quota is not evidence of a delivered notification. Rehearse restoring a known-compatible frontend/backend pair on a safe deployment.
 
-Evidence: [deployment scripts](./package.json), [Cloudflare config](./wrangler.jsonc), [observability](./src/lib/observability.ts), [analytics script](./src/routes/__root.tsx), [existing release checklist](./launch-plan.md).
+Evidence: [deployment scripts](../package.json), [Cloudflare config](../wrangler.jsonc), [observability](../src/lib/observability.ts), [analytics script](../src/routes/__root.tsx), [existing release checklist](./launch-plan.md).
 
 ### Spend and anonymous traffic
 
@@ -201,7 +201,7 @@ Record actual production model/tier, input/output usage, retry counts, maximum a
 
 The Gemini pricing page also distinguishes free-tier and paid-tier use of submitted content for product improvement. Verify the actual provider tier/settings and make the privacy description match; deleting the app's stored photo does not establish deletion behavior at every processor. [Google pricing and data-use distinctions](https://ai.google.dev/gemini-api/docs/pricing).
 
-Evidence: [rate limits](./convex/lib/rateLimits.ts), [uploads](./convex/bills/host/uploads.ts), [vision request](./convex/extraction/vision.ts), [retrier](./convex/lib/retrier.ts).
+Evidence: [rate limits](../convex/lib/rateLimits.ts), [uploads](../convex/bills/host/uploads.ts), [vision request](../convex/extraction/vision.ts), [retrier](../convex/lib/retrier.ts).
 
 ### Privacy, support, and indexing
 
@@ -219,7 +219,7 @@ Keep scale testing proportionate: two guests competing for the last unit, a busy
 
 The source describes item/people arrays as bounded, but bulk `saveWorking` does not enforce an array-length cap, and claim loading uses `.collect()`. Define enforceable limits so cleanup and mutation work fit the intended worst case. Avoid an architecture rewrite without measured need.
 
-Evidence: [claim persistence](./convex/model/claimRows.ts), [schema](./convex/schema.ts), [bulk validation](./convex/model/bills.ts), [package scripts](./package.json).
+Evidence: [claim persistence](../convex/model/claimRows.ts), [schema](../convex/schema.ts), [bulk validation](../convex/model/bills.ts), [package scripts](../package.json).
 
 ## Minimum acceptance session
 

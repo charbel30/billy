@@ -12,12 +12,12 @@ are shared via a live link. The product is implemented end-to-end
 
 Root docs, in reading order:
 - `README.md` — detailed file-by-file guide and main flows.
-- `receipt-splitter-build-spec.md` — product spec (concept, currency logic, split rules).
+- `docs/receipt-splitter-build-spec.md` — product spec (concept, currency logic, split rules).
   Its §7 tech-stack table is outdated: it says Supabase + React/Vite; the real stack is
   **Convex + TanStack Start + Tailwind v4 + shadcn/ui**, deployed to Cloudflare.
-- `architecture-decision.md` — bill storage model: stable parts embedded in one document,
+- `docs/architecture-decision.md` — bill storage model: stable parts embedded in one document,
  high-churn `claims` in their own table (see §Revisited 2026-07-06 for the cost math).
-- `ux-flow-and-motion-plan.md` — decided (2026-09-11), not yet implemented: the shared dock
+- `docs/ux-flow-and-motion-plan.md` — decided (2026-09-11), not yet implemented: the shared dock
  shell + header across bill screens, the full-screen scan processing state owned by review,
  view-transition step navigation + gating, and the summary→settlement redesign. Phased A–E;
  pick up a phase from there rather than re-deciding it.
@@ -132,7 +132,7 @@ namespace gets its own file in `src/api/`.
 `bills` table (`convex/schema.ts`) holds the **stable, bounded** parts as embedded arrays —
 `lineItems`, `people`, meta — while **`claims` is its own table** (one row per (item, person)
 pair, `by_bill` index): claims are high-churn, and embedding them meant every tap rewrote the
-whole document and contended on it (rationale + cost math in `architecture-decision.md`
+whole document and contended on it (rationale + cost math in `docs/architecture-decision.md`
 §Revisited 2026-07-06). All claim-row access goes through the `convex/model/claimRows.ts`
 seam (read, wire mapping, keyed row-diff sync); claim mutations do **not** touch the bill doc
 (no version bump). Queries assemble `{ ...bill, claims }`, so the frontend still sees one

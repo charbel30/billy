@@ -58,7 +58,7 @@ every caller (all frontend Convex references live in `src/api/`, per
 - `schema.ts` — source of truth for persisted shape: `bills` (stable, bounded
   metadata/lineItems/people as embedded arrays) + `claims` (its own high-churn
   table, `by_bill` index — see the file header and
-  `architecture-decision.md` §Revisited for the cost rationale).
+  `docs/architecture-decision.md` §Revisited for the cost rationale).
 - `crons.ts` — placeholder for scheduled backend work (FX refresh, image TTL
   cleanup).
 
@@ -109,6 +109,6 @@ Stale or finalized writes throw; the editor retains its recovery draft and
 requires an explicit decision on conflicts. Extraction records its starting
 version and applies only while that version and its upload are still current.
 
-See [the readiness review](../launch-readiness-review.md) for rollout and the
+See [the readiness review](../docs/launch-readiness-review.md) for rollout and the
 remaining production acceptance checks. The full regression suite now covers
 access control, extraction, editor recovery, storage and settlement math.

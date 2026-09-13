@@ -5,14 +5,16 @@ lets someone scan a receipt, review the extracted line items, split individual
 units between people, and publish a live share link with per-person totals in
 LBP and USD.
 
-Consumer launch plan: see [`launch-plan.md`](./launch-plan.md) — September 15 launch
+Consumer launch plan: see [`docs/launch-plan.md`](./docs/launch-plan.md) — September 15 launch
 scope, readiness gates, production verification, and launch follow-up.
-Current assessment: [`launch-readiness-review.md`](./launch-readiness-review.md) —
+Current assessment: [`docs/launch-readiness-review.md`](./docs/launch-readiness-review.md) —
 September 9 findings, confirmed blockers, verification gaps, and announcement readiness.
-The older [`ROADMAP.md`](./ROADMAP.md) covers venue-product ideas and background;
+The older [`docs/ROADMAP.md`](./docs/ROADMAP.md) covers venue-product ideas and background;
 the consumer launch plan takes precedence for this release.
-Deeper product ideas and pitch material: [`IDEAS.md`](./IDEAS.md).
+Deeper product ideas and pitch material: [`docs/IDEAS.md`](./docs/IDEAS.md).
 Brand assets, colors, motion, and export instructions: [`brand/README.md`](./brand/README.md).
+
+Project plans, specifications, and design notes live in [`docs/`](./docs/).
 
 The app uses:
 
@@ -44,7 +46,7 @@ Do not use `npx convex deploy` for local development.
 Each bill is one `bills` document in Convex containing the bill metadata, line
 items, and people as bounded arrays; **claims live in their own `claims` table**
 (one row per (item, person) pair, `by_bill` index) because they are the
-high-churn part of a live split (see `architecture-decision.md` §Revisited).
+high-churn part of a live split (see `docs/architecture-decision.md` §Revisited).
 Queries assemble `{ ...bill, claims }`, so the frontend still sees one bill
 object. Editing items/people/meta is local-first: the browser owns a working
 copy while it is dirty, then flushes it with a debounced `saveWorking` mutation.
