@@ -44,6 +44,7 @@ import { joinUrl } from '~/lib/format'
 import { trackFunnelMilestone } from '~/lib/observability'
 import { leftoverItemsPhrase, splitCopy, unallocatedServiceNote } from './content'
 import { useBillStepGate } from '~/hooks/useBillStepGate'
+import { openSplitInvite } from './invite'
 
 export function SplitPage({ billId }: { billId: Id<'bills'> }) {
   const navigate = useNavigate()
@@ -157,17 +158,21 @@ export function SplitPage({ billId }: { billId: Id<'bills'> }) {
     }
   }
 
-  // One button does it all: flip to PUBLISHED in the background (don't await —
-  // the dialog should open on the same tap) and show the QR + share link.
-  // navigator.share lives inside the dialog on its own fresh tap, which keeps
-  // iOS's user-gesture requirement happy.
-  function openInvite() {
-    if (!shared) {
-      publish.mutate(hostArgs(), {
-        onSuccess: () => trackFunnelMilestone('published'),
+  // The QR must not become scannable until the link accepts guests.
+  // Native sharing still runs on its own fresh tap inside the dialog.
+  async function openInvite() {
+    try {
+      await openSplitInvite({
+        shared,
+        publish: async () => {
+          await publish.mutateAsync(hostArgs())
+          trackFunnelMilestone('published')
+        },
+        open: () => setQrOpen(true),
       })
+    } catch {
+      // The shared mutation error handler displays the failure. Keep QR closed.
     }
-    setQrOpen(true)
   }
 
   async function finalizeSplit(splitLeftovers: boolean) {
