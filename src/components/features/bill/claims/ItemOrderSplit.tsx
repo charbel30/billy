@@ -234,17 +234,6 @@ export function ItemOrderSplit({
               >
                 <RiAddLine aria-hidden />
               </Button>
-              {belowMax ? (
-                <Button
-                  type="button"
-                  size="lg"
-                  variant="ghost"
-                  className="px-2.5"
-                  onClick={() => setQuantityInput(quantityText(available))}
-                >
-                  All
-                </Button>
-              ) : null}
             </div>
           </motion.div>
         ) : (

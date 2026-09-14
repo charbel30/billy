@@ -36,7 +36,7 @@ export function BillSplitWorkspace({
   actionSlot,
   inviteAction,
   notice,
-  // people selector (subset of bill.people the viewer controls)
+  // Everyone at the table; ownIds determines who the viewer can manage.
   people,
   activeId,
   selfId,
@@ -89,7 +89,7 @@ export function BillSplitWorkspace({
   ownIds?: ReadonlySet<string>
 }) {
   const displayPerson = (person: Person) =>
-    person.id === selfId ? { ...person, name: 'You' } : person
+    person.id === selfId ? { ...person, name: `${person.name} (you)` } : person
   const displayPeople = people.map(displayPerson)
   const displayBillPeople = bill.people.map(displayPerson)
   const activePerson = displayPeople.find((person) => person.id === activeId)

@@ -9,9 +9,10 @@ import { tapHaptic } from '~/lib/ui'
 import { PersonAvatar } from './PersonAvatar'
 import { PortfolioReceipt } from '../receipt'
 
-export function MobilePersonPill({ person, active, buttonRef, onSelect, portfolio, lineItems, claims, rate, serviceChargeOn, tipPercent }: {
+export function MobilePersonPill({ person, active, readOnly = false, buttonRef, onSelect, portfolio, lineItems, claims, rate, serviceChargeOn, tipPercent }: {
   person: Person
   active: boolean
+  readOnly?: boolean
   buttonRef?: Ref<HTMLButtonElement>
   onSelect: (id: string) => void
   portfolio?: Portfolio
@@ -35,8 +36,8 @@ export function MobilePersonPill({ person, active, buttonRef, onSelect, portfoli
   return (
     <Popover open={peek} onOpenChange={setPeek}>
       <PopoverTrigger ref={buttonRef} aria-pressed={active}
-        aria-label={`Pick items for ${person.name}, ${formatUsd(portfolio?.totalUsd ?? 0)}`}
-        title="Tap to select. Hold the avatar or press Shift+F10 for their total."
+        aria-label={`${readOnly ? 'View total for' : 'Pick items for'} ${person.name}, ${formatUsd(portfolio?.totalUsd ?? 0)}`}
+        title={readOnly ? 'Tap to see their total.' : 'Tap to select. Hold the avatar or press Shift+F10 for their total.'}
         onPointerDown={(event) => {
           cancelHold()
           held.current = false
@@ -73,7 +74,8 @@ export function MobilePersonPill({ person, active, buttonRef, onSelect, portfoli
         onClick={(event) => {
           event.preventBaseUIHandler()
           if (event.detail !== 0 && (held.current || moved.current)) return
-          onSelect(person.id)
+          if (readOnly) setPeek(true)
+          else onSelect(person.id)
         }}
         className={cn('flex min-h-12 max-w-36 shrink-0 select-none items-center gap-1.5 rounded-full px-2.5 py-1.5 text-left transition-colors [-webkit-touch-callout:none] focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-ring',
           active ? 'bg-primary/15 ring-1 ring-inset ring-primary/35' : 'bg-background/80 hover:bg-background')}>
