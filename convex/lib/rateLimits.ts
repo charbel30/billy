@@ -1,4 +1,4 @@
-import { HOUR, RateLimiter } from '@convex-dev/rate-limiter'
+import { HOUR, MINUTE, RateLimiter } from '@convex-dev/rate-limiter'
 import { ConvexError } from 'convex/values'
 import { components } from '../_generated/api'
 
@@ -23,6 +23,18 @@ export const rateLimiter = new RateLimiter(components.rateLimiter, {
   extractGlobalDaily: { kind: 'fixed window', rate: 400, period: 24 * HOUR },
   // A leaked share link shouldn't allow unbounded guest spam on one bill.
   guestJoinPerBill: { kind: 'token bucket', rate: 30, period: HOUR, capacity: 15 },
+  // Guest claim writes (step / share evenly / undo), keyed `${billId}:${guestSessionId}`.
+  // Each +/- tap is one mutation. A guest hammering + on a long receipt — or one
+  // guest assigning the whole table — bursts maybe 5-8 taps/s for a few seconds,
+  // then slows to well under 1/s while reading. A 60-tap burst plus a sustained
+  // 2 taps/s covers that with headroom; a script churning the table does not.
+  guestClaimPerSession: { kind: 'token bucket', rate: 120, period: MINUTE, capacity: 60 },
+  // Backstop across every session at one table (key = billId). Sessions are
+  // bounded by MAX_PEOPLE (30) and minted only via joinSplit (guestJoinPerBill),
+  // so a few scripted sessions could otherwise multiply the per-session cap.
+  // ~5 busy guests tapping at the full sustained per-session rate fit (10/s), and
+  // the 200 burst absorbs a whole table claiming at once when the link lands.
+  guestClaimPerBill: { kind: 'token bucket', rate: 600, period: MINUTE, capacity: 200 },
 })
 
 /** Spend emergency brake: `npx convex env set EXTRACTION_DISABLED 1`. */

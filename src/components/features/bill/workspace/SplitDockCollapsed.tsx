@@ -38,7 +38,8 @@ export function SplitDockCollapsed({
   onSelect: (id: string) => void
   onAdd?: (name: string) => void | Promise<void>
   portfolioByPerson: Map<string, Portfolio>
-  /** Only these people can be selected; all breakdowns remain visible. */
+  /** Ids the viewer controls (a guest's own people) — sorted first in the
+   * picker. Everyone remains selectable. */
   ownIds?: ReadonlySet<string>
   lineItems: LineItem[]
   claims: Claim[]

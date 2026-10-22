@@ -83,14 +83,21 @@ export function JoinPage({ shareToken }: { shareToken: string }) {
     try { localStorage.setItem(selfStorageKey, initialId) } catch { /* Keep identity in memory. */ }
   }, [guestSessionId, selfId, selfStorageKey, controlledPeople])
 
+  // Owned (controlled by this session): drives the "(you)" label, the paid
+  // toggle, sending a person's total, and the default selection.
   const isMine = (personId: string) =>
     controlledPeople.some((p) => p.id === personId)
+  // Claimable: once joined, a guest claims and splits for anyone at the table
+  // (same footing as the host). The server enforces the joined-session gate.
+  const joined = controlledPeople.length > 0
+  const isAtTable = (personId: string) =>
+    bill.people.some((p) => p.id === personId)
 
   useEffect(() => {
-    if (!controlledPeople.some((p) => p.id === activeId)) {
+    if (!bill.people.some((p) => p.id === activeId)) {
       setActiveId(controlledPeople[0]?.id ?? null)
     }
-  }, [controlledPeople, activeId])
+  }, [bill.people, controlledPeople, activeId])
 
   async function join(name: string) {
     if (!name || !guestSessionId) return
@@ -117,7 +124,12 @@ export function JoinPage({ shareToken }: { shareToken: string }) {
   }
 
   function stepClaim(itemId: string, personId: string, delta: number) {
-    if (!guestSessionId || !isMine(personId) || (delta !== 1 && delta !== -1))
+    if (
+      !guestSessionId ||
+      !joined ||
+      !isAtTable(personId) ||
+      (delta !== 1 && delta !== -1)
+    )
       return
     setConflictMessage(null)
     void stepGuestClaim
@@ -137,10 +149,11 @@ export function JoinPage({ shareToken }: { shareToken: string }) {
   async function shareEvenly(itemId: string, personIds: string[], quantity: number) {
     if (
       !guestSessionId ||
+      !joined ||
       personIds.length === 0 ||
-      personIds.some((id) => !isMine(id))
+      personIds.some((id) => !isAtTable(id))
     )
-      throw new Error('Choose people you can manage')
+      throw new Error('Join the table, then choose people at it')
     setConflictMessage(null)
     const { before, after, qty } = await shareGuestItemEvenly.mutateAsync({ shareToken, guestSessionId, itemId, personIds, quantity })
     return async () => {
@@ -229,8 +242,6 @@ export function JoinPage({ shareToken }: { shareToken: string }) {
     )
   }
 
-  const joined = controlledPeople.length > 0
-
   return (
     <BillSplitWorkspace
       bill={bill}
@@ -270,21 +281,21 @@ export function JoinPage({ shareToken }: { shareToken: string }) {
           </section>
         )
       }
-      // The whole table is visible (same view as the host's split screen) but
-      // read-only for everyone except your own people: selection, claim
-      // steppers, and paid toggles are all gated on `isMine`. No onRemove —
+      // The whole table is visible (same view as the host's split screen).
+      // Once joined, a guest can select anyone and claim/split for them;
+      // paid toggles and sending stay gated on `isMine`. No onRemove —
       // guests never remove anyone.
       people={bill.people}
       selfId={selfId ?? undefined}
       activeId={activeId}
       onSelect={(id) => {
-        if (isMine(id)) setActiveId(id)
+        if (isAtTable(id)) setActiveId(id)
       }}
       onAdd={joined ? addPerson : undefined}
       onStep={stepClaim}
       onShareEvenly={shareEvenly}
-      canShareEvenly={controlledPeople.length > 1}
-      sharePeople={controlledPeople}
+      canShareEvenly={bill.people.length > 1}
+      sharePeople={bill.people}
       showClaims={joined}
       conflictMessage={conflictMessage}
       ownIds={ownIds}

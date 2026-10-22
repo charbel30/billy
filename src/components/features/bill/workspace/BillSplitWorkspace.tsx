@@ -36,7 +36,8 @@ export function BillSplitWorkspace({
   actionSlot,
   inviteAction,
   notice,
-  // Everyone at the table; ownIds determines who the viewer can manage.
+  // Everyone at the table; anyone can be selected and claimed for. ownIds only
+  // orders/labels the viewer's own people (paid/send gating is the caller's).
   people,
   activeId,
   selfId,
@@ -85,7 +86,8 @@ export function BillSplitWorkspace({
   onTipChange?: (pct: number) => void
   tipPending?: boolean
   /** Ids the viewer controls (e.g. a guest's own people) — sorts those pills
-   * first in the person rail/panel. Omit for the host, who controls everyone. */
+   * first in the person rail/panel. It does not restrict selection or claim
+   * steppers. Omit for the host, who controls everyone. */
   ownIds?: ReadonlySet<string>
 }) {
   const displayPerson = (person: Person) =>

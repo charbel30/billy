@@ -215,7 +215,9 @@ is its api namespace, so `convex/bills/host/lifecycle.ts` is
 - `convex/bills/guest/`: guest-side functions, scoped by `shareToken` +
   `guestSessionId`.
   - `people.ts`: `joinSplit`, `addGuestPerson`, `setGuestPersonPaid`.
-  - `claims.ts`: `stepGuestClaim`, `shareGuestItemEvenly`.
+  - `claims.ts`: `stepGuestClaim`, `shareGuestItemEvenly`,
+    `restoreGuestItemSplit`. Once a guest session has joined the table it can
+    claim and split for anyone at the table; marking paid stays own-people-only.
   - `queries.ts`: `getBillByToken`.
 - `convex/bills/extraction.ts`: internal mutations (`applyExtraction`,
   `onExtractionComplete`) that persist parsed model output into the bill

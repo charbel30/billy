@@ -1,10 +1,12 @@
 import { convexTest } from 'convex-test'
+import rateLimiter from '@convex-dev/rate-limiter/test'
 import { expect, test } from 'vitest'
 import { api, internal } from 'convex/_generated/api'
 import { modules, schema } from './setup'
 
 async function setup() {
   const t = convexTest(schema, modules)
+  rateLimiter.register(t)
   const id = await t.run((ctx) =>
     ctx.db.insert('bills', {
       merchantName: 'Test',

@@ -57,12 +57,14 @@ export const person = v.object({
   color: v.string(),
   // Anonymous guests store a random session id locally. A claim has no owner of
   // its own — ownership is transitive: guestSessionId → person.id → claim.personId.
-  // Rule enforced by the scoped guest mutations: you may edit a person (and its
-  // claims) iff person.guestSessionId === yourSession (or you're the host/owner).
+  // Rule enforced by the scoped guest mutations: you may edit a person (rename,
+  // mark paid) iff person.guestSessionId === yourSession (or you're the host).
+  // Claims are table-scoped: a session that owns at least one person on the
+  // bill may claim for anyone at the table (assertSessionAtTable).
   // One session may own MANY people (a guest who joins via the link can add
   // himself, his girlfriend, etc.) — that's `addGuestPerson` stamping each new
   // person with the same session id. Everyone can READ the whole bill; you only
-  // WRITE your own people. Version 2 invalidates credentials exposed by older responses.
+  // WRITE your own people (claims aside, see above). Version 2 invalidates credentials exposed by older responses.
   guestSessionId: v.optional(v.string()),
   guestAccessVersion: v.optional(v.literal(2)),
   // Mark-as-paid: when this person marked (or was marked) as having paid, ms

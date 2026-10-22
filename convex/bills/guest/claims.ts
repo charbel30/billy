@@ -1,7 +1,10 @@
-// Guest-side claim writes. The guestMutation builder (../lib/functions.ts)
-// consumes (shareToken, guestSessionId), gates on PUBLISHED, and injects
-// ctx.bill — guests can only edit their own claims. Host claim writes live in
-// ../host/claims.ts.
+// Guest-side claim writes. The guestClaimMutation builder (../lib/functions.ts)
+// consumes (shareToken, guestSessionId), gates on PUBLISHED, requires the
+// session to have joined the table, rate limits per session and per bill, and
+// injects ctx.bill + ctx.tableIds. A guest whose session has joined the table
+// (controls at least one person on the bill) may claim, unclaim and split items
+// for anyone at the table; a link holder who never joined may not write claims
+// at all. Host claim writes live in ../host/claims.ts.
 import { v } from 'convex/values'
 import { stepPersonClaim } from '../../model/claimChanges'
 import {
@@ -9,14 +12,13 @@ import {
   syncClaimRows,
   toWireClaims,
 } from '../../model/claimRows'
-import { guestMutation } from '../lib/functions'
-import { assertOwnPerson } from '../../model/bills'
+import { guestClaimMutation } from '../lib/functions'
 import { itemShareResult, itemSplitSnapshot } from '../lib/validators'
 import { restoreItemSplit, shareItemEvenly } from '../../model/itemSharing'
-import type { Doc } from '../../_generated/dataModel'
+import { invariant } from '../../lib/invariant'
 
 // Each tap carries intent; Convex applies it atomically to current claim rows.
-export const stepGuestClaim = guestMutation({
+export const stepGuestClaim = guestClaimMutation({
   args: {
     personId: v.string(),
     itemId: v.string(),
@@ -24,8 +26,8 @@ export const stepGuestClaim = guestMutation({
   },
   returns: v.object({ rejectedCount: v.number() }),
   handler: async (ctx, { personId, itemId, delta }) => {
-    const { bill } = ctx
-    assertOwnPerson(bill, personId, ctx.guestSessionId)
+    const { bill, tableIds } = ctx
+    invariant(tableIds.has(personId), 'person not found')
     const current = toWireClaims(await claimRowsForBill(ctx, bill._id))
     const result = stepPersonClaim(bill.lineItems, current, personId, itemId, delta)
     await syncClaimRows(ctx, bill._id, result.nextClaims)
@@ -33,21 +35,17 @@ export const stepGuestClaim = guestMutation({
   },
 })
 
-function editablePeople(bill: Doc<'bills'>, sessionId: string) {
-  return new Set(bill.people.filter((p) => p.guestAccessVersion === 2 && p.guestSessionId === sessionId).map((p) => p.id))
-}
-
-// Add the chosen unclaimed quantity to selected people in this session.
-export const shareGuestItemEvenly = guestMutation({
+// Add the chosen unclaimed quantity to the selected people at the table.
+export const shareGuestItemEvenly = guestClaimMutation({
   args: { itemId: v.string(), personIds: v.array(v.string()), quantity: v.number() },
   returns: itemShareResult,
   handler: async (ctx, { itemId, personIds, quantity }) =>
-    shareItemEvenly(ctx, ctx.bill, itemId, personIds, quantity, editablePeople(ctx.bill, ctx.guestSessionId)),
+    shareItemEvenly(ctx, ctx.bill, itemId, personIds, quantity, ctx.tableIds),
 })
 
-export const restoreGuestItemSplit = guestMutation({
+export const restoreGuestItemSplit = guestClaimMutation({
   args: { itemId: v.string(), ...itemSplitSnapshot },
   returns: v.null(),
   handler: async (ctx, args) =>
-    restoreItemSplit(ctx, ctx.bill, args, editablePeople(ctx.bill, ctx.guestSessionId)),
+    restoreItemSplit(ctx, ctx.bill, args, ctx.tableIds),
 })

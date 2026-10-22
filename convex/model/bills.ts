@@ -177,7 +177,8 @@ export async function limitGuestJoin(ctx: MutationCtx, billId: string) {
   }
 }
 
-/** A guest may only touch a person row minted by their own session. */
+/** Person-scoped guest writes (e.g. mark-as-paid): only a person row minted
+ * by the caller's own session. Claim writes use assertSessionAtTable instead. */
 export function assertOwnPerson(
   bill: Bill,
   personId: string,
@@ -189,9 +190,25 @@ export function assertOwnPerson(
     person.guestAccessVersion !== 2 ||
     person.guestSessionId !== guestSessionId
   ) {
-    throw new Error('You can only edit your own claims')
+    throw new Error('You can only change your own people')
   }
   return person
+}
+
+/**
+ * Guest claim writes: the calling session must control at least one person
+ * currently on the bill (i.e. it has joined the table). Holding the share link
+ * alone is not enough. Once at the table, a guest may claim for anyone on it —
+ * returns the ids of every person on the bill as the editable set.
+ */
+export function assertSessionAtTable(bill: Bill, guestSessionId: string) {
+  const atTable = bill.people.some(
+    (p) => p.guestAccessVersion === 2 && p.guestSessionId === guestSessionId,
+  )
+  if (!atTable) {
+    throw new ConvexError('Join the table before claiming items')
+  }
+  return new Set(bill.people.map((p) => p.id))
 }
 
 export function assertSharedForGuestWrites(bill: Bill) {

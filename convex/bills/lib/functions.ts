@@ -19,6 +19,7 @@ import {
   assertEditableSplit,
   assertGuestSessionId,
   assertHostToken,
+  assertSessionAtTable,
   assertSettleOpen,
   assertSharedForGuestWrites,
   getBillByShareToken,
@@ -77,6 +78,42 @@ function makeGuestMutation(gate: (bill: Bill) => void) {
 export const guestMutation = makeGuestMutation(assertSharedForGuestWrites)
 /** Guest mark-as-paid: same settle window as the host side. */
 export const guestSettleMutation = makeGuestMutation(assertSettleOpen)
+
+const GUEST_CLAIM_RATE_LIMIT_MESSAGE =
+  "You're changing claims too quickly — wait a moment and try again."
+
+/**
+ * Guest claim writes (step / share evenly / undo). Same capability + PUBLISHED
+ * gate as guestMutation, then:
+ *   1. the session must have joined the table (assertSessionAtTable) — checked
+ *      BEFORE the limiter, so a link holder who never joined always gets "Join
+ *      the table" (even on a throttled table) and never reaches the buckets;
+ *   2. charge the per-session bucket, then the per-bill backstop.
+ * Limiter writes are transactional with the mutation: any throw (a limit hit
+ * here, or a handler error later) rolls back every charge in this call, so a
+ * per-bill rejection never leaves a per-session charge, and only committed
+ * claim writes spend tokens.
+ * Injects `ctx.bill`, `ctx.guestSessionId` and `ctx.tableIds` (every person id
+ * on the bill — the set a joined guest may claim for).
+ */
+export const guestClaimMutation = customMutation(mutation, {
+  args: { shareToken: v.string(), guestSessionId: v.string() },
+  input: async (ctx, { shareToken, guestSessionId }) => {
+    assertGuestSessionId(guestSessionId)
+    const bill = await getBillByShareToken(ctx, shareToken)
+    assertSharedForGuestWrites(bill)
+    const tableIds = assertSessionAtTable(bill, guestSessionId)
+    const perSession = await rateLimiter.limit(ctx, 'guestClaimPerSession', {
+      key: `${bill._id}:${guestSessionId}`,
+    })
+    if (!perSession.ok) throw new ConvexError(GUEST_CLAIM_RATE_LIMIT_MESSAGE)
+    const perBill = await rateLimiter.limit(ctx, 'guestClaimPerBill', {
+      key: bill._id,
+    })
+    if (!perBill.ok) throw new ConvexError(GUEST_CLAIM_RATE_LIMIT_MESSAGE)
+    return { ctx: { bill, guestSessionId, tableIds }, args: {} }
+  },
+})
 
 // ---------------------------------------------------------------------------
 // Scan side. Public + unauthenticated, so every entry point is rate limited

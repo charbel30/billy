@@ -1,10 +1,13 @@
 import { convexTest } from 'convex-test'
-import { expect, test } from 'vitest'
+import rateLimiter from '@convex-dev/rate-limiter/test'
+import { afterEach, expect, test, vi } from 'vitest'
 import { api } from 'convex/_generated/api'
+import { rateLimiter as limits } from 'convex/lib/rateLimits'
 import { modules, schema } from './setup'
 
 async function setup() {
   const t = convexTest(schema, modules)
+  rateLimiter.register(t)
   const id = await t.run((ctx) =>
     ctx.db.insert('bills', {
       merchantName: 'Test bill',
@@ -165,7 +168,7 @@ test('capacity conflicts are reported without discarding other items or people',
   )
 })
 
-test('guest even split is atomic, preserves other items, and respects ownership', async () => {
+test('guest even split is atomic, preserves other items, and reaches anyone at the table', async () => {
   const { t, id, host, guest } = await setup()
   await t.mutation(api.bills.host.claims.stepHostClaim, {
     ...host,
@@ -197,6 +200,31 @@ test('guest even split is atomic, preserves other items, and respects ownership'
       { personId: 'alice', itemId: 'drink', units: 1 },
     ]),
   )
+  // A joined guest may now unclaim for and share with another joined guest.
+  await t.mutation(api.bills.guest.claims.stepGuestClaim, {
+    ...guest,
+    personId: 'bob',
+    itemId: 'meal',
+    delta: -1,
+  })
+  await t.mutation(api.bills.guest.claims.shareGuestItemEvenly, {
+    ...guest,
+    itemId: 'meal',
+    personIds: ['alice', 'bob'], quantity: 1,
+  })
+  const after = await t.query(api.bills.host.queries.getBill, {
+    id,
+    hostToken: 'test-host-token',
+  })
+  expect(after.claims).toEqual(
+    expect.arrayContaining([
+      { personId: 'bob', itemId: 'meal', units: 0.5 },
+      { personId: 'alice', itemId: 'meal', units: 2 },
+      { personId: 'companion', itemId: 'meal', units: 1.5 },
+      { personId: 'alice', itemId: 'drink', units: 1 },
+    ]),
+  )
+  // Sharing still never exceeds what is left, and unknown people are rejected.
   await expect(
     t.mutation(api.bills.guest.claims.shareGuestItemEvenly, {
       ...guest,
@@ -205,11 +233,18 @@ test('guest even split is atomic, preserves other items, and respects ownership'
     }),
   ).rejects.toThrow()
   await expect(
+    t.mutation(api.bills.guest.claims.shareGuestItemEvenly, {
+      ...guest,
+      itemId: 'drink',
+      personIds: ['alice', 'ghost'], quantity: 1,
+    }),
+  ).rejects.toThrow()
+  await expect(
     t.mutation(api.bills.guest.claims.stepGuestClaim, {
       ...guest,
-      personId: 'bob',
-      itemId: 'meal',
-      delta: -1,
+      personId: 'ghost',
+      itemId: 'drink',
+      delta: 1,
     }),
   ).rejects.toThrow()
   expect(
@@ -219,7 +254,7 @@ test('guest even split is atomic, preserves other items, and respects ownership'
         hostToken: 'test-host-token',
       })
     ).claims,
-  ).toEqual(bill.claims)
+  ).toEqual(after.claims)
 })
 
 test('finalization preserves accepted choices and rejects later taps', async () => {
@@ -310,19 +345,79 @@ for (const caller of ['host', 'guest'] as const) {
   })
 }
 
-test('guest undo cannot forge another guest’s share or exceed the item quantity', async () => {
+test('guest undo may restore other people’s shares but never exceeds the item quantity', async () => {
   const { t, host, guest } = await setup()
   await t.mutation(api.bills.host.claims.stepHostClaim, { ...host, itemId: 'meal', personId: 'bob', delta: 1 })
   const { before, after, qty } = await t.mutation(api.bills.guest.claims.shareGuestItemEvenly, { ...guest, itemId: 'meal', personIds: ['alice', 'companion'], quantity: 3 })
   for (const invalidBefore of [
-    before.map((c) => ({ ...c, units: 0.5 })),
     [...before, { itemId: 'meal', personId: 'alice', units: 10 }],
     [...before, { itemId: 'drink', personId: 'alice', units: 1 }],
+    [...before, { itemId: 'meal', personId: 'ghost', units: 1 }],
   ]) {
     await expect(t.mutation(api.bills.guest.claims.restoreGuestItemSplit, { ...guest, itemId: 'meal', before: invalidBefore, after, qty })).rejects.toThrow()
   }
+  expect((await t.query(api.bills.host.queries.getBill, host)).claims).toEqual(expect.arrayContaining(after))
+  // Another joined guest's share is no longer off-limits to a joined guest.
+  await t.mutation(api.bills.guest.claims.restoreGuestItemSplit, { ...guest, itemId: 'meal', before: before.map((c) => ({ ...c, units: 0.5 })), after, qty })
+  expect((await t.query(api.bills.host.queries.getBill, host)).claims).toEqual([{ itemId: 'meal', personId: 'bob', units: 0.5 }])
+})
+
+async function withHostPerson() {
+  const ctx = await setup()
+  await ctx.t.run(async (run) => {
+    const bill = await run.db.get(ctx.id)
+    if (!bill) throw Error('missing fixture')
+    await run.db.patch(ctx.id, { people: [{ id: 'host', name: 'Host', color: 'pink' }, ...bill.people] })
+  })
+  return ctx
+}
+
+test('a joined guest shares an item with the host’s person and another guest’s person', async () => {
+  const { t, host, guest } = await withHostPerson()
+  const result = await t.mutation(api.bills.guest.claims.shareGuestItemEvenly, { ...guest, itemId: 'meal', personIds: ['host', 'bob'], quantity: 2 })
+  expect(result.after).toHaveLength(2)
   const bill = await t.query(api.bills.host.queries.getBill, host)
-  expect(bill.claims).toEqual(expect.arrayContaining(after))
+  expect(bill.claims).toHaveLength(2)
+  expect(bill.claims).toEqual(expect.arrayContaining([
+    { itemId: 'meal', personId: 'host', units: 1 },
+    { itemId: 'meal', personId: 'bob', units: 1 },
+  ]))
+  // And can undo it again.
+  await t.mutation(api.bills.guest.claims.restoreGuestItemSplit, { ...guest, itemId: 'meal', ...result })
+  expect((await t.query(api.bills.host.queries.getBill, host)).claims).toEqual([])
+})
+
+test('a joined guest steps a claim for the host’s person', async () => {
+  const { t, host, guest } = await withHostPerson()
+  await t.mutation(api.bills.guest.claims.stepGuestClaim, { ...guest, personId: 'host', itemId: 'drink', delta: 1 })
+  await t.mutation(api.bills.guest.claims.stepGuestClaim, { ...guest, personId: 'host', itemId: 'drink', delta: 1 })
+  await t.mutation(api.bills.guest.claims.stepGuestClaim, { ...guest, personId: 'host', itemId: 'drink', delta: -1 })
+  expect((await t.query(api.bills.host.queries.getBill, host)).claims).toEqual([
+    { itemId: 'drink', personId: 'host', units: 1 },
+  ])
+})
+
+test('a well-formed session that never joined cannot step, share or undo', async () => {
+  const { t, host, guest } = await withHostPerson()
+  const stranger = { ...guest, guestSessionId: 'v2:never-joined-session-secret' }
+  const snapshot = await t.mutation(api.bills.host.claims.shareHostItemEvenly, { ...host, itemId: 'meal', personIds: ['host', 'alice'], quantity: 2 })
+  const before = (await t.query(api.bills.host.queries.getBill, host)).claims
+  await expect(t.mutation(api.bills.guest.claims.stepGuestClaim, { ...stranger, personId: 'host', itemId: 'drink', delta: 1 })).rejects.toThrow('Join the table')
+  await expect(t.mutation(api.bills.guest.claims.stepGuestClaim, { ...stranger, personId: 'alice', itemId: 'meal', delta: -1 })).rejects.toThrow('Join the table')
+  await expect(t.mutation(api.bills.guest.claims.shareGuestItemEvenly, { ...stranger, itemId: 'drink', personIds: ['host', 'bob'], quantity: 2 })).rejects.toThrow('Join the table')
+  await expect(t.mutation(api.bills.guest.claims.restoreGuestItemSplit, { ...stranger, itemId: 'meal', ...snapshot })).rejects.toThrow('Join the table')
+  expect((await t.query(api.bills.host.queries.getBill, host)).claims).toEqual(before)
+})
+
+test('a guest whose people were all removed loses claim access', async () => {
+  const { t, host, guest } = await withHostPerson()
+  const bob = { ...guest, guestSessionId: 'v2:bob-session-secret' }
+  await t.mutation(api.bills.guest.claims.stepGuestClaim, { ...bob, personId: 'host', itemId: 'drink', delta: 1 })
+  await t.mutation(api.bills.host.people.removeHostPerson, { ...host, personId: 'bob' })
+  await expect(t.mutation(api.bills.guest.claims.stepGuestClaim, { ...bob, personId: 'host', itemId: 'drink', delta: 1 })).rejects.toThrow('Join the table')
+  expect((await t.query(api.bills.host.queries.getBill, host)).claims).toEqual([
+    { itemId: 'drink', personId: 'host', units: 1 },
+  ])
 })
 
 test('sharing and undo reject finalized bills', async () => {
@@ -396,3 +491,86 @@ for (const caller of ['host', 'guest'] as const) {
     }
   })
 }
+
+// --- Guest claim rate limits ------------------------------------------------
+// Date is frozen so token buckets never refill mid-test: a session gets exactly
+// its burst capacity, which keeps the loops bounded by config, not wall time.
+
+afterEach(() => {
+  vi.useRealTimers()
+})
+
+function freezeTime() {
+  vi.useFakeTimers({ toFake: ['Date'] })
+  vi.setSystemTime(new Date('2026-10-22T20:00:00Z'))
+}
+
+type Guest = { shareToken: string; guestSessionId: string }
+type T = Awaited<ReturnType<typeof setup>>['t']
+
+/** Tap +/- on one item until the session is throttled; returns accepted taps. */
+async function tapUntilThrottled(t: T, guest: Guest, personId: string) {
+  for (let accepted = 0; accepted < 500; accepted++) {
+    try {
+      await t.mutation(api.bills.guest.claims.stepGuestClaim, {
+        ...guest, personId, itemId: 'meal', delta: accepted % 2 === 0 ? 1 : -1,
+      })
+    } catch (error) {
+      expect(String(error)).toContain('too quickly')
+      return accepted
+    }
+  }
+  throw new Error('guest claim writes were never throttled')
+}
+
+test('a guest session that exceeds its burst is throttled and its claims stop changing', async () => {
+  freezeTime()
+  const { t, host, guest } = await setup()
+  const accepted = await tapUntilThrottled(t, guest, 'alice')
+  // Generous enough for a real guest tapping fast across a long receipt.
+  expect(accepted).toBeGreaterThanOrEqual(40)
+  const before = (await t.query(api.bills.host.queries.getBill, host)).claims
+  // Every guest claim write shares the session bucket: step, share and undo.
+  await expect(t.mutation(api.bills.guest.claims.stepGuestClaim, { ...guest, personId: 'alice', itemId: 'drink', delta: 1 })).rejects.toThrow('too quickly')
+  await expect(t.mutation(api.bills.guest.claims.shareGuestItemEvenly, { ...guest, itemId: 'drink', personIds: ['alice', 'bob'], quantity: 2 })).rejects.toThrow('too quickly')
+  expect((await t.query(api.bills.host.queries.getBill, host)).claims).toEqual(before)
+  // Host writes are not guest-limited.
+  await t.mutation(api.bills.host.claims.stepHostClaim, { ...host, personId: 'alice', itemId: 'drink', delta: 1 })
+  // The bucket refills with time.
+  vi.setSystemTime(new Date('2026-10-22T20:01:00Z'))
+  await t.mutation(api.bills.guest.claims.stepGuestClaim, { ...guest, personId: 'alice', itemId: 'drink', delta: 1 })
+  expect((await t.query(api.bills.host.queries.getBill, host)).claims).toEqual(
+    expect.arrayContaining([{ personId: 'alice', itemId: 'drink', units: 2 }]),
+  )
+})
+
+test('throttling one guest session leaves other joined sessions at the table writable', async () => {
+  freezeTime()
+  const { t, host, guest } = await setup()
+  await tapUntilThrottled(t, guest, 'alice')
+  const bob = { ...guest, guestSessionId: 'v2:bob-session-secret' }
+  await t.mutation(api.bills.guest.claims.stepGuestClaim, { ...bob, personId: 'bob', itemId: 'drink', delta: 1 })
+  expect((await t.query(api.bills.host.queries.getBill, host)).claims).toEqual(
+    expect.arrayContaining([{ personId: 'bob', itemId: 'drink', units: 1 }]),
+  )
+})
+
+test('a session that never joined is refused before the limiter and never drains the table’s bucket', async () => {
+  freezeTime()
+  const { t, id, guest } = await setup()
+  const perBill = () => t.run((ctx) => limits.getValue(ctx, 'guestClaimPerBill', { key: id }))
+  const stranger = { ...guest, guestSessionId: 'v2:never-joined-session-secret' }
+  for (let i = 0; i < 5; i++) {
+    await expect(t.mutation(api.bills.guest.claims.stepGuestClaim, { ...stranger, personId: 'alice', itemId: 'meal', delta: 1 })).rejects.toThrow('Join the table')
+  }
+  const untouched = await perBill()
+  expect(untouched.value).toBe(untouched.config.capacity)
+  // Control: a joined session's tap does charge that same bucket.
+  await t.mutation(api.bills.guest.claims.stepGuestClaim, { ...guest, personId: 'alice', itemId: 'meal', delta: 1 })
+  expect((await perBill()).value).toBe(untouched.value - 1)
+  // The join check runs before the limiter: even with the table's backstop
+  // exhausted, a stranger is told to join, while a joined guest is throttled.
+  await t.run((ctx) => limits.limit(ctx, 'guestClaimPerBill', { key: id, count: untouched.value - 1 }))
+  await expect(t.mutation(api.bills.guest.claims.stepGuestClaim, { ...stranger, personId: 'alice', itemId: 'meal', delta: 1 })).rejects.toThrow('Join the table')
+  await expect(t.mutation(api.bills.guest.claims.stepGuestClaim, { ...guest, personId: 'alice', itemId: 'meal', delta: 1 })).rejects.toThrow('too quickly')
+})

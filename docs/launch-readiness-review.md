@@ -83,6 +83,8 @@ A viewer can therefore copy another participant's session ID from a response and
 
 Evidence: [serialization and ownership checks](../convex/model/bills.ts), [person schema](../convex/schema.ts), [guest query](../convex/bills/guest/queries.ts), [guest claims](../convex/bills/guest/claims.ts), [guest people](../convex/bills/guest/people.ts), [join ownership UI](../src/components/features/join/JoinPage.tsx).
 
+> **Update 2026-10-22 (product decision):** guest *claim* writes are no longer person-scoped. A session that has joined the table (controls at least one person currently on the bill, `assertSessionAtTable`) may claim, unclaim, split evenly and undo splits for anyone at the table, including the host's people and other guests. A well-formed session that never joined, or whose people were all removed, is still rejected. The credential-disclosure fix above remains required: credentials still gate joining, companions, and marking one's own people paid (`assertOwnPerson`), and the acceptance criterion "neither can … clear claims … for the other" is superseded for claims only.
+
 ### P0 — Revoking a share link does not revoke a previous viewer's access
 
 The guest query returns the bill's stable `_id`. The host-side `getBill` query requires only that ID and returns the current `shareToken`. `revokeShare` rotates the share token and returns the bill to `READY`, but does not change this alternate read path.

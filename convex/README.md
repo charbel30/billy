@@ -25,9 +25,14 @@ every caller (all frontend Convex references live in `src/api/`, per
     extraction action).
 - `bills/guest/` — guest-side functions, scoped by `shareToken` +
   `guestSessionId` (`ctx.bill` + `ctx.guestSessionId` injected by
-  `guestMutation`/`guestSettleMutation`).
+  `guestMutation`/`guestSettleMutation`/`guestClaimMutation`).
   - `people.ts` — `joinSplit`, `addGuestPerson`, `setGuestPersonPaid`.
-  - `claims.ts` — `stepGuestClaim`, `shareGuestItemEvenly`.
+  - `claims.ts` — `stepGuestClaim`, `shareGuestItemEvenly`,
+    `restoreGuestItemSplit`. A session that has joined the table (controls at
+    least one person on the bill, `assertSessionAtTable`) may claim, unclaim and
+    split for anyone at the table; a link holder who never joined may not.
+    Marking paid stays limited to the caller's own people (`assertOwnPerson`).
+    Rate limited after the join check (`guestClaimMutation`): per session and per bill.
   - `queries.ts` — public `getBillByToken` and caller-scoped `getControlledPeople`.
 - `bills/extraction.ts` — internal mutations only (`applyExtraction`,
   `onExtractionComplete`); not under host/ or guest/ since nothing here is a
@@ -99,6 +104,9 @@ shell; private receipt queries begin after browser access is available.
 `getBillByToken` requires a current published/finalized invitation. Neither
 query returns participant edit credentials. `getControlledPeople` returns only
 the participant IDs controlled by the supplied current guest credential.
+Guest claim writes are table-scoped, not person-scoped: any joined session may
+claim for anyone at the table (decided 2026-10-22). Guest credentials still
+gate joining the table, companions, and marking one's own people paid.
 
 Guest credentials predating access version 2 are invalidated, with old names and
 claims retained for host management. The client creates fresh credentials in a
