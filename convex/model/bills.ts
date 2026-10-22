@@ -9,6 +9,10 @@ import { rateLimiter } from '../lib/rateLimits'
 import type { Bill, Claim, LineItem, Person } from '../schema'
 import { newClientId, nextPersonColor } from '../../src/lib/bill/ids'
 import { MAX_NAME_LENGTH, MAX_PEOPLE } from '../../src/lib/bill/constants'
+import {
+  hostPersonId,
+  isReservedGuestName,
+} from '../../src/lib/bill/hostPerson'
 
 export function definedOnly<T extends Record<string, unknown>>(patch: T) {
   return Object.fromEntries(
@@ -30,6 +34,16 @@ export function cleanName(name: string) {
   const trimmed = name.trim().slice(0, MAX_NAME_LENGTH)
   if (!trimmed) throw new Error('Name is required')
   return trimmed
+}
+
+/** cleanName for guest-chosen names (joinSplit / addGuestPerson): the host's
+ * seed name and the "Host" label guests see for it are reserved. */
+export function cleanGuestName(name: string) {
+  const clean = cleanName(name)
+  if (isReservedGuestName(clean)) {
+    throw new ConvexError('That name is reserved for the host — pick another name.')
+  }
+  return clean
 }
 
 export function assertGuestSessionId(guestSessionId: string) {
@@ -196,10 +210,69 @@ export function assertOwnPerson(
 }
 
 /**
+ * Id of the host's own person: the one seeded with `isHost: true` at bill
+ * creation (legacy bills: the DEFAULT_PERSON_NAME seed), and NEVER a row that
+ * carries a guest session — guest-minted people always do, and no guest
+ * mutation can set `isHost` or take the seed name (cleanGuestName).
+ */
+export function hostOwnPersonId(bill: Pick<Bill, 'people'>) {
+  const id = hostPersonId(bill.people)
+  const person = bill.people.find((p) => p.id === id)
+  return person && !person.guestSessionId ? person.id : undefined
+}
+
+/**
+ * People from a host editor payload (saveWorking), reduced to the fields an
+ * editor may set (id/name/color). Everything else comes from the STORED
+ * person with the same id: guest ownership credentials, paid state, and the
+ * host marker — `isHost` is stamped on the stored host's own person only (this
+ * also pins the legacy name fallback), so a payload can neither set, clear nor
+ * move it. The host's own name is likewise kept as stored: renameHostPerson
+ * owns it, so a stale editor copy can never quietly revert a rename.
+ */
+export function editorPeople(bill: Bill, people: Person[]): Person[] {
+  const hostId = hostOwnPersonId(bill)
+  const stored = new Map(bill.people.map((p) => [p.id, p]))
+  return people.map((person) => {
+    const existing = stored.get(person.id)
+    const isHost = hostId !== undefined && person.id === hostId
+    return {
+      id: person.id,
+      name: isHost && existing ? existing.name : person.name,
+      color: person.color,
+      ...(existing?.guestSessionId
+        ? { guestSessionId: existing.guestSessionId }
+        : {}),
+      ...(existing?.guestAccessVersion
+        ? { guestAccessVersion: existing.guestAccessVersion }
+        : {}),
+      ...(existing?.paidAt != null ? { paidAt: existing.paidAt } : {}),
+      ...(isHost ? { isHost: true } : {}),
+    }
+  })
+}
+
+/** renameHostPerson: only the host's own person, under the usual name rules.
+ * Pins `isHost` on it, so a renamed legacy seed stays recognised. */
+export function renameHostOwnPerson(bill: Bill, personId: string, name: string) {
+  const hostId = hostOwnPersonId(bill)
+  if (!hostId || personId !== hostId) {
+    invariant(bill.people.some((p) => p.id === personId), 'person not found')
+    throw new ConvexError('Only your own name can be changed here')
+  }
+  const clean = cleanName(name)
+  return bill.people.map((p) =>
+    p.id === hostId ? { ...p, name: clean, isHost: true } : p,
+  )
+}
+
+/**
  * Guest claim writes: the calling session must control at least one person
  * currently on the bill (i.e. it has joined the table). Holding the share link
- * alone is not enough. Once at the table, a guest may claim for anyone on it —
- * returns the ids of every person on the bill as the editable set.
+ * alone is not enough. Once at the table, a guest may:
+ *   - claimIds: step/claim for anyone EXCEPT the host's own person;
+ *   - shareIds: include anyone, the host's person too, in an even split (and
+ *     undo it) — see assertGuestShareTargets.
  */
 export function assertSessionAtTable(bill: Bill, guestSessionId: string) {
   const atTable = bill.people.some(
@@ -208,7 +281,35 @@ export function assertSessionAtTable(bill: Bill, guestSessionId: string) {
   if (!atTable) {
     throw new ConvexError('Join the table before claiming items')
   }
-  return new Set(bill.people.map((p) => p.id))
+  const hostId = hostOwnPersonId(bill)
+  return {
+    claimIds: new Set(
+      bill.people.filter((p) => p.id !== hostId).map((p) => p.id),
+    ),
+    shareIds: new Set(bill.people.map((p) => p.id)),
+  }
+}
+
+const HOST_ONLY_MESSAGE = 'Only the host can change their own items'
+
+/** Guest step target: someone at the table other than the host's own person. */
+export function assertGuestClaimTarget(
+  bill: Bill,
+  claimIds: ReadonlySet<string>,
+  personId: string,
+) {
+  if (claimIds.has(personId)) return
+  invariant(bill.people.some((p) => p.id === personId), 'person not found')
+  throw new ConvexError(HOST_ONLY_MESSAGE)
+}
+
+/** A guest may put the host's person into an even split only alongside someone
+ * else — sharing with the host alone would be claiming for them. */
+export function assertGuestShareTargets(bill: Bill, personIds: string[]) {
+  const ids = new Set(personIds)
+  const hostId = hostOwnPersonId(bill)
+  const includesHost = hostId !== undefined && ids.has(hostId)
+  if (includesHost && ids.size < 2) throw new ConvexError(HOST_ONLY_MESSAGE)
 }
 
 export function assertSharedForGuestWrites(bill: Bill) {

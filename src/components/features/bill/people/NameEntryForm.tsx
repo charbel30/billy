@@ -3,8 +3,16 @@ import { RiArrowRightLine, RiLoader4Line } from '@remixicon/react'
 import { Button } from '~/components/ui/button'
 import { Input } from '~/components/ui/input'
 
+/** Overrides for the field's built-in add/join copy (e.g. renaming yourself). */
+export type NameEntryCopy = {
+  label: string
+  hint: string
+  placeholder: string
+  error: string
+}
+
 export function NameEntryForm({
-  onSubmit, submitLabel, pendingLabel, disabled = false, joining = false, onCancel, compact = false,
+  onSubmit, submitLabel, pendingLabel, disabled = false, joining = false, onCancel, compact = false, initialName = '', copy,
 }: {
   onSubmit: (name: string) => void | Promise<void>
   submitLabel: string
@@ -13,9 +21,12 @@ export function NameEntryForm({
   compact?: boolean
   joining?: boolean
   onCancel?: () => void
+  /** Prefills the field (editing an existing name). */
+  initialName?: string
+  copy?: NameEntryCopy
 }) {
   const id = useId()
-  const [name, setName] = useState('')
+  const [name, setName] = useState(initialName)
   const [pending, setPending] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const submitting = useRef(false)
@@ -31,20 +42,20 @@ export function NameEntryForm({
         await onSubmit(name.trim())
         setName('')
       } catch {
-        setError(joining ? 'Could not join the table. Your name is still here — try again.' : 'Could not add this person. Try again.')
+        setError(copy ? copy.error : joining ? 'Could not join the table. Your name is still here — try again.' : 'Could not add this person. Try again.')
       } finally {
         submitting.current = false
         setPending(false)
       }
     }}>
       <div className="space-y-2">
-        <label htmlFor={id} className={compact ? "sr-only" : "block text-sm font-bold"}>{joining ? 'Your name' : 'Their name'}</label>
+        <label htmlFor={id} className={compact ? "sr-only" : "block text-sm font-bold"}>{copy ? copy.label : joining ? 'Your name' : 'Their name'}</label>
         <Input id={id} name="name" autoComplete={joining ? 'given-name' : 'off'} autoCapitalize="words" enterKeyHint="done"
-          placeholder={compact ? 'New person’s name' : joining ? 'e.g. Maya' : 'e.g. Karim'} required
+          placeholder={copy ? copy.placeholder : compact ? 'New person’s name' : joining ? 'e.g. Maya' : 'e.g. Karim'} required
           value={name} disabled={pending} onChange={(event) => setName(event.target.value)}
           aria-describedby={`${id}-hint${error ? ` ${id}-error` : ''}`}
           className="h-12 text-base" />
-        <p id={`${id}-hint`} className={compact ? "sr-only" : "text-sm text-muted-foreground"}>{joining ? 'Use a name your table will recognize. You can add someone with you after joining.' : 'You’ll switch to this person to pick their items.'}</p>
+        <p id={`${id}-hint`} className={compact ? "sr-only" : "text-sm text-muted-foreground"}>{copy ? copy.hint : joining ? 'Use a name your table will recognize. You can add someone with you after joining.' : 'You’ll switch to this person to pick their items.'}</p>
       </div>
       <div className="flex gap-2">
         {onCancel ? <Button type="button" variant="outline" size="lg" disabled={pending} onClick={onCancel}>Cancel</Button> : null}

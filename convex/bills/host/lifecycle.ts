@@ -19,6 +19,7 @@ import {
 import {
   assertFiniteNumber,
   definedOnly,
+  editorPeople,
   now,
   validateClaims,
   validateLineItems,
@@ -100,6 +101,7 @@ export const createBill = newBillMutation({
           id: newClientId(),
           name: DEFAULT_PERSON_NAME,
           color: nextPersonColor(0),
+          isHost: true, // the host's own person — the only place a marker is minted
         },
       ],
     })
@@ -160,6 +162,7 @@ export const createDemoBill = newBillMutation({
           id: newClientId(),
           name: DEFAULT_PERSON_NAME,
           color: nextPersonColor(0),
+          isHost: true, // the host's own person — the only place a marker is minted
         },
       ],
     })
@@ -187,24 +190,11 @@ export const saveWorking = billMutation({
 
     const splitIsLive = bill.status === 'PUBLISHED'
     const nextItems = lineItems ?? bill.lineItems
-    // Public editor data cannot create or replace ownership credentials/paid state.
+    // Public editor data cannot create or replace ownership credentials, paid
+    // state, the host marker or the host's own name (editorPeople).
     const nextPeople = splitIsLive
       ? bill.people
-      : (people ?? bill.people).map((person) => {
-          const existing = bill.people.find((p) => p.id === person.id)
-          return {
-            id: person.id,
-            name: person.name,
-            color: person.color,
-            ...(existing?.guestSessionId
-              ? { guestSessionId: existing.guestSessionId }
-              : {}),
-            ...(existing?.guestAccessVersion
-              ? { guestAccessVersion: existing.guestAccessVersion }
-              : {}),
-            ...(existing?.paidAt != null ? { paidAt: existing.paidAt } : {}),
-          }
-        })
+      : editorPeople(bill, people ?? bill.people)
     // Claims are never submitted by the editor (they live in their own table,
     // written only by the scoped claim mutations). The editor's job here
     // is to keep them CONSISTENT: reconcile the current rows against the next

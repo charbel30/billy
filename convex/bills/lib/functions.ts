@@ -93,8 +93,10 @@ const GUEST_CLAIM_RATE_LIMIT_MESSAGE =
  * here, or a handler error later) rolls back every charge in this call, so a
  * per-bill rejection never leaves a per-session charge, and only committed
  * claim writes spend tokens.
- * Injects `ctx.bill`, `ctx.guestSessionId` and `ctx.tableIds` (every person id
- * on the bill — the set a joined guest may claim for).
+ * Injects `ctx.bill`, `ctx.guestSessionId`, `ctx.claimIds` (people a joined
+ * guest may step claims for: everyone but the host's own person) and
+ * `ctx.shareIds` (people they may include in an even split / its undo:
+ * everyone at the table).
  */
 export const guestClaimMutation = customMutation(mutation, {
   args: { shareToken: v.string(), guestSessionId: v.string() },
@@ -102,7 +104,7 @@ export const guestClaimMutation = customMutation(mutation, {
     assertGuestSessionId(guestSessionId)
     const bill = await getBillByShareToken(ctx, shareToken)
     assertSharedForGuestWrites(bill)
-    const tableIds = assertSessionAtTable(bill, guestSessionId)
+    const { claimIds, shareIds } = assertSessionAtTable(bill, guestSessionId)
     const perSession = await rateLimiter.limit(ctx, 'guestClaimPerSession', {
       key: `${bill._id}:${guestSessionId}`,
     })
@@ -111,7 +113,7 @@ export const guestClaimMutation = customMutation(mutation, {
       key: bill._id,
     })
     if (!perBill.ok) throw new ConvexError(GUEST_CLAIM_RATE_LIMIT_MESSAGE)
-    return { ctx: { bill, guestSessionId, tableIds }, args: {} }
+    return { ctx: { bill, guestSessionId, claimIds, shareIds }, args: {} }
   },
 })
 

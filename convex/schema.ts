@@ -60,13 +60,21 @@ export const person = v.object({
   // Rule enforced by the scoped guest mutations: you may edit a person (rename,
   // mark paid) iff person.guestSessionId === yourSession (or you're the host).
   // Claims are table-scoped: a session that owns at least one person on the
-  // bill may claim for anyone at the table (assertSessionAtTable).
+  // bill may claim for anyone at the table except the host's own person, who
+  // can only be included in an even split (assertSessionAtTable).
   // One session may own MANY people (a guest who joins via the link can add
   // himself, his girlfriend, etc.) — that's `addGuestPerson` stamping each new
   // person with the same session id. Everyone can READ the whole bill; you only
   // WRITE your own people (claims aside, see above). Version 2 invalidates credentials exposed by older responses.
   guestSessionId: v.optional(v.string()),
   guestAccessVersion: v.optional(v.literal(2)),
+  // The host's own person: set ONLY on the person createBill/createDemoBill
+  // seed, so the host can rename it and still be recognised (guest step
+  // protection, "(you)"/"(host)" labels). Not a secret — it goes over the wire.
+  // Never taken from a client payload: saveWorking derives it from the stored
+  // bill, guest mutations never set it. Bills without any marker fall back to
+  // the seed name with no guest session (hostPersonId, src/lib/bill/hostPerson.ts).
+  isHost: v.optional(v.boolean()),
   // Mark-as-paid: when this person marked (or was marked) as having paid, ms
   // timestamp. Self-reported social signal, not accounting — at most one write
   // per person per bill, so it stays embedded per the embed-vs-row rule.
@@ -150,7 +158,7 @@ const schema = defineSchema({
     updatedAt: v.number(),
 
     lineItems: v.array(lineItem),
-    people: v.array(person), // seeded with a "self" person on create
+    people: v.array(person), // seeded with the host's "self" person (isHost) on create
   })
     .index('by_share_token', ['shareToken'])
     // Powers the TTL purge cron (oldest-inactive first).

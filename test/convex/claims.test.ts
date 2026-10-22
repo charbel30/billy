@@ -367,7 +367,9 @@ async function withHostPerson() {
   await ctx.t.run(async (run) => {
     const bill = await run.db.get(ctx.id)
     if (!bill) throw Error('missing fixture')
-    await run.db.patch(ctx.id, { people: [{ id: 'host', name: 'Host', color: 'pink' }, ...bill.people] })
+    // A legacy (pre-`isHost`) host person: DEFAULT_PERSON_NAME, no guest
+    // session, no marker — protected through the name fallback.
+    await run.db.patch(ctx.id, { people: [{ id: 'host', name: 'self', color: 'pink' }, ...bill.people] })
   })
   return ctx
 }
@@ -387,13 +389,33 @@ test('a joined guest shares an item with the host’s person and another guest�
   expect((await t.query(api.bills.host.queries.getBill, host)).claims).toEqual([])
 })
 
-test('a joined guest steps a claim for the host’s person', async () => {
+test('a joined guest cannot step claims for the host’s own person', async () => {
   const { t, host, guest } = await withHostPerson()
-  await t.mutation(api.bills.guest.claims.stepGuestClaim, { ...guest, personId: 'host', itemId: 'drink', delta: 1 })
-  await t.mutation(api.bills.guest.claims.stepGuestClaim, { ...guest, personId: 'host', itemId: 'drink', delta: 1 })
-  await t.mutation(api.bills.guest.claims.stepGuestClaim, { ...guest, personId: 'host', itemId: 'drink', delta: -1 })
+  await t.mutation(api.bills.host.claims.stepHostClaim, { ...host, personId: 'host', itemId: 'drink', delta: 1 })
+  const before = (await t.query(api.bills.host.queries.getBill, host)).claims
+  for (const delta of [1, -1] as const) {
+    await expect(t.mutation(api.bills.guest.claims.stepGuestClaim, { ...guest, personId: 'host', itemId: 'drink', delta })).rejects.toThrow('Only the host')
+  }
+  // Sharing with the host alone would be claiming for them.
+  await expect(t.mutation(api.bills.guest.claims.shareGuestItemEvenly, { ...guest, itemId: 'meal', personIds: ['host'], quantity: 1 })).rejects.toThrow('Only the host')
+  await expect(t.mutation(api.bills.guest.claims.shareGuestItemEvenly, { ...guest, itemId: 'meal', personIds: ['host', 'host'], quantity: 1 })).rejects.toThrow('Only the host')
+  expect((await t.query(api.bills.host.queries.getBill, host)).claims).toEqual(before)
+  // Other people at the table stay claimable.
+  await t.mutation(api.bills.guest.claims.stepGuestClaim, { ...guest, personId: 'bob', itemId: 'drink', delta: 1 })
+})
+
+test('a guest-minted person can never be the protected host person', async () => {
+  const { t, id, host, guest } = await withHostPerson()
+  // Even a (legacy) guest row named like the host stays claimable: protection
+  // requires the seed name AND no guest session.
+  await t.run(async (run) => {
+    const bill = await run.db.get(id)
+    if (!bill) throw Error('missing fixture')
+    await run.db.patch(id, { people: bill.people.map((p) => (p.id === 'bob' ? { ...p, name: 'self' } : p)) })
+  })
+  await t.mutation(api.bills.guest.claims.stepGuestClaim, { ...guest, personId: 'bob', itemId: 'drink', delta: 1 })
   expect((await t.query(api.bills.host.queries.getBill, host)).claims).toEqual([
-    { itemId: 'drink', personId: 'host', units: 1 },
+    { itemId: 'drink', personId: 'bob', units: 1 },
   ])
 })
 
@@ -412,11 +434,11 @@ test('a well-formed session that never joined cannot step, share or undo', async
 test('a guest whose people were all removed loses claim access', async () => {
   const { t, host, guest } = await withHostPerson()
   const bob = { ...guest, guestSessionId: 'v2:bob-session-secret' }
-  await t.mutation(api.bills.guest.claims.stepGuestClaim, { ...bob, personId: 'host', itemId: 'drink', delta: 1 })
+  await t.mutation(api.bills.guest.claims.stepGuestClaim, { ...bob, personId: 'alice', itemId: 'drink', delta: 1 })
   await t.mutation(api.bills.host.people.removeHostPerson, { ...host, personId: 'bob' })
-  await expect(t.mutation(api.bills.guest.claims.stepGuestClaim, { ...bob, personId: 'host', itemId: 'drink', delta: 1 })).rejects.toThrow('Join the table')
+  await expect(t.mutation(api.bills.guest.claims.stepGuestClaim, { ...bob, personId: 'alice', itemId: 'drink', delta: 1 })).rejects.toThrow('Join the table')
   expect((await t.query(api.bills.host.queries.getBill, host)).claims).toEqual([
-    { itemId: 'drink', personId: 'host', units: 1 },
+    { itemId: 'drink', personId: 'alice', units: 1 },
   ])
 })
 

@@ -15,6 +15,23 @@ export const splitCopy = {
     hint: 'Share a link or QR code so everyone can pick their items.',
     dialogTitle: 'Scan to join the split',
   },
+  // How the host's own person reads on the host's screens (hostDisplayName in
+  // src/lib/bill/hostPerson.ts): still the 'self' seed → "You".
+  hostLabels: {
+    seed: 'You',
+    renamed: (name: string) => `${name} (you)`,
+  },
+  renameSelf: {
+    button: 'Edit your name',
+    title: 'Your name',
+    description: 'Everyone at the table sees this name.',
+    label: 'Your name',
+    hint: 'Guests see it marked as the host.',
+    placeholder: 'e.g. Maya',
+    error: 'Could not save your name. Try again.',
+    submit: 'Save name',
+    pending: 'Saving…',
+  },
   actions: {
     viewSummary: 'View final summary',
     finalize: 'Finalize',

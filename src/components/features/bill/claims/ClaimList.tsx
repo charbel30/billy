@@ -21,6 +21,7 @@ export function ClaimList({
   onShareEvenly,
   canShareEvenly = true,
   sharePeople = people,
+  readOnlyIds,
 }: {
   lineItems: LineItem[]
   people: Person[]
@@ -30,13 +31,21 @@ export function ClaimList({
   onStep: (itemId: string, personId: string, delta: number) => void
   onShareEvenly: ShareItemEvenly
   canShareEvenly?: boolean
+  /** People who can be included in an even split. */
   sharePeople?: Person[]
+  /** Of those, people the viewer may NOT claim or unclaim for directly (a
+   * guest viewing the host's person): their claim pills and steppers are
+   * disabled, but they still appear in the split sheet. */
+  readOnlyIds?: ReadonlySet<string>
 }) {
   const personById = new Map(people.map((p) => [p.id, p]))
   const [sharingId, setSharingId] = useState<string | null>(null)
   const [sharingPeople, setSharingPeople] = useState(() => new Set<string>())
   const [pendingId, setPendingId] = useState<string | null>(null)
-  const editableIds = new Set(sharePeople.map((person) => person.id))
+  // Who the steppers / claim pills may change vs. who a split may include.
+  const claimableIds = new Set(
+    sharePeople.filter((person) => !readOnlyIds?.has(person.id)).map((person) => person.id),
+  )
   const everyoneSelected = sharePeople.length > 0 && sharePeople.every((person) => sharingPeople.has(person.id))
 
   function toggleShare(itemId: string) {
@@ -85,7 +94,7 @@ export function ClaimList({
             canShare={canShareEvenly && sharePeople.length > 1}
             sharingOpen={sharingId === item.id}
             pending={pendingId !== null}
-            editableIds={editableIds}
+            editableIds={claimableIds}
           >
             {sharingId === item.id ? (
               <ItemOrderSplit

@@ -1,3 +1,4 @@
+import type { ReactNode } from 'react'
 import { motion } from 'motion/react'
 import { RiCloseLine, RiRadioButtonLine } from '@remixicon/react'
 import type { Claim, LineItem, Person } from '~/lib/types'
@@ -26,6 +27,8 @@ export function PersonPanelRow({
   serviceChargeOn,
   tipPercent,
   onSelect,
+  readOnly = false,
+  action,
   onRemove,
 }: {
   person: Person
@@ -37,6 +40,10 @@ export function PersonPanelRow({
   serviceChargeOn: boolean
   tipPercent?: number | null
   onSelect: (id: string) => void
+  /** Visible but not selectable (a guest viewing the host's person). */
+  readOnly?: boolean
+  /** Extra control before the remove button (the host's rename button). */
+  action?: ReactNode
   /** Present only when the viewer may remove this person. */
   onRemove?: (id: string) => void
 }) {
@@ -57,7 +64,9 @@ export function PersonPanelRow({
       }
       className={cn(
         'flex w-full items-center gap-2 rounded-control border-2 p-2 transition-colors',
-        active ? '' : 'border-transparent bg-background hover:bg-muted/60',
+        active
+          ? ''
+          : cn('border-transparent bg-background', !readOnly && 'hover:bg-muted/60'),
       )}
     >
       {/* Avatar opens the person's item breakdown */}
@@ -91,14 +100,17 @@ export function PersonPanelRow({
       <button
         type="button"
         aria-pressed={active}
+        disabled={readOnly}
         onClick={() => onSelect(person.id)}
-        className="min-h-11 min-w-0 flex-1 rounded-control text-left focus-visible:outline-2 focus-visible:outline-ring"
+        className="min-h-11 min-w-0 flex-1 rounded-control text-left focus-visible:outline-2 focus-visible:outline-ring disabled:cursor-default"
       >
         <p className="truncate font-bold">{person.name}</p>
         <p className="text-xs font-semibold text-muted-foreground tabular-nums">
           {formatUsd(total)} assigned
         </p>
       </button>
+
+      {action}
 
       {onRemove ? (
         <button
@@ -112,9 +124,11 @@ export function PersonPanelRow({
       ) : null}
 
       <RiRadioButtonLine
+        aria-hidden
         className={cn(
           'size-5 shrink-0',
           !active && 'text-muted-foreground opacity-40',
+          readOnly && 'invisible',
         )}
         style={active ? { color: personColorValue(person.color) } : undefined}
       />

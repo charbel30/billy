@@ -26,6 +26,9 @@ export function PersonRail({
   addLabel = 'Add person',
   addPlaceholder = 'Add person',
   ownIds,
+  readOnlyIds,
+  selfId,
+  selfAction,
   trailing,
 }: {
   people: Person[]
@@ -46,6 +49,13 @@ export function PersonRail({
    * these render as individual pills/rows; everyone else is left to the
    * caller (in the bar variant, via `trailing`). */
   ownIds?: ReadonlySet<string>
+  /** Shown but not selectable (a guest viewing the host's person); their
+   * breakdown stays available from the avatar. Panel variant only. */
+  readOnlyIds?: ReadonlySet<string>
+  /** Panel variant only: `selfAction` renders inside `selfId`'s row (e.g. the
+   * host's rename button). */
+  selfId?: string
+  selfAction?: ReactNode
   /** Bar variant only: rendered after the people, inside the
    * scrollable row — e.g. an "others" summary pill for people not in `ownIds`. */
   trailing?: ReactNode
@@ -98,6 +108,8 @@ export function PersonRail({
       serviceChargeOn={serviceChargeOn}
       tipPercent={tipPercent}
       onSelect={onSelect}
+      readOnly={readOnlyIds?.has(p.id)}
+      action={p.id === selfId ? selfAction : undefined}
       onRemove={onRemove && people.length > 1 ? onRemove : undefined}
     />
   )

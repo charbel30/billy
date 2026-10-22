@@ -6,6 +6,7 @@ import {
   cleanName,
   assertRoomForPerson,
   now,
+  renameHostOwnPerson,
   withPersonPaid,
 } from '../../model/bills'
 import { newClientId, nextPersonColor } from '../../../src/lib/bill/ids'
@@ -27,6 +28,23 @@ export const addHostPerson = editableBillMutation({
       updatedAt: now(),
     })
     return { personId: nextPerson.id }
+  },
+})
+
+// The host names their own person (seeded as 'self'). Scoped to that person:
+// everyone else's name is theirs (guests) or set when added (host additions).
+// The person keeps `isHost`, so protection and labels follow the rename.
+export const renameHostPerson = editableBillMutation({
+  args: { personId: v.string(), name: v.string() },
+  returns: v.null(),
+  handler: async (ctx, { personId, name }) => {
+    const { bill } = ctx
+    await ctx.db.patch(bill._id, {
+      people: renameHostOwnPerson(bill, personId, name),
+      version: bill.version + 1,
+      updatedAt: now(),
+    })
+    return null
   },
 })
 

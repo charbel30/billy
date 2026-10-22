@@ -59,6 +59,9 @@ export function BillSplitWorkspace({
   onTipChange,
   tipPending = false,
   ownIds,
+  readOnlyIds,
+  selfLabel = (name) => `${name} (you)`,
+  selfAction,
 }: {
   bill: WorkspaceBill
   description: string
@@ -89,9 +92,18 @@ export function BillSplitWorkspace({
    * first in the person rail/panel. It does not restrict selection or claim
    * steppers. Omit for the host, who controls everyone. */
   ownIds?: ReadonlySet<string>
+  /** People shown (totals, breakdowns, split sheet) but not selectable and
+   * not directly claimable — a guest viewing the host's own person. Omit for
+   * the host. */
+  readOnlyIds?: ReadonlySet<string>
+  /** How `selfId`'s name reads everywhere on this screen. Defaults to
+   * "<name> (you)"; the host page passes its own rule (hostDisplayName). */
+  selfLabel?: (name: string) => string
+  /** Rendered beside `selfId`'s own row/pill — e.g. the host's rename button. */
+  selfAction?: ReactNode
 }) {
   const displayPerson = (person: Person) =>
-    person.id === selfId ? { ...person, name: `${person.name} (you)` } : person
+    person.id === selfId ? { ...person, name: selfLabel(person.name) } : person
   const displayPeople = people.map(displayPerson)
   const displayBillPeople = bill.people.map(displayPerson)
   const activePerson = displayPeople.find((person) => person.id === activeId)
@@ -187,6 +199,9 @@ export function BillSplitWorkspace({
           addLabel={addLabel}
           addPlaceholder={addPlaceholder}
           ownIds={ownIds}
+          readOnlyIds={readOnlyIds}
+          selfId={selfId}
+          selfAction={selfAction}
         />
         <p className="mt-2 px-1 text-[11px] text-muted-foreground">
           Tap a person's avatar to see their items.
@@ -244,6 +259,8 @@ export function BillSplitWorkspace({
               onAdd={onAdd}
               portfolioByPerson={portfolioByPerson}
               ownIds={ownIds}
+              readOnlyIds={readOnlyIds}
+              selfAction={selfAction}
               lineItems={bill.lineItems}
               claims={bill.claims}
               rate={bill.rate}
@@ -288,6 +305,7 @@ export function BillSplitWorkspace({
         onShareEvenly={onShareEvenly}
         canShareEvenly={canShareEvenly}
         sharePeople={sharePeople?.map(displayPerson)}
+        readOnlyIds={readOnlyIds}
       />
     </BillScreen>
   )

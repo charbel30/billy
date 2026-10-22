@@ -1,6 +1,7 @@
 export * from './claims'
 export * from './itemSharing'
 export * from './constants'
+export * from './hostPerson'
 export * from './edits'
 export * from './ids'
 export * from './scanError'

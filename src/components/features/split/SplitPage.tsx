@@ -23,6 +23,7 @@ import {
   useFinalize,
   usePublish,
   useRemoveHostPerson,
+  useRenameHostPerson,
   useRevokeShare,
   useStepHostClaim,
   useSetTipPercent,
@@ -41,10 +42,13 @@ import {
   toUsd,
 } from '~/lib/money'
 import { joinUrl } from '~/lib/format'
+import { hostDisplayName, hostPersonId } from '~/lib/bill'
 import { trackFunnelMilestone } from '~/lib/observability'
 import { leftoverItemsPhrase, splitCopy, unallocatedServiceNote } from './content'
 import { useBillStepGate } from '~/hooks/useBillStepGate'
 import { openSplitInvite } from './invite'
+import { RenameSelfButton } from './components/RenameSelfButton'
+import { joinCopy } from '~/components/features/join/content'
 
 export function SplitPage({ billId }: { billId: Id<'bills'> }) {
   const navigate = useNavigate()
@@ -63,6 +67,7 @@ export function SplitPage({ billId }: { billId: Id<'bills'> }) {
   const [finalizeOpen, setFinalizeOpen] = useState(false)
   const addHostPerson = useAddHostPerson()
   const removeHostPerson = useRemoveHostPerson()
+  const renameHostPerson = useRenameHostPerson()
   const stepHostClaim = useStepHostClaim()
   const shareHostItemEvenly = useShareHostItemEvenly()
   const restoreHostItemSplit = useRestoreHostItemSplit()
@@ -117,6 +122,19 @@ export function SplitPage({ billId }: { billId: Id<'bills'> }) {
       addHostPerson.mutateAsync({ ...hostArgs(), name }),
     )
     setActiveId(result.personId)
+  }
+
+  // The host's own person: "You" / "Maya (you)" for the host; a read-only
+  // viewer of this URL isn't necessarily the host, so they get the guest label.
+  const hostId = hostPersonId(bill.people)
+  const hostPerson = bill.people.find((p) => p.id === hostId)
+  const hostLabels = canEdit ? splitCopy.hostLabels : joinCopy.hostLabels
+
+  async function renameSelf(name: string) {
+    if (finalizing.current || !hostId) return
+    await writes.run(() =>
+      renameHostPerson.mutateAsync({ ...hostArgs(), personId: hostId, name }),
+    )
   }
 
   async function removePerson(personId: string) {
@@ -240,7 +258,13 @@ export function SplitPage({ billId }: { billId: Id<'bills'> }) {
           ) : null
         }
         people={bill.people}
-        selfId={bill.people.find((p) => p.name === 'self')?.id}
+        selfId={hostId}
+        selfLabel={(name) => hostDisplayName(name, hostLabels)}
+        selfAction={
+          canEdit && !finalized && hostPerson ? (
+            <RenameSelfButton name={hostPerson.name} onRename={renameSelf} />
+          ) : undefined
+        }
         activeId={activeId}
         onSelect={setActiveId}
         onAdd={finalized || !canEdit ? undefined : addPerson}

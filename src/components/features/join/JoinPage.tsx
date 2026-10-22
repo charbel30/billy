@@ -28,13 +28,31 @@ import {
 import { getOrCreateGuestSessionId } from '~/lib/session'
 import { LegalFooter } from '~/components/shared/LegalFooter'
 import { trackFunnelMilestone } from '~/lib/observability'
-import { settlementProgress } from '~/lib/bill'
+import { hostPersonId, settlementProgress, withHostLabel } from '~/lib/bill'
 import { buildPersonMessage, joinUrl } from '~/lib/format'
 import toast from 'react-hot-toast'
 import { summaryCopy } from '~/components/features/summary/content'
+import { joinCopy } from './content'
 
 export function JoinPage({ shareToken }: { shareToken: string }) {
-  const { data: bill } = useSuspenseQuery(billQueries.byToken(shareToken))
+  const { data: rawBill } = useSuspenseQuery(billQueries.byToken(shareToken))
+  // The host's own person: guests may include it in an even split but never
+  // select it or step its claims (the server enforces the same rule).
+  const hostId = hostPersonId(rawBill.people)
+  const hostIds = useMemo(
+    () => new Set(hostId ? [hostId] : []),
+    [hostId],
+  )
+  // Everything on this page renders the guest view, where the host's person
+  // reads as "Host" / "Maya (host)" (rail, pills, split sheet, totals,
+  // summary, share text).
+  const bill = useMemo(
+    () => ({
+      ...rawBill,
+      people: withHostLabel(rawBill.people, hostId, joinCopy.hostLabels),
+    }),
+    [rawBill, hostId],
+  )
   const [guestSessionId, setGuestSessionId] = useState<string | null>(null)
   const [sessionReady, setSessionReady] = useState(false)
   const [activeId, setActiveId] = useState<string | null>(null)
@@ -92,6 +110,8 @@ export function JoinPage({ shareToken }: { shareToken: string }) {
   const joined = controlledPeople.length > 0
   const isAtTable = (personId: string) =>
     bill.people.some((p) => p.id === personId)
+  const canClaimFor = (personId: string) =>
+    isAtTable(personId) && !hostIds.has(personId)
 
   useEffect(() => {
     if (!bill.people.some((p) => p.id === activeId)) {
@@ -127,7 +147,7 @@ export function JoinPage({ shareToken }: { shareToken: string }) {
     if (
       !guestSessionId ||
       !joined ||
-      !isAtTable(personId) ||
+      !canClaimFor(personId) ||
       (delta !== 1 && delta !== -1)
     )
       return
@@ -282,14 +302,15 @@ export function JoinPage({ shareToken }: { shareToken: string }) {
         )
       }
       // The whole table is visible (same view as the host's split screen).
-      // Once joined, a guest can select anyone and claim/split for them;
-      // paid toggles and sending stay gated on `isMine`. No onRemove —
+      // Once joined, a guest can select anyone but the host's person and
+      // claim for them; the host's person is only reachable via an even
+      // split. Paid toggles and sending stay gated on `isMine`. No onRemove —
       // guests never remove anyone.
       people={bill.people}
       selfId={selfId ?? undefined}
       activeId={activeId}
       onSelect={(id) => {
-        if (isAtTable(id)) setActiveId(id)
+        if (canClaimFor(id)) setActiveId(id)
       }}
       onAdd={joined ? addPerson : undefined}
       onStep={stepClaim}
@@ -299,6 +320,7 @@ export function JoinPage({ shareToken }: { shareToken: string }) {
       showClaims={joined}
       conflictMessage={conflictMessage}
       ownIds={ownIds}
+      readOnlyIds={hostIds}
     />
   )
 }

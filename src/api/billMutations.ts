@@ -60,6 +60,12 @@ export function useAddHostPerson() {
   })
 }
 
+export function useRenameHostPerson() {
+  return useMutation({
+    mutationFn: useConvexMutation(api.bills.host.people.renameHostPerson),
+  })
+}
+
 export function useRemoveHostPerson() {
   return useMutation({
     mutationFn: useConvexMutation(api.bills.host.people.removeHostPerson),

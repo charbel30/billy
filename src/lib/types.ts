@@ -36,6 +36,8 @@ export interface Person {
   /** Settle-up: ms timestamp of when this person was marked paid.
    *  Self-reported social signal — render as a checkmark, not accounting. */
   paidAt?: number
+  /** The host's own person (server-set; see hostPersonId in lib/bill/hostPerson.ts). */
+  isHost?: boolean
 }
 
 /** A (person, item) claim of a fractional number of units. */

@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { useSuspenseQuery } from '@tanstack/react-query'
 import toast from 'react-hot-toast'
 import { RiChat1Line, RiPieChartLine } from '@remixicon/react'
@@ -16,19 +16,43 @@ import { ReadOnlyNotice } from '~/components/shared/ReadOnlyNotice'
 import { billQueries, useSetHostPersonPaid } from '~/api'
 import { getHostToken, recordBill } from '~/lib/session'
 import { buildPersonMessage, buildTotalsMessage, joinUrl } from '~/lib/format'
-import { settlementProgress } from '~/lib/bill'
+import { hostPersonId, settlementProgress, withHostLabel } from '~/lib/bill'
 import { useHasHostToken } from '~/hooks/useHostAccess'
 import { useBillStepGate } from '~/hooks/useBillStepGate'
 import { useMediaQuery } from '~/hooks/useMediaQuery'
 import { SummaryDock, SummarySettlementPanel } from './components/SummaryDock'
 import { summaryCopy } from './content'
+import { splitCopy } from '~/components/features/split/content'
+import { joinCopy } from '~/components/features/join/content'
 
 const DESKTOP = '(min-width: 1024px)'
 
 export function SummaryPage({ billId }: { billId: Id<'bills'> }) {
   const canEdit = useHasHostToken(billId)
-  const { data: bill } = useSuspenseQuery(billQueries.detail(billId))
-  const allowedHere = useBillStepGate(billId, 'summary', bill)
+  const { data: rawBill } = useSuspenseQuery(billQueries.detail(billId))
+  const allowedHere = useBillStepGate(billId, 'summary', rawBill)
+  // The host's own person reads "You" / "Maya (you)" on the host's screen, but
+  // "Host" / "Maya (host)" in texts sent to the table (and to a read-only
+  // viewer of this URL, who isn't necessarily the host).
+  const hostId = hostPersonId(rawBill.people)
+  const bill = useMemo(
+    () => ({
+      ...rawBill,
+      people: withHostLabel(
+        rawBill.people,
+        hostId,
+        canEdit ? splitCopy.hostLabels : joinCopy.hostLabels,
+      ),
+    }),
+    [rawBill, hostId, canEdit],
+  )
+  const tableBill = useMemo(
+    () => ({
+      ...rawBill,
+      people: withHostLabel(rawBill.people, hostId, joinCopy.hostLabels),
+    }),
+    [rawBill, hostId],
+  )
   const hostArgs = () => ({ id: billId, hostToken: getHostToken(billId) })
   const setHostPersonPaid = useSetHostPersonPaid()
   const [qrOpen, setQrOpen] = useState(false)
@@ -38,7 +62,7 @@ export function SummaryPage({ billId }: { billId: Id<'bills'> }) {
   const link = joinUrl(bill.shareToken)
 
   async function shareTotalsText() {
-    const text = buildTotalsMessage(bill, link)
+    const text = buildTotalsMessage(tableBill, link)
     if (typeof navigator.share === 'function') {
       try {
         await navigator.share({ text })
@@ -56,8 +80,8 @@ export function SummaryPage({ billId }: { billId: Id<'bills'> }) {
   }
 
   async function sendPerson(personId: string) {
-    const person = bill.people.find((p) => p.id === personId)
-    const text = buildPersonMessage(bill, personId, { joinUrl: link })
+    const person = tableBill.people.find((p) => p.id === personId)
+    const text = buildPersonMessage(tableBill, personId, { joinUrl: link })
     setSendPendingId(personId)
     try {
       if (typeof navigator.share === 'function') {

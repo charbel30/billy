@@ -22,6 +22,9 @@ export const publicPerson = v.object({
   name: v.string(),
   color: v.string(),
   paidAt: v.optional(v.number()),
+  // Public marker for the host's own person. Accepted in saveWorking payloads
+  // only because the wire carries it; the server always ignores the sent value.
+  isHost: v.optional(v.boolean()),
 })
 
 export const billDocValidator = v.object({

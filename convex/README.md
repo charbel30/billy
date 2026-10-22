@@ -17,7 +17,8 @@ every caller (all frontend Convex references live in `src/api/`, per
   by `billMutation`/`editableBillMutation`/`settleBillMutation`).
   - `lifecycle.ts` — `createBill`, `createDemoBill`, `saveWorking`, `publish`,
     `finalize`, `revokeShare`, `setTipPercent`.
-  - `people.ts` — `addHostPerson`, `removeHostPerson`, `setHostPersonPaid`.
+  - `people.ts` — `addHostPerson`, `renameHostPerson`, `removeHostPerson`, `setHostPersonPaid`.
+    The host's own person carries `isHost` (seeded by createBill/createDemoBill, kept by saveWorking, never client-set; legacy bills fall back to the unmarked `'self'` seed — `hostOwnPersonId`); only `renameHostPerson` renames it.
   - `claims.ts` — `stepHostClaim`, `shareHostItemEvenly`,
     `splitLeftoversEvenly`.
   - `queries.ts` — `getBill`.
@@ -31,6 +32,7 @@ every caller (all frontend Convex references live in `src/api/`, per
     `restoreGuestItemSplit`. A session that has joined the table (controls at
     least one person on the bill, `assertSessionAtTable`) may claim, unclaim and
     split for anyone at the table; a link holder who never joined may not.
+    The host's own person (`hostOwnPersonId`) is step-protected: guests may only include it in an even split with someone else, and undo that split.
     Marking paid stays limited to the caller's own people (`assertOwnPerson`).
     Rate limited after the join check (`guestClaimMutation`): per session and per bill.
   - `queries.ts` — public `getBillByToken` and caller-scoped `getControlledPeople`.

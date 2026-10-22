@@ -1,6 +1,7 @@
 // Guest-side people writes. The guestMutation builder (../lib/functions.ts)
 // consumes (shareToken, guestSessionId), gates on PUBLISHED, and injects
-// ctx.bill — guests can only join and add companions. guestSettleMutation opens
+// ctx.bill — guests can only join and add companions, and never under the
+// host's reserved names (cleanGuestName). guestSettleMutation opens
 // the same mark-as-paid window as the host side. Host writes live in
 // ../host/people.ts.
 import { v } from 'convex/values'
@@ -8,7 +9,7 @@ import { guestMutation, guestSettleMutation } from '../lib/functions'
 import {
   assertOwnPerson,
   assertRoomForPerson,
-  cleanName,
+  cleanGuestName,
   createGuestPerson,
   findGuestPerson,
   limitGuestJoin,
@@ -21,7 +22,7 @@ export const joinSplit = guestMutation({
   returns: v.object({ personId: v.string() }),
   handler: async (ctx, { name }) => {
     const { bill, guestSessionId } = ctx
-    const clean = cleanName(name)
+    const clean = cleanGuestName(name)
     const existing = findGuestPerson(bill, guestSessionId)
 
     if (existing) {
@@ -55,7 +56,7 @@ export const addGuestPerson = guestMutation({
     const { bill, guestSessionId } = ctx
     assertRoomForPerson(bill)
     await limitGuestJoin(ctx, bill._id)
-    const nextPerson = createGuestPerson(bill, cleanName(name), guestSessionId)
+    const nextPerson = createGuestPerson(bill, cleanGuestName(name), guestSessionId)
     await ctx.db.patch(bill._id, {
       people: [...bill.people, nextPerson],
       version: bill.version + 1,

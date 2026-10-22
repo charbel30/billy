@@ -24,6 +24,8 @@ export function SplitDockCollapsed({
   onAdd,
   portfolioByPerson,
   ownIds,
+  readOnlyIds,
+  selfAction,
   lineItems,
   claims,
   rate,
@@ -39,8 +41,12 @@ export function SplitDockCollapsed({
   onAdd?: (name: string) => void | Promise<void>
   portfolioByPerson: Map<string, Portfolio>
   /** Ids the viewer controls (a guest's own people) — sorted first in the
-   * picker. Everyone remains selectable. */
+   * picker. */
   ownIds?: ReadonlySet<string>
+  /** Shown but not selectable (a guest viewing the host's person). */
+  readOnlyIds?: ReadonlySet<string>
+  /** Rendered right after `selfId`'s pill (the host's rename button). */
+  selfAction?: ReactNode
   lineItems: LineItem[]
   claims: Claim[]
   rate?: number | null
@@ -61,6 +67,8 @@ export function SplitDockCollapsed({
         onSelect={onSelect}
         portfolioByPerson={portfolioByPerson}
         ownIds={ownIds}
+        readOnlyIds={readOnlyIds}
+        selfAction={selfAction}
         lineItems={lineItems}
         claims={claims}
         rate={rate}

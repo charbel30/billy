@@ -46,6 +46,10 @@ export const MIN_PLAUSIBLE_LBP = 1000
 
 export const SAVE_DELAY_MS = 5000
 export const DEFAULT_PERSON_NAME = 'self'
+// Names a guest may not join as (compared trimmed + lowercased): the host's
+// seed name, and 'host' — the label guests see for the host's person
+// (joinCopy.hostName). A guest taking either would read as the host.
+export const RESERVED_GUEST_NAMES = [DEFAULT_PERSON_NAME, 'host'] as const
 
 // --- Bill domain rules (shared with convex/, like currency.ts) ---
 

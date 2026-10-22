@@ -52,6 +52,8 @@ export function ClaimListItem({
   onSelectEveryone: () => void
   everyoneSelected: boolean
   canShare: boolean
+  /** People whose claims this viewer may step: claim pills and the steppers
+   * are disabled for anyone else. */
   editableIds: ReadonlySet<string>
   sharingOpen: boolean
   pending: boolean
@@ -61,6 +63,7 @@ export function ClaimListItem({
   const { display } = useCurrencyDisplay()
   const remaining = remainingUnits(item, claims)
   const mine = activePerson ? unitsFor(claims, item.id, activePerson.id) : 0
+  const canStep = !!activePerson && editableIds.has(activePerson.id)
   const claimants = claims.filter((c) => c.itemId === item.id && c.units > 0)
   const shared = claimants.length > 1 || claimants.some((c) => Math.abs(c.units - Math.round(c.units)) > 1e-8)
   const equal = claimants.length > 1 && claimants.every((c) => Math.abs(c.units - claimants[0]!.units) < 1e-8)
@@ -265,9 +268,9 @@ export function ClaimListItem({
                 <button
                   type="button"
                   aria-label={mine > 0 && mine < 1 ? 'Remove my share' : 'Remove one order'}
-                  disabled={pending || !activePerson || mine <= 0}
+                  disabled={pending || !canStep || mine <= 0}
                   onClick={() =>
-                    activePerson && onStep(item.id, activePerson.id, -1)
+                    canStep && activePerson && onStep(item.id, activePerson.id, -1)
                   }
                   className="grid size-10 place-items-center rounded-full border border-border transition-[scale,background-color] hover:bg-muted active:scale-[0.96] focus-visible:outline-2 focus-visible:outline-ring disabled:opacity-30"
                 >
@@ -290,13 +293,13 @@ export function ClaimListItem({
                 <button
                   type="button"
                   aria-label="Claim one order"
-                  disabled={pending || !activePerson || remaining <= 0.0001}
+                  disabled={pending || !canStep || remaining <= 0.0001}
                   onClick={() =>
-                    activePerson && onStep(item.id, activePerson.id, +1)
+                    canStep && activePerson && onStep(item.id, activePerson.id, +1)
                   }
                   className="grid size-10 place-items-center rounded-full border border-border transition-[scale,background-color,opacity] hover:bg-muted active:scale-[0.96] focus-visible:outline-2 focus-visible:outline-ring disabled:opacity-30"
                   style={
-                    activePerson && remaining > 0.0001
+                    canStep && activePerson && remaining > 0.0001
                       ? {
                           backgroundColor: personColorValue(activePerson.color),
                           color: 'white',
