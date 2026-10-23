@@ -4,28 +4,28 @@
 <title>Spolio — social preview source</title>
 <style>
 /* EMBED_FONT */
-*{box-sizing:border-box}body{margin:0;width:1200px;height:630px;overflow:hidden;background:#f8f7f3;color:#202820;font-family:Figtree,Arial,sans-serif}.layout{display:grid;grid-template-columns:650px 1fr;height:100%;padding:54px 58px;gap:30px}.brand{display:flex;gap:12px;align-items:center;font-size:36px;font-weight:800;letter-spacing:-2px}.brand svg{width:200px;height:auto}.pitch h1{font-size:78px;line-height:1.02;letter-spacing:-4px;font-weight:800;margin:51px 0 22px;max-width:610px}.pitch p{font-size:25px;line-height:1.4;margin:0;color:#526254;max-width:570px}.address{font-size:20px;font-weight:650;margin-top:36px}.scene{position:relative;display:flex;align-items:center;justify-content:center}.plate{position:absolute;width:390px;height:390px;background:#f7c928;border-radius:50%;top:65px;left:-25px}.receipt{position:relative;background:white;width:342px;padding:27px 25px 24px;transform:rotate(5deg);box-shadow:0 18px 42px #20282020}.receipt:after{content:'';position:absolute;left:0;right:0;bottom:-9px;height:10px;background:linear-gradient(135deg,white 25%,transparent 25%) -5px 0/10px 10px,linear-gradient(225deg,white 25%,transparent 25%) -5px 0/10px 10px}.receipt .top{font-size:23px;font-weight:750;text-align:center;margin-bottom:5px}.receipt .sub{text-align:center;font-size:15px;color:#647062;margin-bottom:23px}.line{display:flex;justify-content:space-between;padding:12px 0;font-size:18px;gap:16px}.rule{border-top:1px dashed #c7cec5;margin:10px 0}.total{font-size:31px;font-weight:800;color:#285647;letter-spacing:-1px}.lbp{font-size:22px;font-weight:650;color:#285647;text-align:right}.note{margin-top:23px;font-size:13px;color:#647062;text-align:center}.currency{display:inline-flex;gap:10px;margin-top:22px;font-size:15px;font-weight:750}.currency span{padding:8px 13px;background:#e8ecdf;border-radius:20px}
+*{box-sizing:border-box}body{margin:0;width:1200px;height:630px;overflow:hidden;background:#f8f7f3;color:#202820;font-family:Figtree,Arial,sans-serif}.layout{display:grid;grid-template-columns:640px 1fr;height:100%;padding:52px 58px;gap:24px}.brand{display:flex;gap:12px;align-items:center}.brand svg{width:190px;height:auto}.pitch h1{font-size:84px;line-height:1.02;letter-spacing:-4.5px;font-weight:800;margin:96px 0 24px}.pitch h1 span{color:#285647}.pitch p{font-size:30px;line-height:1.4;margin:0;color:#526254;max-width:560px}.steps{display:flex;gap:10px;margin-top:30px;font-size:18px;font-weight:750}.steps span{padding:9px 16px;background:#e8ecdf;border-radius:22px}.steps i{font-style:normal;color:#8a9688;margin-right:6px}.scene{position:relative;display:flex;align-items:flex-start;justify-content:center;padding-top:6px}.plate{position:absolute;width:380px;height:380px;background:#f7c928;border-radius:50%;top:70px;left:-30px}.receipt{position:relative;background:white;width:360px;padding:24px 24px 22px;transform:rotate(4deg);box-shadow:0 18px 42px #20282020}.receipt:after{content:'';position:absolute;left:0;right:0;bottom:-9px;height:10px;background:linear-gradient(135deg,white 25%,transparent 25%) -5px 0/10px 10px,linear-gradient(225deg,white 25%,transparent 25%) -5px 0/10px 10px}.over{font-size:13px;font-weight:700;letter-spacing:1.5px;text-transform:uppercase;color:#8a9688;text-align:center}.venue{font-size:28px;font-weight:800;letter-spacing:-1px;text-align:center;margin:2px 0 14px}.prompt{display:flex;justify-content:space-between;align-items:center;font-size:15px;color:#647062;padding-bottom:10px;border-bottom:1px dashed #c7cec5}.toggle{display:flex;background:#eef1ea;border-radius:14px;padding:3px;font-size:12px;font-weight:750}.toggle b{padding:3px 9px;border-radius:11px}.toggle b.on{background:#202820;color:white}.item{display:flex;align-items:center;gap:11px;padding:11px 0;font-size:17px}.item .box{flex:none;width:20px;height:20px;border-radius:6px;border:2px solid #c7cec5;display:grid;place-items:center}.item.on .box{background:#285647;border-color:#285647}.item.on .box:after{content:'';width:9px;height:5px;border:solid white;border-width:0 0 2.5px 2.5px;transform:translateY(-1px) rotate(-45deg)}.item .name{flex:1;line-height:1.15}.item small{display:block;font-size:12.5px;color:#647062;margin-top:2px}.item b{font-weight:700}.item.off{color:#9aa498}.total{display:flex;justify-content:space-between;align-items:flex-end;border-top:1px dashed #c7cec5;margin-top:4px;padding-top:12px}.total span{font-size:17px;font-weight:700}.total small{display:block;font-size:13px;color:#647062;font-weight:500;margin-top:2px}.amount{text-align:right;color:#285647}.amount strong{display:block;font-size:34px;font-weight:800;letter-spacing:-1px;line-height:1}.amount em{font-style:normal;font-size:19px;font-weight:650}.rate{margin-top:12px;font-size:12.5px;color:#647062;text-align:center}
 </style>
 <div class="layout">
   <div class="pitch">
     <div class="brand"><!-- BRAND_LOCKUP --></div>
-    <h1>Good food.<br>Fair split.</h1>
-    <p>Split the bill in dollars and lira.<br>Made for the Lebanese table.</p>
-    <div class="address">spolio.net</div>
+    <h1>Snap the bill.<br><span>Tap your share.</span></h1>
+    <p>In dollars and lira.</p>
   </div>
   <div class="scene">
     <div class="plate"></div>
     <div class="receipt">
-      <div class="top">Your part of a good night.</div>
-      <div class="sub">A little less dinner math.</div>
-      <div class="rule"></div>
-      <div class="line"><span>Chicken taouk</span><b>$9.00</b></div>
-      <div class="line"><span>Your share of fries</span><b>$2.00</b></div>
-      <div class="rule"></div>
-      <div class="line"><span>Your share</span><b class="total">$11.00</b></div>
-      <div class="lbp">984,500 LL</div>
-      <div class="note">Example · $1 = 89,500 LL</div>
-      <div class="currency"><span>Scan</span><span>Pick</span><span>Share</span></div>
+      <div class="over">Mar Mikhael</div>
+      <div class="venue">Tawlet</div>
+      <div class="prompt"><span></span><span class="toggle"><b class="on">USD</b><b>LL</b></span></div>
+      <div class="item on"><span class="box"></span><span class="name">Chicken taouk</span><b>$9.00</b></div>
+      <div class="item on"><span class="box"></span><span class="name">Fries for the table<small>Split 3 ways · your third</small></span><b>$2.00</b></div>
+      <div class="item off"><span class="box"></span><span class="name">Mint lemonade</span><b>$4.00</b></div>
+      <div class="total">
+        <span>Your share</span>
+        <div class="amount"><strong>$11.00</strong><em>984,500 LL</em></div>
+      </div>
+      <div class="rate">$1 = 89,500 LL · venue rate</div>
     </div>
   </div>
 </div>

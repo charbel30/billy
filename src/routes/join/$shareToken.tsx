@@ -27,7 +27,7 @@ export const Route = createFileRoute('/join/$shareToken')({
             loaderData.totalLbp,
           )} on the bill. Claim your items and see your share in USD & LBP — no app needed.`
         : 'Claim your items and see your share in USD & LBP — no app needed.',
-      image: 'https://spolio.net/og-image.png?v=spolio-scoop-1',
+      image: 'https://spolio.net/og-image.png?v=spolio-scoop-2',
       imageAlt: 'Spolio — split a receipt in LBP and USD.',
     }),
   }),

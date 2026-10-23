@@ -38,8 +38,8 @@ export const Route = createRootRouteWithContext<{
       ...seo({
         title: "Spolio — split a bill in LBP & USD",
         description: `Scan a Lebanese receipt, see it in both LBP and USD at the venue's rate, and split it item-by-item.`,
-        image: 'https://spolio.net/og-image.png?v=spolio-scoop-1',
-        imageAlt: 'Spolio — split the bill in dollars and lira. Made for the Lebanese table.',
+        image: 'https://spolio.net/og-image.png?v=spolio-scoop-2',
+        imageAlt: 'Spolio — snap the bill, tap your share. In dollars and lira.',
       }),
     ],
     links: [
