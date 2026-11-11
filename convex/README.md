@@ -8,8 +8,7 @@ helpers, builders, validators) must live outside `bills/host/` and
 `bills/guest/` — those two folders are the API surface, nothing else. After
 moving or renaming a function file, run `npx convex dev --once` to
 regenerate `_generated/`; renames change the public function path, so update
-every caller (all frontend Convex references live in `src/api/`, per
-`CLAUDE.md`).
+every caller (all frontend Convex references live in `src/api/`).
 
 ## Layout
 
@@ -119,6 +118,5 @@ Stale or finalized writes throw; the editor retains its recovery draft and
 requires an explicit decision on conflicts. Extraction records its starting
 version and applies only while that version and its upload are still current.
 
-See [the readiness review](../docs/launch-readiness-review.md) for rollout and the
-remaining production acceptance checks. The full regression suite now covers
-access control, extraction, editor recovery, storage and settlement math.
+The regression suite covers access control, extraction, editor recovery,
+storage and settlement math.

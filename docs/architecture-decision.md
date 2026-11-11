@@ -119,7 +119,7 @@ cascade-deletes claim rows.
 **Rule for future tables** (venues, table sessions, menu priors, reports): stable + bounded +
 bill-scoped → embed in the bill; high-churn, unbounded, or shared across bills → own table
 with an index. When per-venue reporting needs counts/sums across many bills, use
-`@convex-dev/aggregate` (ROADMAP §8), not schema surgery.
+`@convex-dev/aggregate`, not schema surgery.
 
 ## To research / revisit before it can improve
 

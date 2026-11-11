@@ -2,7 +2,7 @@
 
 A mobile-responsive web app that scans a restaurant/store receipt, extracts the line items with a vision-LLM, shows every amount in both **LBP and USD**, and lets a group split the bill item-by-item into per-person "portfolios." Built for Lebanon's dual-currency reality.
 
-> **Scope of this document:** the full plan — product concept, the key design decisions and *why*, system architecture, the extraction pipeline, currency logic, the split logic and data model, tech stack, app structure, privacy/legal, error handling, and a staged roadmap. Web-first, because it ships fastest and solves the "get everyone into the split" problem with a link instead of an install.
+> **Scope of this document:** the full plan — product concept, the key design decisions and *why*, system architecture, the extraction pipeline, currency logic, the split logic and data model, tech stack, app structure, privacy/legal, and error handling. Web-first, because it ships fastest and solves the "get everyone into the split" problem with a link instead of an install.
 
 ---
 
@@ -18,8 +18,7 @@ A mobile-responsive web app that scans a restaurant/store receipt, extracts the 
 7. A shareable link lets friends see (and later claim) their part **without installing anything**.
 
 **Who it's for**
-- Primary: friends splitting a restaurant bill in Lebanon.
-- More monetizable later: diaspora / USD earners who want clean USD totals.
+- Friends splitting a restaurant bill in Lebanon.
 
 **Why it's not "just another Splitwise"**
 The gap no existing app fills: **LBP/USD dual display at a user-controllable parallel rate**, with receipts that are often English/French + occasionally Arabic. That intersection is the whole differentiator. Everything else (splitting, link-sharing) is table stakes that we copy from the best apps.
@@ -214,6 +213,8 @@ snapshot only if you later need an immutable settled record.
 
 ## 7. Tech stack
 
+> **Note:** this section records the original plan. The app as built uses TanStack Start, Convex and Cloudflare Workers; see the [README](../README.md#tech-stack) for the current stack.
+
 Chosen for "ship a working thing fast, cheap, on free tiers." This is the **actual** stack the
 project is built on (it supersedes earlier Supabase/Vite proposals).
 
@@ -323,41 +324,7 @@ convex/
 
 ---
 
-## 12. Roadmap
-
-### Phase 1 — MVP (ship this)
-- Web/PWA, no login, single bill.
-- Photo → vision-LLM extract → reconcile → review/fix.
-- Rate auto-derived from receipt; manual override.
-- Add people, assign items (incl. shared), proportional service/tax.
-- Per-person totals in both currencies.
-- **Read-only** shareable link.
-- Manual-entry path as fallback.
-
-*Advance when:* people actually use it to split real bills and ask for guests to self-claim.
-
-### Phase 2
-- **Interactive guest claim** via link (live sync).
-- **Market-rate feed** + override (for single-currency receipts).
-- Optional accounts + history.
-- Polish capture (edge detection, retake).
-
-### Phase 3 (only with traction)
-- **Native host app** for on-device OCR + offline + better camera; web guests stay on the link.
-- **Arabic OCR fallback** (server-side PaddleOCR) if Arabic receipts become frequent.
-- Consider settlement/payments — with the licensing homework that implies.
-
----
-
-## 13. Market & monetization notes (Lebanon)
-
-- Cash-heavy, heavily dollarized economy; **willingness to pay for apps is low**, and app-store payment rails are weak — which is *another* reason web beats native early (no 15–30% store cut).
-- High smartphone/internet penetration is a tailwind; unreliable power/internet is a headwind (favors offline-capable design later).
-- **Most monetizable segment: diaspora / USD earners.** If you charge, prefer a cheap **one-time/lifetime unlock** over subscriptions; consider keeping it a free utility / portfolio piece first and validating demand before monetizing.
-
----
-
-## 14. Open decisions to settle before building
+## 12. Open decisions to settle before building
 
 1. **Offline at the table:** is "scan with no internet" a must-have? If yes, that pulls native forward (cloud-web can't scan offline). If "there's usually wifi/data" is acceptable, web MVP stands.
 2. **LLM provider:** hosted vision-LLM (simplest) vs self-hosted (cheaper/private at scale). Start hosted, keep it swappable.

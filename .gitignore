@@ -19,3 +19,16 @@ dist
 .env.sentry-build-plugin
 
 .env.local
+.env*.local
+!.env.local.example
+
+# Local AI tooling and editor settings (not part of the project)
+.agents/
+.claude/
+AGENTS.md
+CLAUDE.md
+skills-lock.json
+.vscode/
+
+# Generated locally by `pnpm brand:export`
+brand/spolio-logo.zip

@@ -105,8 +105,8 @@ The script writes:
 - `brand/spolio-logo/logo-preview.svg` and `.png`: logo on an opaque white canvas.
 - `brand/spolio-logo/construction.svg` and `.png`: contour and lettering study.
 
-`brand/spolio-logo.zip` packages the logo kit and production icons. Rebuild it
-after exporting assets with:
+`brand/spolio-logo.zip` is a locally generated artifact that packages the logo kit
+and production icons; it is not committed. Build it after exporting assets with:
 
 ```sh
 python - <<'PY'

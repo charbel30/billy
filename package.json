@@ -1,6 +1,8 @@
 {
-  "name": "tanstack-start-example-convex-trellaux",
+  "name": "spolio",
   "private": true,
+  "license": "AGPL-3.0-only",
+  "author": "Charbel Tannous",
   "sideEffects": false,
   "type": "module",
   "scripts": {

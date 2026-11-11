@@ -4,12 +4,11 @@ Status: **decided, not started**. Agreed 2026-09-11 in a design-tree session; ev
 section below is a settled decision unless it is explicitly marked *open* or *backlog*.
 This is the implementation plan for the "one continuous surface" rework of the bill flow
 (scan → review → split → summary). It is written so that a phase can be picked up cold —
-by a person or an agent — and shipped as one PR.
+and shipped as one PR.
 
-Read with `CLAUDE.md` (directory contract, where code goes) and
-`.claude/skills/make-interfaces-feel-better/SKILL.md` (motion values, hit areas, concentric
-radii). Nothing here overrides the directory contract; where this plan names a file path it
-is applying that contract, not inventing a new one.
+Read with the project's directory contract (where code goes; see `README.md` and
+`convex/README.md`). Nothing here overrides that contract; where this plan names a file path
+it is applying that contract, not inventing a new one.
 
 Contents
 
@@ -104,7 +103,7 @@ sheet and has no job of its own.
 The design tree, collapsed. Each line is a decision that was put to the owner and answered.
 
 **Document**
-- Lives in `docs/` as this file, implementation-ready, listed in `CLAUDE.md`.
+- Lives in `docs/` as this file, implementation-ready.
 
 **Motion technology**
 - Route transitions use the **CSS View Transitions API** through TanStack Router's
